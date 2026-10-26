@@ -1,0 +1,6 @@
+node_modules/
+dist/
+vendor/
+.electron-dl/
+assets/filters/*.txt
+build-protected/

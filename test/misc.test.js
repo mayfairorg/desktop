@@ -1,0 +1,120 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { TabModel } = require('../src/main/lib/tabmodel');
+const { Blocker, parseList } = require('../src/main/lib/adblock');
+const { safeFilename, uniquePath, chooseDir } = require('../src/main/lib/downloads-path');
+const P = require('../src/main/lib/policy');
+const fs = require('node:fs');
+const path = require('node:path');
+
+test('tab 0 (Mayfair) is pinned: no close, no move, only one', () => {
+  const m = new TabModel();
+  const home = m.add({ pinned: true, url: 'https://cloud.mayfairmail.com/' });
+  const a = m.add({ url: 'https://a.com' }); const b = m.add({ url: 'https://b.com' });
+  assert.equal(m.tabs[0].id, home.id);
+  assert.equal(m.close(home.id).closed, false);
+  assert.throws(() => m.add({ pinned: true }));
+  assert.equal(m.move(home.id, 2), false);
+  assert.ok(m.move(b.id, 0));
+  assert.deepEqual(m.tabs.map((t) => t.id), [home.id, b.id, a.id]);
+  assert.equal(m.tabs[0].pinned, true);
+});
+test('tab activation after close and open-next-to-active', () => {
+  const m = new TabModel();
+  const home = m.add({ pinned: true });
+  const a = m.add({}); const b = m.add({}); const c = m.add({});
+  m.activate(b.id);
+  const n = m.add({ afterActive: true });
+  assert.deepEqual(m.tabs.map((t) => t.id), [home.id, a.id, b.id, n.id, c.id]);
+  assert.equal(m.activeId, n.id);
+  m.close(n.id);
+  assert.equal(m.activeId, c.id);
+  m.close(c.id);
+  assert.equal(m.activeId, b.id);
+  m.closeOthers(a.id);
+  assert.deepEqual(m.tabs.map((t) => t.id), [home.id, a.id]);
+  assert.equal(m.activeId, a.id);
+  m.close(a.id);
+  assert.equal(m.activeId, home.id);
+  assert.equal(m.step(1), home.id);
+  assert.equal(m.hasPrivate(), false);
+  m.add({ private: true });
+  assert.equal(m.hasPrivate(), true);
+});
+test('adblock list parsing and matching', () => {
+  const set = parseList('# c\n0.0.0.0 ads.example.com\nTracker.NET # inline\n\nnotadomain\n127.0.0.1 localhost\n');
+  assert.ok(set.has('ads.example.com')); assert.ok(set.has('tracker.net')); assert.equal(set.has('notadomain'), false);
+  const b = new Blocker(set);
+  assert.equal(b.matches('x.y.tracker.net'), true);
+  assert.equal(b.matches('mytracker.net'), false);
+  assert.equal(b.shouldBlock('https://tracker.net/p.js', { pageUrl: 'https://news.com/' }), true);
+  assert.equal(b.shouldBlock('https://tracker.net/', { pageUrl: 'https://news.com/', resourceType: 'mainFrame' }), false);
+  assert.equal(b.shouldBlock('https://tracker.net/p.js', { pageUrl: 'https://tracker.net/' }), false, 'first party');
+  assert.equal(b.shouldBlock('https://tracker.net/p.js', { pageUrl: 'https://cloud.mayfairmail.com/' }), false, 'never on Mayfair');
+  assert.equal(b.shouldBlock('https://cloud.mayfairmail.com/a.js', { pageUrl: 'https://news.com/' }), false);
+  assert.equal(b.shouldBlock('data:text/plain,x', { pageUrl: 'https://news.com/' }), false);
+  b.setSiteAllowed('news.com', true);
+  assert.equal(b.shouldBlock('https://tracker.net/p.js', { pageUrl: 'https://news.com/' }), false);
+});
+test('the bundled blocklist parses, is non-trivial, and never lists Mayfair', () => {
+  const set = parseList(fs.readFileSync(path.join(__dirname, '../src/main/lib/blocklist.txt'), 'utf8'));
+  assert.ok(set.size > 50);
+  assert.ok(set.has('doubleclick.net'));
+  assert.equal([...set].some((d) => d.includes('mayfair')), false);
+});
+test('download file names: unsafe characters, reserved names, collisions', () => {
+  assert.equal(safeFilename('../../etc/passwd'), '.._.._etc_passwd'.replace(/^\.+/, ''));
+  assert.equal(safeFilename('a:b*c?.pdf'), 'a_b_c_.pdf');
+  assert.equal(safeFilename('CON.txt'), 'download-CON.txt');
+  assert.equal(safeFilename(''), 'download');
+  assert.equal(safeFilename('   '), 'download');
+  assert.equal(safeFilename('.bashrc'), 'bashrc');
+  assert.ok(safeFilename('x'.repeat(400) + '.pdf').length <= 150);
+  assert.ok(safeFilename('x'.repeat(400) + '.pdf').endsWith('.pdf'));
+  assert.ok(!safeFilename('a/b\\c').includes('/'));
+  const taken = new Set(['/d/a.pdf', '/d/a (1).pdf']);
+  assert.equal(uniquePath('/d', 'a.pdf', (p) => taken.has(p)), '/d/a (2).pdf');
+  assert.equal(uniquePath('/d', 'b.pdf', (p) => taken.has(p)), '/d/b.pdf');
+});
+test('download destination follows the setting', () => {
+  const ctx = { driveDir: '/home/u/Mayfair Drive/Downloads', downloadsDir: '/home/u/Downloads' };
+  assert.deepEqual(chooseDir({ downloadMode: 'drive' }, ctx), { dir: ctx.driveDir });
+  assert.deepEqual(chooseDir({ downloadMode: 'folder', downloadFolder: '/x' }, ctx), { dir: '/x' });
+  assert.deepEqual(chooseDir({ downloadMode: 'folder', downloadFolder: '' }, ctx), { dir: ctx.downloadsDir });
+  assert.deepEqual(chooseDir({ downloadMode: 'ask' }, ctx), { ask: true });
+});
+test('pop-up policy needs a recent click', () => {
+  assert.equal(P.popupAllowed(1000, 0), false);
+  assert.equal(P.popupAllowed(1000, 600), true);
+  assert.equal(P.popupAllowed(5000, 600), false);
+  assert.equal(P.popupAllowed(1000, 2000), false);
+  assert.equal(P.popupAllowed(1000, NaN), false);
+});
+test('permission decisions', () => {
+  const d = P.decidePermission;
+  assert.equal(d('notifications', { mayfair: true }), 'allow');
+  assert.equal(d('geolocation', { mayfair: true }), 'deny');
+  assert.equal(d('media', { mayfair: true }), 'ask');
+  assert.equal(d('geolocation', { mayfair: false }), 'ask');
+  assert.equal(d('geolocation', { mayfair: false, saved: 'allow' }), 'allow');
+  assert.equal(d('geolocation', { mayfair: false, saved: 'deny' }), 'deny');
+  for (const p of ['openExternal', 'hid', 'serial', 'usb', 'bluetooth']) assert.equal(d(p, { mayfair: true, saved: 'allow' }), 'deny', p);
+  assert.equal(d('clipboard-sanitized-write', {}), 'allow');
+  assert.equal(d('something-new', { mayfair: false, saved: 'allow' }), 'deny');
+});
+test('update feed placeholder is detected', () => {
+  assert.equal(P.updateFeedConfigured('https://updates.example.invalid/mayfair-desktop'), false);
+  assert.equal(P.updateFeedConfigured('http://updates.mayfairmail.com/x'), false);
+  assert.equal(P.updateFeedConfigured(''), false);
+  assert.equal(P.updateFeedConfigured('https://updates.mayfairmail.com/desktop'), true);
+  const pkg = require('../package.json');
+  assert.equal(P.updateFeedConfigured(pkg.build.publish[0].url), false, 'shipping config is still a placeholder');
+});
+test('chrome height hides the toolbar on the Mayfair tab', () => {
+  const s = { hideToolbarOnMayfair: true, bookmarksBar: true };
+  assert.equal(P.chromeHeight(true, s), 38);
+  assert.equal(P.chromeHeight(false, s), 38 + 44 + 30);
+  assert.equal(P.chromeHeight(false, { ...s, bookmarksBar: false }), 82);
+  assert.equal(P.chromeHeight(true, { ...s, hideToolbarOnMayfair: false }), 112);
+});

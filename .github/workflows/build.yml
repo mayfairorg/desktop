@@ -1,0 +1,82 @@
+name: Build Mayfair Desktop
+# Builds unsigned installers for Windows, macOS and Linux.
+# Run it from the Actions tab (Run workflow), or push a tag like v0.1.0.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund   # switch to "npm ci" once package-lock.json is committed
+      - run: npm test
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, script: dist:win, name: windows }
+          - { os: macos-latest,   script: dist:mac, name: macos }
+          - { os: ubuntu-latest,  script: dist:linux, name: linux }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund   # switch to "npm ci" once package-lock.json is committed
+      - name: Bundle the ad-blocker filter lists and refresh currency rates
+        run: |
+          node tools/fetch-lists.js
+          node tools/update-rates.js
+      - name: Fetch the Tor daemon (official Tor Project packages, checksum + signature checked)
+        shell: bash
+        run: |
+          case "${{ matrix.name }}" in
+            windows) node tools/fetch-tor.js win x64 ;;
+            linux)   node tools/fetch-tor.js linux x64 ;;
+            macos)   node tools/fetch-tor.js mac x64 && node tools/fetch-tor.js mac arm64 ;;
+          esac
+        env:
+          TOR_BUNDLE_VERSION: ${{ vars.TOR_BUNDLE_VERSION }}   # repository variable: current Tor Browser stable version, e.g. 15.0.1
+          REQUIRE_GPG: '1'
+      - name: Build installer (unsigned)
+        run: npm run ${{ matrix.script }}
+        env:
+          # Signing is OFF until the owner adds the secrets listed in README.md.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # Uncomment after adding the secrets:
+          # CSC_LINK: ${{ secrets.WIN_CSC_LINK }}          # Windows .pfx (base64) - use on the windows job
+          # CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_PASSWORD }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mayfair-desktop-${{ matrix.name }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+            dist/latest*.yml
+          if-no-files-found: error
+      - name: Publish a release (only when you tag a version like v1.0.0)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+            dist/latest*.yml

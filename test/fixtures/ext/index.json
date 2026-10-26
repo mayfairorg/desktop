@@ -1,0 +1,231 @@
+{
+  "schema": 1,
+  "publisher": "Mayfair Organization",
+  "extensions": [
+    {
+      "id": "deals",
+      "name": "Mayfair Deals",
+      "version": "1.0.0",
+      "description": "Price history and drop alerts from the page's own product data, and coupon codes you and others have saved. No link changes, no tracking.",
+      "permissions": [
+        "storage",
+        "alarms",
+        "notifications",
+        "activeTab",
+        "optional-host:http://*/*",
+        "optional-host:https://*/*"
+      ],
+      "permissionNotes": [
+        "Read and change pages on every site",
+        "Ask later to read pages in the background",
+        "Keep its own settings on this device",
+        "Run a check now and then",
+        "Show notifications",
+        "Look at the page you press its button on"
+      ],
+      "sha256": "0e4142fc2a15c58486c6b83a99375c49ce0355f87c7c6ae6f6586a2816a3c341",
+      "size": 20241,
+      "file": "deals-1.0.0.zip",
+      "files": 15,
+      "glyph": "<path d=\"M3 12V4h8l10 10-8 8z\"/><circle cx=\"7.5\" cy=\"8.5\" r=\"1.2\"/>",
+      "category": "Browser extensions"
+    },
+    {
+      "id": "clipper",
+      "name": "Mayfair Clipper",
+      "version": "1.0.0",
+      "description": "Save a page, a selection or a link to Mayfair Notes, Tasks or Drive.",
+      "permissions": [
+        "storage",
+        "contextMenus",
+        "activeTab",
+        "scripting",
+        "tabs"
+      ],
+      "permissionNotes": [
+        "Talk to cloud.mayfairmail.com",
+        "Talk to mayfairmail.com",
+        "Keep its own settings on this device",
+        "Add items to the right-click menu",
+        "Look at the page you press its button on",
+        "Run on the page you press its button on",
+        "See the addresses and titles of your open tabs"
+      ],
+      "sha256": "093bc7fec7038a4cd6c60011b2f72fbfeece7772d9243029ef5481fec99d65b3",
+      "size": 13839,
+      "file": "clipper-1.0.0.zip",
+      "files": 15,
+      "glyph": "<path d=\"M6 3h12v18l-6-4-6 4z\"/>",
+      "category": "Browser extensions"
+    },
+    {
+      "id": "passwords",
+      "name": "Mayfair Passwords autofill",
+      "version": "1.0.0",
+      "description": "Fills a sign-in form from Mayfair Passwords when you ask. The extension never keeps a password.",
+      "permissions": [
+        "contextMenus",
+        "activeTab",
+        "tabs"
+      ],
+      "permissionNotes": [
+        "Read and change pages on every site",
+        "Talk to localhost",
+        "Talk to 127.0.0.1",
+        "Talk to cloud.mayfairmail.com",
+        "Talk to mayfairmail.com",
+        "Add items to the right-click menu",
+        "Look at the page you press its button on",
+        "See the addresses and titles of your open tabs"
+      ],
+      "sha256": "25e1d60425512d24ec473462d490efc7689cbdac35e4b81ce5ffe286c167c632",
+      "size": 15233,
+      "file": "passwords-1.0.0.zip",
+      "files": 15,
+      "glyph": "<circle cx=\"8\" cy=\"15\" r=\"4\"/><path d=\"M11 12l9-9M16 7l3 3\"/>",
+      "category": "Browser extensions"
+    },
+    {
+      "id": "reader",
+      "name": "Mayfair Reader",
+      "version": "1.0.0",
+      "description": "A clean, calm reading view for articles. Runs on the page, nothing leaves your device.",
+      "permissions": [
+        "storage",
+        "contextMenus",
+        "activeTab"
+      ],
+      "permissionNotes": [
+        "Read and change pages on every site",
+        "Keep its own settings on this device",
+        "Add items to the right-click menu",
+        "Look at the page you press its button on"
+      ],
+      "sha256": "074933d9800b803c3e102b8f8ede2e426bdb880375f149e8636393b6e6718f6a",
+      "size": 11459,
+      "file": "reader-1.0.0.zip",
+      "files": 12,
+      "glyph": "<path d=\"M3 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3zM21 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7z\"/>",
+      "category": "Browser extensions"
+    },
+    {
+      "id": "dark",
+      "name": "Mayfair Dark mode",
+      "version": "1.0.0",
+      "description": "Dark mode for any website. Skips pages that are already dark. Remembers your choice for each site.",
+      "permissions": [
+        "storage",
+        "activeTab"
+      ],
+      "permissionNotes": [
+        "Read and change pages on every site",
+        "Keep its own settings on this device",
+        "Look at the page you press its button on"
+      ],
+      "sha256": "0fcae7ba42df7105147ec21e76da686057e90a082193067eba06577c4c41153d",
+      "size": 13478,
+      "file": "dark-1.0.0.zip",
+      "files": 14,
+      "glyph": "<path d=\"M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z\"/>",
+      "category": "Browser extensions"
+    },
+    {
+      "id": "blocker",
+      "name": "Mayfair Tracker blocker",
+      "version": "1.0.0",
+      "description": "Blocks third-party ad and tracking requests with a bundled list. Works offline, no account, nothing is sent anywhere.",
+      "permissions": [
+        "storage",
+        "activeTab",
+        "declarativeNetRequest",
+        "declarativeNetRequestFeedback",
+        "host:http://*/*",
+        "host:https://*/*"
+      ],
+      "permissionNotes": [
+        "Read and change pages on every site",
+        "Keep its own settings on this device",
+        "Look at the page you press its button on",
+        "Block requests it has a list for",
+        "Count what it blocked"
+      ],
+      "sha256": "65bdb0501e68b6a23b2d05fb0bd971f4ce3e4a68155155456a3cbb8f30e03bad",
+      "size": 22398,
+      "file": "blocker-1.0.0.zip",
+      "files": 16,
+      "glyph": "<path d=\"M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z\"/><path d=\"M8.5 12h7\"/>",
+      "category": "Browser extensions"
+    },
+    {
+      "id": "tabsaver",
+      "name": "Mayfair Tab saver",
+      "version": "1.0.0",
+      "description": "Save all your open tabs as a named session and open them again later. Automatic snapshots protect you after a crash.",
+      "permissions": [
+        "storage",
+        "tabs",
+        "alarms"
+      ],
+      "permissionNotes": [
+        "Keep its own settings on this device",
+        "See the addresses and titles of your open tabs",
+        "Run a check now and then"
+      ],
+      "sha256": "038670436c2f1c0399ee7d4843e7908f624df23d494e0868965e9df19e5dced2",
+      "size": 15673,
+      "file": "tabsaver-1.0.0.zip",
+      "files": 14,
+      "glyph": "<path d=\"M12 3l9 5-9 5-9-5z\"/><path d=\"M3 13l9 5 9-5\"/>",
+      "category": "Browser extensions"
+    },
+    {
+      "id": "screenshot",
+      "name": "Mayfair Screenshot",
+      "version": "1.0.0",
+      "description": "Capture what you see, a chosen area, or the whole page. Saved as a PNG on your device.",
+      "permissions": [
+        "activeTab",
+        "scripting",
+        "downloads",
+        "storage"
+      ],
+      "permissionNotes": [
+        "Look at the page you press its button on",
+        "Run on the page you press its button on",
+        "Save files to your downloads",
+        "Keep its own settings on this device"
+      ],
+      "sha256": "0b2a5d3b8613766f82b61a01fc361fdeecf73c506768db82c2565fb48090a551",
+      "size": 14362,
+      "file": "screenshot-1.0.0.zip",
+      "files": 14,
+      "glyph": "<path d=\"M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>",
+      "category": "Browser extensions"
+    },
+    {
+      "id": "translate",
+      "name": "Mayfair Translate selection",
+      "version": "1.0.0",
+      "description": "Select words on a page and see a quick translation. Works offline for common words and phrases; nothing is sent anywhere.",
+      "permissions": [
+        "storage",
+        "contextMenus",
+        "activeTab",
+        "scripting"
+      ],
+      "permissionNotes": [
+        "Read and change pages on every site",
+        "Keep its own settings on this device",
+        "Add items to the right-click menu",
+        "Look at the page you press its button on",
+        "Run on the page you press its button on"
+      ],
+      "sha256": "675470c004353d04c169b0d780f86320461a66a255581263d8c8cc98709e76c1",
+      "size": 21513,
+      "file": "translate-1.0.0.zip",
+      "files": 17,
+      "glyph": "<path d=\"M4 6h9M8.5 4v2M6 6c.6 3.6 3 6.4 6.5 8M11 6c-.6 3.6-3.2 6.4-7 8\"/><path d=\"M13.5 20l4-10 4 10M15 16.5h5\"/>",
+      "category": "Browser extensions"
+    }
+  ]
+}

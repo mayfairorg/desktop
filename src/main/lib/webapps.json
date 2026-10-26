@@ -1,0 +1,451 @@
+{
+ "version": 1,
+ "apps": [
+  {
+   "id": "whatsapp",
+   "name": "WhatsApp Web",
+   "url": "https://web.whatsapp.com/",
+   "category": "Chat",
+   "description": "Messages from your phone on your computer.",
+   "hosts": [
+    "whatsapp.com",
+    "whatsapp.net"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "messenger",
+   "name": "Messenger",
+   "url": "https://www.messenger.com/",
+   "category": "Chat",
+   "description": "Facebook chat.",
+   "hosts": [
+    "messenger.com",
+    "facebook.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "telegram",
+   "name": "Telegram Web",
+   "url": "https://web.telegram.org/a/",
+   "category": "Chat",
+   "description": "Telegram chats.",
+   "hosts": [
+    "telegram.org"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "discord",
+   "name": "Discord",
+   "url": "https://discord.com/app",
+   "category": "Chat",
+   "description": "Voice, video and text communities.",
+   "hosts": [
+    "discord.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "slack",
+   "name": "Slack",
+   "url": "https://app.slack.com/client",
+   "category": "Work",
+   "description": "Team chat.",
+   "hosts": [
+    "slack.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "teams",
+   "name": "Microsoft Teams",
+   "url": "https://teams.microsoft.com/",
+   "category": "Work",
+   "description": "Chat and meetings.",
+   "hosts": [
+    "login.microsoftonline.com",
+    "login.live.com",
+    "microsoft.com",
+    "live.com",
+    "office.com",
+    "microsoftonline.com",
+    "teams.microsoft.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "meet",
+   "name": "Google Meet",
+   "url": "https://meet.google.com/",
+   "category": "Work",
+   "description": "Video meetings.",
+   "hosts": [
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "zoom",
+   "name": "Zoom",
+   "url": "https://app.zoom.us/wc",
+   "category": "Work",
+   "description": "Meetings in the browser.",
+   "hosts": [
+    "zoom.us"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "gmail",
+   "name": "Gmail",
+   "url": "https://mail.google.com/",
+   "category": "Mail",
+   "description": "Google mail.",
+   "hosts": [
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "outlook",
+   "name": "Outlook",
+   "url": "https://outlook.live.com/mail/",
+   "category": "Mail",
+   "description": "Microsoft mail.",
+   "hosts": [
+    "login.microsoftonline.com",
+    "login.live.com",
+    "microsoft.com",
+    "live.com",
+    "office.com",
+    "microsoftonline.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "gdrive",
+   "name": "Google Drive",
+   "url": "https://drive.google.com/",
+   "category": "Files",
+   "description": "Google file storage.",
+   "hosts": [
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "gdocs",
+   "name": "Google Docs",
+   "url": "https://docs.google.com/document/",
+   "category": "Files",
+   "description": "Documents.",
+   "hosts": [
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "gsheets",
+   "name": "Google Sheets",
+   "url": "https://docs.google.com/spreadsheets/",
+   "category": "Files",
+   "description": "Spreadsheets.",
+   "hosts": [
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "gcal",
+   "name": "Google Calendar",
+   "url": "https://calendar.google.com/",
+   "category": "Work",
+   "description": "Calendar.",
+   "hosts": [
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "gmaps",
+   "name": "Google Maps",
+   "url": "https://www.google.com/maps",
+   "category": "Tools",
+   "description": "Maps and directions.",
+   "hosts": [
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "dropbox",
+   "name": "Dropbox",
+   "url": "https://www.dropbox.com/home",
+   "category": "Files",
+   "description": "File storage.",
+   "hosts": [
+    "dropbox.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "notion",
+   "name": "Notion",
+   "url": "https://www.notion.so/",
+   "category": "Work",
+   "description": "Notes and wikis.",
+   "hosts": [
+    "notion.so",
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "trello",
+   "name": "Trello",
+   "url": "https://trello.com/",
+   "category": "Work",
+   "description": "Boards and cards.",
+   "hosts": [
+    "trello.com",
+    "atlassian.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "asana",
+   "name": "Asana",
+   "url": "https://app.asana.com/",
+   "category": "Work",
+   "description": "Project tracking.",
+   "hosts": [
+    "asana.com",
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "miro",
+   "name": "Miro",
+   "url": "https://miro.com/app/",
+   "category": "Work",
+   "description": "Whiteboards.",
+   "hosts": [
+    "miro.com",
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "canva",
+   "name": "Canva",
+   "url": "https://www.canva.com/",
+   "category": "Design",
+   "description": "Design anything.",
+   "hosts": [
+    "canva.com",
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "figma",
+   "name": "Figma",
+   "url": "https://www.figma.com/files",
+   "category": "Design",
+   "description": "Interface design.",
+   "hosts": [
+    "figma.com",
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "chatgpt",
+   "name": "ChatGPT",
+   "url": "https://chatgpt.com/",
+   "category": "AI",
+   "description": "AI assistant.",
+   "hosts": [
+    "chatgpt.com",
+    "openai.com",
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "github",
+   "name": "GitHub",
+   "url": "https://github.com/",
+   "category": "Tools",
+   "description": "Code hosting.",
+   "hosts": [
+    "github.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "linkedin",
+   "name": "LinkedIn",
+   "url": "https://www.linkedin.com/feed/",
+   "category": "Social",
+   "description": "Professional network.",
+   "hosts": [
+    "linkedin.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "facebook",
+   "name": "Facebook",
+   "url": "https://www.facebook.com/",
+   "category": "Social",
+   "description": "Social network.",
+   "hosts": [
+    "facebook.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "instagram",
+   "name": "Instagram",
+   "url": "https://www.instagram.com/",
+   "category": "Social",
+   "description": "Photos and reels.",
+   "hosts": [
+    "instagram.com",
+    "facebook.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "x",
+   "name": "X",
+   "url": "https://x.com/",
+   "category": "Social",
+   "description": "Posts and news.",
+   "hosts": [
+    "x.com",
+    "twitter.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "tiktok",
+   "name": "TikTok",
+   "url": "https://www.tiktok.com/",
+   "category": "Social",
+   "description": "Short videos.",
+   "hosts": [
+    "tiktok.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "reddit",
+   "name": "Reddit",
+   "url": "https://www.reddit.com/",
+   "category": "Social",
+   "description": "Communities.",
+   "hosts": [
+    "reddit.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "pinterest",
+   "name": "Pinterest",
+   "url": "https://www.pinterest.com/",
+   "category": "Social",
+   "description": "Ideas and boards.",
+   "hosts": [
+    "pinterest.com",
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title"
+  },
+  {
+   "id": "youtube",
+   "name": "YouTube",
+   "url": "https://www.youtube.com/",
+   "category": "Media",
+   "description": "Videos.",
+   "hosts": [
+    "youtube.com",
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title",
+   "adblock": true
+  },
+  {
+   "id": "twitch",
+   "name": "Twitch",
+   "url": "https://www.twitch.tv/",
+   "category": "Media",
+   "description": "Live streams.",
+   "hosts": [
+    "twitch.tv"
+   ],
+   "badge": "title",
+   "adblock": true
+  },
+  {
+   "id": "spotify",
+   "name": "Spotify",
+   "url": "https://open.spotify.com/",
+   "category": "Media",
+   "description": "Music. Playback needs Widevine, see the README.",
+   "hosts": [
+    "spotify.com",
+    "accounts.google.com",
+    "google.com",
+    "facebook.com"
+   ],
+   "badge": "title",
+   "drm": true
+  },
+  {
+   "id": "netflix",
+   "name": "Netflix",
+   "url": "https://www.netflix.com/browse",
+   "category": "Media",
+   "description": "Video. Needs Widevine, see the README.",
+   "hosts": [
+    "netflix.com"
+   ],
+   "badge": "title",
+   "drm": true
+  },
+  {
+   "id": "disney",
+   "name": "Disney+",
+   "url": "https://www.disneyplus.com/",
+   "category": "Media",
+   "description": "Video. Needs Widevine, see the README.",
+   "hosts": [
+    "disneyplus.com",
+    "disney.com",
+    "bamgrid.com"
+   ],
+   "badge": "title",
+   "drm": true
+  }
+ ]
+}

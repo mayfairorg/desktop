@@ -1,0 +1,228 @@
+{
+  "name": "mayfair-desktop",
+  "productName": "Mayfair Desktop",
+  "version": "0.1.0",
+  "description": "Mayfair Cloud in its own window, with a built-in browser.",
+  "author": "The Mayfair Organization",
+  "license": "SEE LICENSE IN LICENSE.txt",
+  "private": true,
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test \"test/*.test.js\"",
+    "smoke": "node tools/smoke.js",
+    "icons": "node tools/make-icons.js",
+    "dist": "node tools/gen-notices.js && node tools/protect.js && electron-builder",
+    "dist:win": "node tools/gen-notices.js && node tools/protect.js && electron-builder --win nsis",
+    "dist:mac": "node tools/gen-notices.js && node tools/protect.js && electron-builder --mac dmg",
+    "dist:linux": "node tools/gen-notices.js && node tools/protect.js && electron-builder --linux AppImage deb",
+    "fetch-lists": "node tools/fetch-lists.js",
+    "update-rates": "node tools/update-rates.js",
+    "protect": "node tools/protect.js",
+    "notices": "node tools/gen-notices.js"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9",
+    "@ghostery/adblocker-electron": "^2.0.0",
+    "@ghostery/adblocker-electron-preload": "^2.0.0"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^25.1.8",
+    "@electron/fuses": "^1.8.0",
+    "esbuild": "^0.25.0",
+    "acorn": "^8.14.0"
+  },
+  "build": {
+    "appId": "com.mayfairmail.desktop",
+    "productName": "Mayfair Desktop",
+    "copyright": "Copyright (c) 2022-2026 The Mayfair Organization. All rights reserved.",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "build-protected/**/*",
+      "!**/*.map",
+      "!vendor/**"
+    ],
+    "asar": true,
+    "protocols": [
+      {
+        "name": "Mayfair",
+        "schemes": [
+          "mayfair"
+        ]
+      }
+    ],
+    "fileAssociations": [
+      {
+        "ext": "docx",
+        "name": "DOCX file",
+        "role": "Editor"
+      },
+      {
+        "ext": "xlsx",
+        "name": "XLSX file",
+        "role": "Editor"
+      },
+      {
+        "ext": "pptx",
+        "name": "PPTX file",
+        "role": "Editor"
+      },
+      {
+        "ext": "pdf",
+        "name": "PDF file",
+        "role": "Editor"
+      },
+      {
+        "ext": "csv",
+        "name": "CSV file",
+        "role": "Editor"
+      },
+      {
+        "ext": "md",
+        "name": "MD file",
+        "role": "Editor"
+      },
+      {
+        "ext": "txt",
+        "name": "TXT file",
+        "role": "Editor"
+      },
+      {
+        "ext": "png",
+        "name": "PNG file",
+        "role": "Editor"
+      },
+      {
+        "ext": "jpg",
+        "name": "JPG file",
+        "role": "Editor"
+      },
+      {
+        "ext": "jpeg",
+        "name": "JPEG file",
+        "role": "Editor"
+      },
+      {
+        "ext": "gif",
+        "name": "GIF file",
+        "role": "Editor"
+      },
+      {
+        "ext": "webp",
+        "name": "WEBP file",
+        "role": "Editor"
+      },
+      {
+        "ext": "svg",
+        "name": "SVG file",
+        "role": "Editor"
+      }
+    ],
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://updates.example.invalid/mayfair-desktop"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "Mayfair-Desktop-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "artifactName": "Mayfair-Desktop-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "Mayfair Desktop"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Network;Office",
+      "maintainer": "The Mayfair Organization <support@mayfairmail.com>",
+      "synopsis": "Mayfair Cloud with a built-in browser",
+      "mimeTypes": [
+        "x-scheme-handler/mayfair"
+      ],
+      "artifactName": "Mayfair-Desktop-${version}-${arch}.${ext}",
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "Mayfair Desktop"
+        }
+      }
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ]
+    },
+    "extraResources": [
+      {
+        "from": "vendor/tor/${os}-${arch}",
+        "to": "tor",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "assets/licenses",
+        "to": "licenses"
+      },
+      {
+        "from": "LICENSE.txt",
+        "to": "licenses/LICENSE.txt"
+      },
+      {
+        "from": "THIRD_PARTY_NOTICES.txt",
+        "to": "licenses/THIRD_PARTY_NOTICES.txt"
+      }
+    ],
+    "extraMetadata": {
+      "main": "build-protected/src/main/main.js"
+    },
+    "afterPack": "tools/after-pack.js"
+  }
+}

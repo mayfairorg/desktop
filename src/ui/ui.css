@@ -1,0 +1,31 @@
+/* Mayfair skin tokens (from the web shell: amber accent, Inter, 4px spacing scale, 6px radius). */
+:root{
+  --mf-bg:#0a0a0a;--mf-surface:#171716;--mf-surface2:#1f1f1d;--mf-text:#f1f1ee;--mf-mute:#a3a39d;
+  --mf-accent:#ffa800;--mf-accent-ink:#0a0a0a;--mf-danger:#ff6b5e;--mf-ok:#5ed38a;
+  --mf-hair:color-mix(in srgb,var(--mf-text) 11%,transparent);
+  --mf-hair2:color-mix(in srgb,var(--mf-text) 22%,transparent);
+  --mf-hov:color-mix(in srgb,#fff 8%,transparent);
+  --mf-sel:color-mix(in srgb,var(--mf-text) 14%,transparent);
+  --mf-s1:4px;--mf-s2:8px;--mf-s3:12px;--mf-s4:16px;--mf-s5:24px;--mf-r-sm:6px;--mf-r-md:10px;
+  --mf-fs-sm:12px;--mf-fs-md:13.5px;
+  --mf-font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){:root{
+  --mf-bg:#ecece8;--mf-surface:#ffffff;--mf-surface2:#f6f6f3;--mf-text:#0a0a0a;--mf-mute:#5b5b57;--mf-accent-ink:#0a0a0a;
+  --mf-danger:#b3261e;--mf-ok:#1b7a43;--mf-hov:color-mix(in srgb,#000 6%,transparent);color-scheme:light}}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--mf-text) 28%,transparent) transparent}
+html,body{margin:0;height:100%;background:var(--mf-bg);color:var(--mf-text);font:400 var(--mf-fs-md)/1.4 var(--mf-font);overflow:hidden;-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit}
+svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--mf-s2);min-width:32px;height:32px;padding:0 var(--mf-s2);border:0;border-radius:var(--mf-r-sm);background:transparent;cursor:pointer}
+.btn:hover:not(:disabled){background:var(--mf-hov)}
+.btn:disabled{opacity:.38;cursor:default}
+.btn.on{background:var(--mf-sel)}
+.btn.primary{background:var(--mf-accent);color:var(--mf-accent-ink);font-weight:600;padding:0 var(--mf-s4)}
+.btn.primary:hover:not(:disabled){background:color-mix(in srgb,var(--mf-accent) 88%,#fff)}
+.btn.line{border:1px solid var(--mf-hair2)}
+:focus-visible{outline:2px solid var(--mf-accent);outline-offset:1px}
+input,select{font:inherit;color:inherit}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+[hidden]{display:none!important}

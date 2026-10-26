@@ -1,0 +1,7 @@
+{
+  "base": "EUR",
+  "date": "2026-10-01",
+  "approximate": true,
+  "source": "Bundled reference table (approximate). Refresh with: node tools/update-rates.js (European Central Bank daily reference rates, free).",
+  "rates": { "EUR": 1, "USD": 1.08, "GBP": 0.85, "JPY": 163, "CHF": 0.95, "CAD": 1.47, "AUD": 1.63, "NZD": 1.78, "CNY": 7.7, "INR": 90.5, "SEK": 11.5, "NOK": 11.6, "DKK": 7.46, "PLN": 4.3, "CZK": 25.2, "HUF": 395, "TRY": 36, "BRL": 5.9, "MXN": 20.5, "ZAR": 20, "SGD": 1.44, "HKD": 8.4, "KRW": 1450, "AED": 3.97, "ILS": 4, "THB": 37 }
+}

@@ -1,0 +1,44 @@
+/* Mayfair Search start page: near-empty, one box, quiet shortcuts. */
+:root{--bg:var(--mf-bg);--boxbg:var(--mf-surface2);--boxline:var(--mf-hair2);--shadow:0 1px 2px rgba(0,0,0,.4)}
+@media (prefers-color-scheme:light){:root{--bg:#fff;--boxbg:#fff;--boxline:color-mix(in srgb,#000 22%,transparent);--shadow:0 1px 3px rgba(0,0,0,.14)}}
+html{font-size:clamp(16px,calc(10px + .5vw),24px)}
+html,body{height:100%;background:var(--bg);overflow:auto;-webkit-user-select:text;user-select:text}
+main{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1rem 14vh;gap:1.5rem}
+.wordmark{margin:0;font-size:clamp(3rem,10vw,4.75rem);font-weight:700;letter-spacing:-.035em;line-height:1;color:var(--mf-text)}
+.wordmark::after{content:"";display:block;width:2.4rem;height:.2rem;margin:.9rem auto 0;border-radius:.1rem;background:var(--mf-accent)}
+form{width:min(40rem,100%);position:relative}
+.box{background:var(--boxbg);border:1px solid var(--boxline);border-radius:1.7rem;box-shadow:var(--shadow);transition:box-shadow .12s,border-color .12s;overflow:hidden}
+.box:hover{border-color:color-mix(in srgb,var(--mf-text) 36%,transparent)}
+.box:focus-within{border-color:var(--mf-accent);box-shadow:0 0 0 1px var(--mf-accent),0 4px 18px rgba(0,0,0,.28)}
+.field-row{display:flex;align-items:center;gap:.5rem;height:3.4rem;padding:0 .6rem 0 1.1rem}
+.lead{color:var(--mf-mute);display:flex}
+.lead svg,.clear svg{width:1.25rem;height:1.25rem}
+#q{flex:1;min-width:0;height:100%;border:0;outline:none;background:transparent;font-size:1.125rem;color:var(--mf-text)}
+#q::placeholder{color:var(--mf-mute)}
+.clear{border:0;background:transparent;color:var(--mf-mute);width:2.25rem;height:2.25rem;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.clear:hover{background:var(--mf-hov);color:var(--mf-text)}
+#pop{border-top:1px solid var(--mf-hair);padding:.4rem 0 .5rem;max-height:60vh;overflow:auto}
+.answer{margin:.4rem .9rem .6rem;padding:.9rem 1.1rem;border:1px solid var(--mf-hair);border-radius:1rem;background:color-mix(in srgb,var(--mf-text) 4%,transparent)}
+.answer .big{font-size:1.9rem;font-weight:600;letter-spacing:-.01em;line-height:1.2;overflow-wrap:anywhere}
+.answer .sub{color:var(--mf-mute);font-size:.95rem;margin-top:.15rem;overflow-wrap:anywhere}
+.answer .note{color:var(--mf-mute);font-size:.8rem;margin-top:.5rem}
+.answer a,.answer button.link{font-size:.8rem}
+.opt{display:flex;align-items:center;gap:.8rem;min-height:2.75rem;padding:.35rem 1.1rem;cursor:pointer;color:var(--mf-text)}
+.opt[aria-selected=true],.opt:hover{background:var(--mf-hov)}
+.opt .ic{color:var(--mf-mute);display:flex}
+.opt .ic svg{width:1.1rem;height:1.1rem}
+.opt .tx{flex:1;min-width:0}
+.opt .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opt .s{color:var(--mf-mute);font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opt .k{color:var(--mf-mute);font-size:.8rem;flex:none}
+.engine{margin:0;color:var(--mf-mute);font-size:.85rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;justify-content:center}
+.link{border:0;background:none;color:var(--mf-mute);font:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;padding:.25rem .15rem}
+.link:hover{color:var(--mf-text)}
+#engsel{height:2rem;border:1px solid var(--mf-hair2);border-radius:.5rem;background:var(--boxbg);color:var(--mf-text);padding:0 .5rem;font:inherit}
+.quick{display:flex;flex-wrap:wrap;justify-content:center;gap:.25rem .5rem;max-width:40rem;margin-top:.25rem}
+.quick button{display:flex;flex-direction:column;align-items:center;gap:.35rem;width:5.5rem;min-height:4.25rem;padding:.6rem .25rem;border:0;border-radius:.75rem;background:transparent;color:var(--mf-mute);font:inherit;font-size:.8rem;cursor:pointer}
+.quick button:hover{background:var(--mf-hov);color:var(--mf-text)}
+.quick svg{width:1.5rem;height:1.5rem}
+@media (max-width:480px){.quick button{width:calc(33.333% - .5rem)}}
+@media (prefers-reduced-motion:reduce){.box{transition:none}}
+.sr{position:absolute;left:-9999px}

@@ -1,0 +1,151 @@
+THIRD-PARTY NOTICES
+Mayfair Desktop (c) The Mayfair Organization, all rights reserved (see LICENSE.txt).
+The parts below are not ours. They are used under their own licences, which are not changed by the Mayfair licence.
+
+==============================================================================
+Electron  38.x
+Licence: MIT
+Project: https://github.com/electron/electron
+Credit: Copyright (c) Electron contributors. Copyright (c) 2013-2020 GitHub Inc.
+The application framework (window, menus, tray, updates).
+
+Copyright (c) Electron contributors. Copyright (c) 2013-2020 GitHub Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+==============================================================================
+Chromium  bundled with Electron
+Licence: BSD-3-Clause, with parts under other open licences
+Project: https://chromium.googlesource.com/chromium/src/+/main/LICENSE
+Credit: Copyright 2015 The Chromium Authors
+The web engine. Electron ships the full list of Chromium's third-party licences as LICENSES.chromium.html next to the app; do not delete it.
+
+Copyright 2015 The Chromium Authors
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+==============================================================================
+Node.js  bundled with Electron
+Licence: MIT, with parts under other open licences
+Project: https://github.com/nodejs/node/blob/main/LICENSE
+Credit: Copyright Node.js contributors
+The JavaScript runtime inside Electron.
+
+Copyright Node.js contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+==============================================================================
+tor (the Tor daemon)  Tor Browser bundle, set at build time
+Licence: BSD-3-Clause
+Project: https://gitlab.torproject.org/tc/tor
+Credit: Copyright (c) 2001 Matej Pfajfar. Copyright (c) 2001-2004, Roger Dingledine. Copyright (c) 2004-2007, Roger Dingledine, Nick Mathewson. Copyright (c) 2007-, The Tor Project, Inc.
+Optional. Runs unmodified as a separate program for the Tor tab. Not Tor Browser, not made or endorsed by The Tor Project.
+
+Tor
+===
+Mayfair Desktop can start the open-source "tor" program (the Tor daemon) on your computer to
+route one private tab through the Tor network. It is not Tor Browser. Mayfair Desktop is not
+made, endorsed or supported by The Tor Project, Inc. "Tor" is a trademark of The Tor Project.
+
+The tor program is downloaded unmodified from the Tor Project's official packages when this
+app is built (see tools/fetch-tor.js) and is shipped as a separate program in the app's
+"tor" resource folder. Source code: https://gitlab.torproject.org/tc/tor
+
+Licence of tor (3-clause BSD):
+
+Copyright (c) 2001 Matej Pfajfar.
+Copyright (c) 2001-2004, Roger Dingledine.
+Copyright (c) 2004-2007, Roger Dingledine, Nick Mathewson.
+Copyright (c) 2007-, The Tor Project, Inc.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright notice, this list of
+    conditions and the following disclaimer.
+  * Redistributions in binary form must reproduce the above copyright notice, this list of
+    conditions and the following disclaimer in the documentation and/or other materials
+    provided with the distribution.
+  * Neither the names of the copyright owners nor the names of its contributors may be used to
+    endorse or promote products derived from this software without specific prior written
+    permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+(copied from assets/licenses/TOR-NOTICE.txt)
+
+==============================================================================
+@ghostery/adblocker, @ghostery/adblocker-electron, @ghostery/adblocker-electron-preload  2.x
+Licence: MPL-2.0
+Project: https://github.com/ghostery/adblocker
+Credit: Copyright Ghostery GmbH and contributors
+The ad and tracker blocking engine. Used unmodified; its source is at the address given. MPL-2.0 text: https://www.mozilla.org/MPL/2.0/
+
+The full text is at https://github.com/ghostery/adblocker and in the project named above.
+
+==============================================================================
+electron-updater  6.x
+Licence: MIT
+Project: https://github.com/electron-userland/electron-builder
+Credit: Copyright (c) 2015 Loopline Systems and contributors (electron-userland)
+Checks for and installs updates.
+
+Copyright (c) 2015 Loopline Systems and contributors (electron-userland)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+==============================================================================
+EasyList and EasyPrivacy  downloaded at build time and updated while the app runs
+Licence: CC BY-SA 3.0 or GPL v3 (dual)
+Project: https://easylist.to/
+Credit: The EasyList authors
+Filter lists (data, not code) used by the ad blocker.
+
+The full text is at https://easylist.to/ and in the project named above.
+
+==============================================================================
+uBlock filters (uAssets): filters, badware, privacy, quick fixes, unbreak, annoyances  downloaded at build time and updated while the app runs
+Licence: GPL v3
+Project: https://github.com/uBlockOrigin/uAssets
+Credit: Raymond Hill and contributors
+Filter lists (data, not code) used by the ad blocker.
+
+The full text is at https://github.com/uBlockOrigin/uAssets and in the project named above.
+
+==============================================================================
+Open-Meteo, Wikipedia, Free Dictionary API  online services
+Licence: Their own terms apply
+Project: https://open-meteo.com/
+Credit: Their owners
+Used only when you type weather, wiki or define. They are not part of the app.
+
+The full text is at https://open-meteo.com/ and in the project named above.
+
+==============================================================================
+Used to make the installers and not shipped inside them: electron-builder (MIT), @electron/fuses (MIT), esbuild (MIT), acorn (MIT).

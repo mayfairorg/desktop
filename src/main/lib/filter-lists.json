@@ -1,0 +1,13 @@
+{
+  "resources": "https://cdn.jsdelivr.net/gh/ghostery/adblocker@master/packages/adblocker/assets/ublock-origin/resources.txt",
+  "lists": [
+    { "id": "easylist", "name": "EasyList", "file": "easylist.txt", "url": "https://easylist.to/easylist/easylist.txt", "homepage": "https://easylist.to/", "license": "CC BY-SA 3.0 or GPL v3 (dual)", "credit": "The EasyList authors", "purpose": "Ads" },
+    { "id": "easyprivacy", "name": "EasyPrivacy", "file": "easyprivacy.txt", "url": "https://easylist.to/easylist/easyprivacy.txt", "homepage": "https://easylist.to/", "license": "CC BY-SA 3.0 or GPL v3 (dual)", "credit": "The EasyList authors", "purpose": "Trackers" },
+    { "id": "ublock-filters", "name": "uBlock filters", "file": "ublock-filters.txt", "url": "https://ublockorigin.github.io/uAssets/filters/filters.min.txt", "homepage": "https://github.com/uBlockOrigin/uAssets", "license": "GPL v3", "credit": "Raymond Hill and contributors", "purpose": "Ads, video ads, scriptlets" },
+    { "id": "ublock-badware", "name": "uBlock filters - Badware risks", "file": "ublock-badware.txt", "url": "https://ublockorigin.github.io/uAssets/filters/badware.min.txt", "homepage": "https://github.com/uBlockOrigin/uAssets", "license": "GPL v3", "credit": "Raymond Hill and contributors", "purpose": "Malicious sites" },
+    { "id": "ublock-privacy", "name": "uBlock filters - Privacy", "file": "ublock-privacy.txt", "url": "https://ublockorigin.github.io/uAssets/filters/privacy.min.txt", "homepage": "https://github.com/uBlockOrigin/uAssets", "license": "GPL v3", "credit": "Raymond Hill and contributors", "purpose": "Trackers" },
+    { "id": "ublock-quick-fixes", "name": "uBlock filters - Quick fixes", "file": "ublock-quick-fixes.txt", "url": "https://ublockorigin.github.io/uAssets/filters/quick-fixes.min.txt", "homepage": "https://github.com/uBlockOrigin/uAssets", "license": "GPL v3", "credit": "Raymond Hill and contributors", "purpose": "Fast fixes for sites that change (YouTube and others)" },
+    { "id": "ublock-unbreak", "name": "uBlock filters - Unbreak", "file": "ublock-unbreak.txt", "url": "https://ublockorigin.github.io/uAssets/filters/unbreak.min.txt", "homepage": "https://github.com/uBlockOrigin/uAssets", "license": "GPL v3", "credit": "Raymond Hill and contributors", "purpose": "Keeps sites working" },
+    { "id": "ublock-annoyances", "name": "uBlock filters - Annoyances", "file": "ublock-annoyances.txt", "url": "https://ublockorigin.github.io/uAssets/filters/annoyances.min.txt", "homepage": "https://github.com/uBlockOrigin/uAssets", "license": "GPL v3", "credit": "Raymond Hill and contributors", "purpose": "Cookie banners, pop-ups, overlays" }
+  ]
+}

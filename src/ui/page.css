@@ -1,0 +1,12 @@
+html,body{overflow:auto;-webkit-user-select:text;user-select:text}
+main{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--mf-s4);padding:var(--mf-s5) var(--mf-s4);text-align:center}
+h1{margin:0;font-size:clamp(32px,6vw,56px);font-weight:700;letter-spacing:-.02em}
+h1::after{content:"";display:block;width:48px;height:4px;margin:var(--mf-s3) auto 0;border-radius:2px;background:var(--mf-accent)}
+form{display:flex;gap:var(--mf-s2);width:min(640px,100%)}
+form input{flex:1;min-width:0;height:44px;padding:0 var(--mf-s4);border:1px solid var(--mf-hair2);border-radius:22px;background:var(--mf-surface);outline:none}
+form input:focus{border-color:var(--mf-accent)}
+form .btn{height:44px;border-radius:22px}
+.s{color:var(--mf-mute);margin:0;max-width:44ch}
+.code{font-family:var(--mf-mono,ui-monospace,monospace);font-size:var(--mf-fs-sm);color:var(--mf-mute);word-break:break-all;max-width:60ch}
+.acts{display:flex;gap:var(--mf-s2);flex-wrap:wrap;justify-content:center}
+h2{margin:0;font-size:22px}
