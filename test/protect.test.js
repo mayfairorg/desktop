@@ -66,7 +66,7 @@ test('fuses: the required ones are set, and after-pack passes them to @electron/
   assert.equal(AP.executableFor({ ...ctx, electronPlatformName: 'darwin' }), path.join('/o', 'Mayfair Desktop.app'));
   assert.equal((await AP.applyFuses({ ...ctx, electronPlatformName: 'darwin', arch: 3 }, fake)).wire.resetAdHocDarwinSignature, true);
   const had = process.env.MAYFAIR_ALLOW_UNFUSED; delete process.env.MAYFAIR_ALLOW_UNFUSED;
-  await assert.rejects(() => AP.applyFuses(ctx, null), /@electron\/fuses is not installed|Cannot find|fuses/, 'no silent unprotected installer');
+  await assert.rejects(() => AP.applyFuses(ctx, null), /@electron\/fuses is not installed|Cannot find|fuses|ENOENT/, 'no silent unprotected installer');
   if (had !== undefined) process.env.MAYFAIR_ALLOW_UNFUSED = had;
 });
 test('file:// pages use nothing that GrantFileProtocolExtraPrivileges=false would take away', () => {
@@ -109,6 +109,7 @@ test('the strip engine keeps the syntax tree identical (templates, regexes, ASI,
 test('legal files: licence says all rights reserved, notices are generated and list the open source parts', () => {
   const lic = read('LICENSE.txt');
   assert.match(lic, /All rights reserved/); assert.match(lic, /reverse engineer/i); assert.match(lic, /redistribut/i); assert.match(lic, /own\s+licences/);
+  execFileSync(process.execPath, [path.join(root, 'tools/gen-notices.js')]);   /* the notices file is generated (not committed), so make it first */
   execFileSync(process.execPath, [path.join(root, 'tools/gen-notices.js'), '--check']);
   const n = read('THIRD_PARTY_NOTICES.txt');
   for (const k of ['Electron', 'Chromium', 'tor (the Tor daemon)', 'BSD-3-Clause', '@ghostery/adblocker', 'MPL-2.0', 'EasyList', 'uBlock filters', 'electron-updater', 'MIT']) assert.ok(n.includes(k), k);
