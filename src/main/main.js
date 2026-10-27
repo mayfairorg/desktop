@@ -193,7 +193,7 @@ function boot() {
 
   app.on('activate', () => { if (br) br.showWindow(); });
   app.on('will-quit', () => { if (br) br.flushAppSessions(); });
-  app.on('before-quit', () => { if (br) { br.quitting = true; br.flushAll(); } });
+  app.on('before-quit', () => { if (br) { br.quitting = true; br.icons.stop(); br.flushAll(); } });
   app.on('window-all-closed', () => { if (br && br.quitting) app.quit(); else if (!br || !br.settings.get().tray) app.quit(); });
   // Any web contents the app did not create itself (webview, stray windows) is refused.
   app.on('web-contents-created', (_e, wc) => {

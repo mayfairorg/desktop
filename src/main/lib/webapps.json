@@ -1,6 +1,710 @@
 {
- "version": 1,
+ "version": 2,
  "apps": [
+  {
+   "id": "claude",
+   "name": "Claude",
+   "url": "https://claude.ai/",
+   "category": "AI",
+   "description": "Chat with Anthropic's AI assistant.",
+   "hosts": [
+    "claude.ai"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "anthropic",
+    "ai",
+    "assistant",
+    "chatbot"
+   ]
+  },
+  {
+   "id": "chatgpt",
+   "name": "ChatGPT",
+   "url": "https://chatgpt.com/",
+   "category": "AI",
+   "description": "AI assistant.",
+   "hosts": [
+    "chatgpt.com",
+    "openai.com",
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "openai",
+    "gpt",
+    "chat",
+    "gpt",
+    "ai",
+    "chatbot"
+   ]
+  },
+  {
+   "id": "gemini",
+   "name": "Gemini",
+   "url": "https://gemini.google.com/",
+   "category": "AI",
+   "description": "Google's AI assistant.",
+   "hosts": [
+    "google.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "google",
+    "bard",
+    "ai",
+    "chatbot"
+   ]
+  },
+  {
+   "id": "perplexity",
+   "name": "Perplexity",
+   "url": "https://www.perplexity.ai/",
+   "category": "AI",
+   "description": "Answers with sources, powered by AI search.",
+   "hosts": [
+    "perplexity.ai"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "ai",
+    "search",
+    "pplx"
+   ]
+  },
+  {
+   "id": "copilot",
+   "name": "Microsoft Copilot",
+   "url": "https://copilot.microsoft.com/",
+   "category": "AI",
+   "description": "Microsoft's AI companion.",
+   "hosts": [
+    "microsoft.com"
+   ],
+   "authHosts": [
+    "login.microsoftonline.com",
+    "login.live.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "bing",
+    "chat",
+    "microsoft",
+    "ai"
+   ]
+  },
+  {
+   "id": "grok",
+   "name": "Grok",
+   "url": "https://grok.com/",
+   "category": "AI",
+   "description": "The xAI assistant.",
+   "hosts": [
+    "grok.com",
+    "x.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "xai",
+    "elon",
+    "ai",
+    "chatbot"
+   ]
+  },
+  {
+   "id": "mistral",
+   "name": "Le Chat",
+   "url": "https://chat.mistral.ai/",
+   "category": "AI",
+   "description": "Mistral AI's assistant.",
+   "hosts": [
+    "mistral.ai"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "mistral",
+    "le",
+    "chat",
+    "ai"
+   ]
+  },
+  {
+   "id": "deepseek",
+   "name": "DeepSeek",
+   "url": "https://chat.deepseek.com/",
+   "category": "AI",
+   "description": "Chat with DeepSeek's models.",
+   "hosts": [
+    "deepseek.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "deep",
+    "seek",
+    "ai",
+    "chatbot"
+   ]
+  },
+  {
+   "id": "metaai",
+   "name": "Meta AI",
+   "url": "https://www.meta.ai/",
+   "category": "AI",
+   "description": "Meta's AI assistant.",
+   "hosts": [
+    "meta.ai",
+    "facebook.com",
+    "instagram.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "meta",
+    "llama",
+    "facebook",
+    "ai"
+   ]
+  },
+  {
+   "id": "poe",
+   "name": "Poe",
+   "url": "https://poe.com/",
+   "category": "AI",
+   "description": "Talk to many AI bots in one place.",
+   "hosts": [
+    "poe.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "quora",
+    "ai",
+    "bots"
+   ]
+  },
+  {
+   "id": "notebooklm",
+   "name": "NotebookLM",
+   "url": "https://notebooklm.google.com/",
+   "category": "AI",
+   "description": "Research and notes grounded in your sources.",
+   "hosts": [
+    "google.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "google",
+    "notebook",
+    "lm",
+    "ai"
+   ]
+  },
+  {
+   "id": "huggingchat",
+   "name": "HuggingChat",
+   "url": "https://huggingface.co/chat/",
+   "category": "AI",
+   "description": "Open source AI chat.",
+   "hosts": [
+    "huggingface.co"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "hugging",
+    "face",
+    "open",
+    "source",
+    "ai"
+   ]
+  },
+  {
+   "id": "character",
+   "name": "Character.AI",
+   "url": "https://character.ai/",
+   "category": "AI",
+   "description": "Chat with AI characters.",
+   "hosts": [
+    "character.ai"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "characterai",
+    "roleplay",
+    "ai"
+   ]
+  },
+  {
+   "id": "midjourney",
+   "name": "Midjourney",
+   "url": "https://www.midjourney.com/",
+   "category": "AI",
+   "description": "AI image generation.",
+   "hosts": [
+    "midjourney.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "mj",
+    "image",
+    "art",
+    "ai"
+   ]
+  },
+  {
+   "id": "suno",
+   "name": "Suno",
+   "url": "https://suno.com/",
+   "category": "AI",
+   "description": "Make songs from a text prompt.",
+   "hosts": [
+    "suno.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "ai",
+    "music",
+    "songs"
+   ]
+  },
+  {
+   "id": "elevenlabs",
+   "name": "ElevenLabs",
+   "url": "https://elevenlabs.io/",
+   "category": "AI",
+   "description": "Realistic AI voices and speech.",
+   "hosts": [
+    "elevenlabs.io"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "eleven",
+    "labs",
+    "voice",
+    "tts",
+    "ai"
+   ]
+  },
+  {
+   "id": "runway",
+   "name": "Runway",
+   "url": "https://runwayml.com/",
+   "category": "AI",
+   "description": "AI video and creative tools.",
+   "hosts": [
+    "runwayml.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "runwayml",
+    "video",
+    "ai"
+   ]
+  },
+  {
+   "id": "youcom",
+   "name": "You.com",
+   "url": "https://you.com/",
+   "category": "AI",
+   "description": "AI search and assistant.",
+   "hosts": [
+    "you.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "you",
+    "search",
+    "ai"
+   ]
+  },
+  {
+   "id": "sora",
+   "name": "Sora",
+   "url": "https://sora.com/",
+   "category": "AI",
+   "description": "AI video from OpenAI.",
+   "hosts": [
+    "sora.com",
+    "openai.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "openai",
+    "video",
+    "ai"
+   ]
+  },
+  {
+   "id": "linkedin",
+   "name": "LinkedIn",
+   "url": "https://www.linkedin.com/feed/",
+   "category": "Social",
+   "description": "Professional network.",
+   "hosts": [
+    "linkedin.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "jobs",
+    "network"
+   ]
+  },
+  {
+   "id": "facebook",
+   "name": "Facebook",
+   "url": "https://www.facebook.com/",
+   "category": "Social",
+   "description": "Social network.",
+   "hosts": [
+    "facebook.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "fb",
+    "meta"
+   ]
+  },
+  {
+   "id": "instagram",
+   "name": "Instagram",
+   "url": "https://www.instagram.com/",
+   "category": "Social",
+   "description": "Photos and reels.",
+   "hosts": [
+    "instagram.com",
+    "facebook.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "insta",
+    "ig",
+    "meta",
+    "photos"
+   ]
+  },
+  {
+   "id": "x",
+   "name": "X",
+   "url": "https://x.com/",
+   "category": "Social",
+   "description": "Posts and news.",
+   "hosts": [
+    "x.com",
+    "twitter.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "twitter",
+    "tweet"
+   ]
+  },
+  {
+   "id": "tiktok",
+   "name": "TikTok",
+   "url": "https://www.tiktok.com/",
+   "category": "Social",
+   "description": "Short videos.",
+   "hosts": [
+    "tiktok.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "tik",
+    "tok",
+    "short",
+    "videos"
+   ]
+  },
+  {
+   "id": "reddit",
+   "name": "Reddit",
+   "url": "https://www.reddit.com/",
+   "category": "Social",
+   "description": "Communities.",
+   "hosts": [
+    "reddit.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "subreddit",
+    "forums"
+   ]
+  },
+  {
+   "id": "pinterest",
+   "name": "Pinterest",
+   "url": "https://www.pinterest.com/",
+   "category": "Social",
+   "description": "Ideas and boards.",
+   "hosts": [
+    "pinterest.com",
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "pins",
+    "boards"
+   ]
+  },
+  {
+   "id": "snapchat",
+   "name": "Snapchat",
+   "url": "https://web.snapchat.com/",
+   "category": "Social",
+   "description": "Snaps, chat and stories.",
+   "hosts": [
+    "snapchat.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "snap",
+    "snapchat.com"
+   ]
+  },
+  {
+   "id": "threads",
+   "name": "Threads",
+   "url": "https://www.threads.com/",
+   "category": "Social",
+   "description": "Text conversations from the Instagram community.",
+   "hosts": [
+    "threads.com",
+    "threads.net",
+    "instagram.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "meta",
+    "twitter",
+    "alternative"
+   ]
+  },
+  {
+   "id": "bluesky",
+   "name": "Bluesky",
+   "url": "https://bsky.app/",
+   "category": "Social",
+   "description": "A social network you can shape.",
+   "hosts": [
+    "bsky.app"
+   ],
+   "badge": "title",
+   "keywords": [
+    "bsky",
+    "atproto",
+    "twitter",
+    "alternative"
+   ]
+  },
+  {
+   "id": "mastodon",
+   "name": "Mastodon",
+   "url": "https://mastodon.social/",
+   "category": "Social",
+   "description": "Decentralised social network.",
+   "hosts": [
+    "mastodon.social"
+   ],
+   "badge": "title",
+   "keywords": [
+    "fediverse",
+    "toot",
+    "twitter",
+    "alternative"
+   ]
+  },
+  {
+   "id": "tumblr",
+   "name": "Tumblr",
+   "url": "https://www.tumblr.com/",
+   "category": "Social",
+   "description": "Blogs, art and fandoms.",
+   "hosts": [
+    "tumblr.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "blog"
+   ]
+  },
+  {
+   "id": "quora",
+   "name": "Quora",
+   "url": "https://www.quora.com/",
+   "category": "Social",
+   "description": "Questions and answers from people.",
+   "hosts": [
+    "quora.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "q&a"
+   ]
+  },
+  {
+   "id": "medium",
+   "name": "Medium",
+   "url": "https://medium.com/",
+   "category": "Social",
+   "description": "Stories and ideas from writers.",
+   "hosts": [
+    "medium.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "blog",
+    "articles"
+   ]
+  },
+  {
+   "id": "substack",
+   "name": "Substack",
+   "url": "https://substack.com/",
+   "category": "Social",
+   "description": "Newsletters from writers you follow.",
+   "hosts": [
+    "substack.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "newsletter",
+    "blog"
+   ]
+  },
+  {
+   "id": "goodreads",
+   "name": "Goodreads",
+   "url": "https://www.goodreads.com/",
+   "category": "Social",
+   "description": "Track and share the books you read.",
+   "hosts": [
+    "goodreads.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "books",
+    "reading"
+   ]
+  },
+  {
+   "id": "letterboxd",
+   "name": "Letterboxd",
+   "url": "https://letterboxd.com/",
+   "category": "Social",
+   "description": "Log and review films.",
+   "hosts": [
+    "letterboxd.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "movies",
+    "film",
+    "diary"
+   ]
+  },
+  {
+   "id": "strava",
+   "name": "Strava",
+   "url": "https://www.strava.com/",
+   "category": "Social",
+   "description": "Track runs and rides with friends.",
+   "hosts": [
+    "strava.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "running",
+    "cycling",
+    "fitness"
+   ]
+  },
+  {
+   "id": "patreon",
+   "name": "Patreon",
+   "url": "https://www.patreon.com/",
+   "category": "Social",
+   "description": "Support the creators you follow.",
+   "hosts": [
+    "patreon.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "creators",
+    "membership"
+   ]
+  },
+  {
+   "id": "indeed",
+   "name": "Indeed",
+   "url": "https://www.indeed.com/",
+   "category": "Social",
+   "description": "Search jobs.",
+   "hosts": [
+    "indeed.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "jobs",
+    "careers",
+    "work"
+   ]
+  },
   {
    "id": "whatsapp",
    "name": "WhatsApp Web",
@@ -11,7 +715,12 @@
     "whatsapp.com",
     "whatsapp.net"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "wa",
+    "whats",
+    "app"
+   ]
   },
   {
    "id": "messenger",
@@ -23,7 +732,12 @@
     "messenger.com",
     "facebook.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "facebook",
+    "chat",
+    "fb"
+   ]
   },
   {
    "id": "telegram",
@@ -34,7 +748,10 @@
    "hosts": [
     "telegram.org"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "tg"
+   ]
   },
   {
    "id": "discord",
@@ -45,24 +762,33 @@
    "hosts": [
     "discord.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "voice",
+    "chat",
+    "gaming"
+   ]
   },
   {
    "id": "slack",
    "name": "Slack",
    "url": "https://app.slack.com/client",
-   "category": "Work",
+   "category": "Chat",
    "description": "Team chat.",
    "hosts": [
     "slack.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "team",
+    "chat"
+   ]
   },
   {
    "id": "teams",
    "name": "Microsoft Teams",
    "url": "https://teams.microsoft.com/",
-   "category": "Work",
+   "category": "Chat",
    "description": "Chat and meetings.",
    "hosts": [
     "login.microsoftonline.com",
@@ -73,30 +799,507 @@
     "microsoftonline.com",
     "teams.microsoft.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "microsoft",
+    "teams",
+    "msteams"
+   ]
   },
   {
    "id": "meet",
    "name": "Google Meet",
    "url": "https://meet.google.com/",
-   "category": "Work",
+   "category": "Chat",
    "description": "Video meetings.",
    "hosts": [
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "google",
+    "meet",
+    "video",
+    "calls"
+   ]
   },
   {
    "id": "zoom",
    "name": "Zoom",
    "url": "https://app.zoom.us/wc",
-   "category": "Work",
+   "category": "Chat",
    "description": "Meetings in the browser.",
    "hosts": [
     "zoom.us"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "video",
+    "calls",
+    "meetings"
+   ]
+  },
+  {
+   "id": "googlechat",
+   "name": "Google Chat",
+   "url": "https://chat.google.com/",
+   "category": "Chat",
+   "description": "Messages and spaces in Google Workspace.",
+   "hosts": [
+    "google.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "hangouts",
+    "gchat"
+   ]
+  },
+  {
+   "id": "webex",
+   "name": "Webex",
+   "url": "https://web.webex.com/",
+   "category": "Chat",
+   "description": "Meetings and calling from Cisco.",
+   "hosts": [
+    "webex.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "cisco",
+    "meetings"
+   ]
+  },
+  {
+   "id": "gmessages",
+   "name": "Messages for web",
+   "url": "https://messages.google.com/web/",
+   "category": "Chat",
+   "description": "Text from your computer with your Android phone.",
+   "hosts": [
+    "google.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "sms",
+    "texts",
+    "android"
+   ]
+  },
+  {
+   "id": "youtube",
+   "name": "YouTube",
+   "url": "https://www.youtube.com/",
+   "category": "Media",
+   "description": "Videos.",
+   "hosts": [
+    "youtube.com",
+    "accounts.google.com",
+    "google.com"
+   ],
+   "badge": "title",
+   "adblock": true,
+   "keywords": [
+    "yt",
+    "videos"
+   ]
+  },
+  {
+   "id": "twitch",
+   "name": "Twitch",
+   "url": "https://www.twitch.tv/",
+   "category": "Media",
+   "description": "Live streams.",
+   "hosts": [
+    "twitch.tv"
+   ],
+   "badge": "title",
+   "adblock": true,
+   "keywords": [
+    "streaming",
+    "gaming",
+    "streamers"
+   ]
+  },
+  {
+   "id": "spotify",
+   "name": "Spotify",
+   "url": "https://open.spotify.com/",
+   "category": "Media",
+   "description": "Music. Playback needs Widevine, see the README.",
+   "hosts": [
+    "spotify.com",
+    "accounts.google.com",
+    "google.com",
+    "facebook.com"
+   ],
+   "badge": "title",
+   "drm": true,
+   "keywords": [
+    "music",
+    "podcasts"
+   ]
+  },
+  {
+   "id": "netflix",
+   "name": "Netflix",
+   "url": "https://www.netflix.com/browse",
+   "category": "Media",
+   "description": "Video. Needs Widevine, see the README.",
+   "hosts": [
+    "netflix.com"
+   ],
+   "badge": "title",
+   "drm": true,
+   "keywords": [
+    "tv",
+    "films",
+    "streaming"
+   ]
+  },
+  {
+   "id": "disney",
+   "name": "Disney+",
+   "url": "https://www.disneyplus.com/",
+   "category": "Media",
+   "description": "Video. Needs Widevine, see the README.",
+   "hosts": [
+    "disneyplus.com",
+    "disney.com",
+    "bamgrid.com"
+   ],
+   "badge": "title",
+   "drm": true,
+   "keywords": [
+    "disney+",
+    "disney",
+    "plus",
+    "tv",
+    "films"
+   ]
+  },
+  {
+   "id": "ytmusic",
+   "name": "YouTube Music",
+   "url": "https://music.youtube.com/",
+   "category": "Media",
+   "description": "Songs, albums and playlists.",
+   "hosts": [
+    "youtube.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "yt",
+    "music",
+    "youtube"
+   ]
+  },
+  {
+   "id": "primevideo",
+   "name": "Prime Video",
+   "url": "https://www.primevideo.com/",
+   "category": "Media",
+   "description": "Films, series and originals from Amazon.",
+   "hosts": [
+    "primevideo.com",
+    "amazon.com",
+    "amazon.co.uk"
+   ],
+   "badge": "none",
+   "drm": true,
+   "keywords": [
+    "amazon",
+    "prime",
+    "tv"
+   ]
+  },
+  {
+   "id": "appletv",
+   "name": "Apple TV",
+   "url": "https://tv.apple.com/",
+   "category": "Media",
+   "description": "Apple originals, films and series.",
+   "hosts": [
+    "apple.com"
+   ],
+   "badge": "none",
+   "drm": true,
+   "keywords": [
+    "apple",
+    "tv+"
+   ]
+  },
+  {
+   "id": "applemusic",
+   "name": "Apple Music",
+   "url": "https://music.apple.com/",
+   "category": "Media",
+   "description": "Songs, playlists and radio from Apple.",
+   "hosts": [
+    "apple.com"
+   ],
+   "badge": "none",
+   "drm": true,
+   "keywords": [
+    "itunes"
+   ]
+  },
+  {
+   "id": "soundcloud",
+   "name": "SoundCloud",
+   "url": "https://soundcloud.com/",
+   "category": "Media",
+   "description": "Music and audio from independent artists.",
+   "hosts": [
+    "soundcloud.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "music"
+   ]
+  },
+  {
+   "id": "deezer",
+   "name": "Deezer",
+   "url": "https://www.deezer.com/",
+   "category": "Media",
+   "description": "Music streaming.",
+   "hosts": [
+    "deezer.com",
+    "facebook.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "music"
+   ]
+  },
+  {
+   "id": "bbciplayer",
+   "name": "BBC iPlayer",
+   "url": "https://www.bbc.co.uk/iplayer",
+   "category": "Media",
+   "description": "Watch BBC TV live and on demand.",
+   "hosts": [
+    "bbc.co.uk",
+    "bbc.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "bbc",
+    "tv",
+    "iplayer"
+   ]
+  },
+  {
+   "id": "bbcsounds",
+   "name": "BBC Sounds",
+   "url": "https://www.bbc.co.uk/sounds",
+   "category": "Media",
+   "description": "BBC radio, music and podcasts.",
+   "hosts": [
+    "bbc.co.uk",
+    "bbc.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "bbc",
+    "radio",
+    "podcasts"
+   ]
+  },
+  {
+   "id": "itvx",
+   "name": "ITVX",
+   "url": "https://www.itv.com/watch",
+   "category": "Media",
+   "description": "Watch ITV live and on demand.",
+   "hosts": [
+    "itv.com"
+   ],
+   "badge": "none",
+   "drm": true,
+   "keywords": [
+    "itv",
+    "player",
+    "tv"
+   ]
+  },
+  {
+   "id": "channel4",
+   "name": "Channel 4",
+   "url": "https://www.channel4.com/",
+   "category": "Media",
+   "description": "Watch Channel 4 shows on demand.",
+   "hosts": [
+    "channel4.com"
+   ],
+   "badge": "none",
+   "drm": true,
+   "keywords": [
+    "all4",
+    "c4",
+    "tv"
+   ]
+  },
+  {
+   "id": "my5",
+   "name": "My5",
+   "url": "https://www.channel5.com/",
+   "category": "Media",
+   "description": "Channel 5 shows live and on demand.",
+   "hosts": [
+    "channel5.com"
+   ],
+   "badge": "none",
+   "drm": true,
+   "keywords": [
+    "channel",
+    "5",
+    "tv"
+   ]
+  },
+  {
+   "id": "paramount",
+   "name": "Paramount+",
+   "url": "https://www.paramountplus.com/",
+   "category": "Media",
+   "description": "Films, series and live TV.",
+   "hosts": [
+    "paramountplus.com"
+   ],
+   "badge": "none",
+   "drm": true,
+   "keywords": [
+    "paramount",
+    "plus"
+   ]
+  },
+  {
+   "id": "hulu",
+   "name": "Hulu",
+   "url": "https://www.hulu.com/",
+   "category": "Media",
+   "description": "Streaming TV and films.",
+   "hosts": [
+    "hulu.com"
+   ],
+   "badge": "none",
+   "drm": true,
+   "keywords": [
+    "tv"
+   ]
+  },
+  {
+   "id": "crunchyroll",
+   "name": "Crunchyroll",
+   "url": "https://www.crunchyroll.com/",
+   "category": "Media",
+   "description": "Anime streaming.",
+   "hosts": [
+    "crunchyroll.com"
+   ],
+   "badge": "none",
+   "drm": true,
+   "keywords": [
+    "anime",
+    "manga"
+   ]
+  },
+  {
+   "id": "plex",
+   "name": "Plex",
+   "url": "https://app.plex.tv/",
+   "category": "Media",
+   "description": "Your media library and free TV.",
+   "hosts": [
+    "plex.tv"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "media",
+    "server"
+   ]
+  },
+  {
+   "id": "vimeo",
+   "name": "Vimeo",
+   "url": "https://vimeo.com/",
+   "category": "Media",
+   "description": "Videos from creators.",
+   "hosts": [
+    "vimeo.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "video"
+   ]
+  },
+  {
+   "id": "bandcamp",
+   "name": "Bandcamp",
+   "url": "https://bandcamp.com/",
+   "category": "Media",
+   "description": "Buy and listen to music from artists.",
+   "hosts": [
+    "bandcamp.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "music",
+    "indie"
+   ]
+  },
+  {
+   "id": "audible",
+   "name": "Audible",
+   "url": "https://www.audible.com/",
+   "category": "Media",
+   "description": "Audiobooks and podcasts.",
+   "hosts": [
+    "audible.com",
+    "amazon.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "audiobooks",
+    "books"
+   ]
+  },
+  {
+   "id": "imdb",
+   "name": "IMDb",
+   "url": "https://www.imdb.com/",
+   "category": "Media",
+   "description": "Films, TV and the people who make them.",
+   "hosts": [
+    "imdb.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "movies",
+    "ratings"
+   ]
   },
   {
    "id": "gmail",
@@ -108,7 +1311,12 @@
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "google",
+    "mail",
+    "email"
+   ]
   },
   {
    "id": "outlook",
@@ -124,67 +1332,342 @@
     "office.com",
     "microsoftonline.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "microsoft",
+    "mail",
+    "email",
+    "hotmail"
+   ]
+  },
+  {
+   "id": "protonmail",
+   "name": "Proton Mail",
+   "url": "https://mail.proton.me/",
+   "category": "Mail",
+   "description": "Private, encrypted email.",
+   "hosts": [
+    "proton.me"
+   ],
+   "badge": "title",
+   "keywords": [
+    "proton",
+    "email",
+    "encrypted"
+   ]
+  },
+  {
+   "id": "yahoomail",
+   "name": "Yahoo Mail",
+   "url": "https://mail.yahoo.com/",
+   "category": "Mail",
+   "description": "Email from Yahoo.",
+   "hosts": [
+    "yahoo.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "yahoo",
+    "email"
+   ]
+  },
+  {
+   "id": "icloudmail",
+   "name": "iCloud Mail",
+   "url": "https://www.icloud.com/mail",
+   "category": "Mail",
+   "description": "Email from your Apple account.",
+   "hosts": [
+    "icloud.com",
+    "apple.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "apple",
+    "email",
+    "icloud"
+   ]
+  },
+  {
+   "id": "fastmail",
+   "name": "Fastmail",
+   "url": "https://app.fastmail.com/",
+   "category": "Mail",
+   "description": "Private email, calendar and contacts.",
+   "hosts": [
+    "fastmail.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "email"
+   ]
   },
   {
    "id": "gdrive",
    "name": "Google Drive",
    "url": "https://drive.google.com/",
-   "category": "Files",
+   "category": "Office",
    "description": "Google file storage.",
    "hosts": [
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "google",
+    "drive",
+    "files"
+   ]
   },
   {
    "id": "gdocs",
    "name": "Google Docs",
    "url": "https://docs.google.com/document/",
-   "category": "Files",
+   "category": "Office",
    "description": "Documents.",
    "hosts": [
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "google",
+    "docs",
+    "documents",
+    "word"
+   ]
   },
   {
    "id": "gsheets",
    "name": "Google Sheets",
    "url": "https://docs.google.com/spreadsheets/",
-   "category": "Files",
+   "category": "Office",
    "description": "Spreadsheets.",
    "hosts": [
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "google",
+    "sheets",
+    "spreadsheets",
+    "excel"
+   ]
   },
   {
    "id": "gcal",
    "name": "Google Calendar",
    "url": "https://calendar.google.com/",
-   "category": "Work",
+   "category": "Office",
    "description": "Calendar.",
    "hosts": [
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "google",
+    "calendar"
+   ]
   },
   {
-   "id": "gmaps",
-   "name": "Google Maps",
-   "url": "https://www.google.com/maps",
-   "category": "Tools",
-   "description": "Maps and directions.",
+   "id": "gslides",
+   "name": "Google Slides",
+   "url": "https://docs.google.com/presentation/",
+   "category": "Office",
+   "description": "Make and present slides.",
    "hosts": [
-    "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "google",
+    "slides",
+    "presentation",
+    "powerpoint"
+   ]
+  },
+  {
+   "id": "gforms",
+   "name": "Google Forms",
+   "url": "https://docs.google.com/forms/",
+   "category": "Office",
+   "description": "Surveys and quizzes.",
+   "hosts": [
+    "google.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "google",
+    "forms",
+    "survey"
+   ]
+  },
+  {
+   "id": "gphotos",
+   "name": "Google Photos",
+   "url": "https://photos.google.com/",
+   "category": "Office",
+   "description": "Your photos and videos, backed up.",
+   "hosts": [
+    "google.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "google",
+    "photos",
+    "pictures"
+   ]
+  },
+  {
+   "id": "gkeep",
+   "name": "Google Keep",
+   "url": "https://keep.google.com/",
+   "category": "Office",
+   "description": "Quick notes and lists.",
+   "hosts": [
+    "google.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "google",
+    "keep",
+    "notes"
+   ]
+  },
+  {
+   "id": "onedrive",
+   "name": "OneDrive",
+   "url": "https://onedrive.live.com/",
+   "category": "Office",
+   "description": "Your files in your Microsoft account.",
+   "hosts": [
+    "live.com"
+   ],
+   "authHosts": [
+    "login.microsoftonline.com",
+    "login.live.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "microsoft",
+    "onedrive",
+    "files"
+   ]
+  },
+  {
+   "id": "word",
+   "name": "Word",
+   "url": "https://www.office.com/launch/word",
+   "category": "Office",
+   "description": "Microsoft Word online.",
+   "hosts": [
+    "office.com"
+   ],
+   "authHosts": [
+    "login.microsoftonline.com",
+    "login.live.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "microsoft",
+    "word",
+    "docs",
+    "documents"
+   ]
+  },
+  {
+   "id": "excel",
+   "name": "Excel",
+   "url": "https://www.office.com/launch/excel",
+   "category": "Office",
+   "description": "Microsoft Excel online.",
+   "hosts": [
+    "office.com"
+   ],
+   "authHosts": [
+    "login.microsoftonline.com",
+    "login.live.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "microsoft",
+    "excel",
+    "spreadsheets"
+   ]
+  },
+  {
+   "id": "powerpoint",
+   "name": "PowerPoint",
+   "url": "https://www.office.com/launch/powerpoint",
+   "category": "Office",
+   "description": "Microsoft PowerPoint online.",
+   "hosts": [
+    "office.com"
+   ],
+   "authHosts": [
+    "login.microsoftonline.com",
+    "login.live.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "microsoft",
+    "powerpoint",
+    "slides",
+    "ppt"
+   ]
+  },
+  {
+   "id": "onenote",
+   "name": "OneNote",
+   "url": "https://www.onenote.com/notebooks",
+   "category": "Office",
+   "description": "Microsoft notebooks.",
+   "hosts": [
+    "onenote.com"
+   ],
+   "authHosts": [
+    "login.microsoftonline.com",
+    "login.live.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "microsoft",
+    "onenote",
+    "notes"
+   ]
+  },
+  {
+   "id": "m365",
+   "name": "Microsoft 365",
+   "url": "https://www.microsoft365.com/",
+   "category": "Office",
+   "description": "All your Microsoft 365 apps.",
+   "hosts": [
+    "microsoft365.com"
+   ],
+   "authHosts": [
+    "login.microsoftonline.com",
+    "login.live.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "office",
+    "microsoft365"
+   ]
   },
   {
    "id": "dropbox",
@@ -195,7 +1678,94 @@
    "hosts": [
     "dropbox.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "files",
+    "cloud",
+    "storage"
+   ]
+  },
+  {
+   "id": "box",
+   "name": "Box",
+   "url": "https://app.box.com/",
+   "category": "Files",
+   "description": "Secure file sharing and content.",
+   "hosts": [
+    "box.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "files",
+    "cloud",
+    "storage"
+   ]
+  },
+  {
+   "id": "mega",
+   "name": "MEGA",
+   "url": "https://mega.nz/",
+   "category": "Files",
+   "description": "Encrypted cloud storage.",
+   "hosts": [
+    "mega.nz"
+   ],
+   "badge": "title",
+   "keywords": [
+    "files",
+    "cloud",
+    "storage"
+   ]
+  },
+  {
+   "id": "protondrive",
+   "name": "Proton Drive",
+   "url": "https://drive.proton.me/",
+   "category": "Files",
+   "description": "Encrypted cloud storage.",
+   "hosts": [
+    "proton.me"
+   ],
+   "badge": "title",
+   "keywords": [
+    "proton",
+    "files",
+    "cloud",
+    "storage"
+   ]
+  },
+  {
+   "id": "icloud",
+   "name": "iCloud",
+   "url": "https://www.icloud.com/",
+   "category": "Files",
+   "description": "Apple's cloud: photos, drive and notes.",
+   "hosts": [
+    "icloud.com",
+    "apple.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "apple",
+    "files",
+    "photos"
+   ]
+  },
+  {
+   "id": "wetransfer",
+   "name": "WeTransfer",
+   "url": "https://wetransfer.com/",
+   "category": "Files",
+   "description": "Send big files.",
+   "hosts": [
+    "wetransfer.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "send",
+    "files",
+    "transfer"
+   ]
   },
   {
    "id": "notion",
@@ -208,7 +1778,12 @@
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "notes",
+    "wiki",
+    "docs"
+   ]
   },
   {
    "id": "trello",
@@ -220,7 +1795,11 @@
     "trello.com",
     "atlassian.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "kanban",
+    "boards"
+   ]
   },
   {
    "id": "asana",
@@ -233,7 +1812,11 @@
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "projects",
+    "tasks"
+   ]
   },
   {
    "id": "miro",
@@ -246,7 +1829,206 @@
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "whiteboard"
+   ]
+  },
+  {
+   "id": "todoist",
+   "name": "Todoist",
+   "url": "https://app.todoist.com/",
+   "category": "Work",
+   "description": "To-do lists and tasks.",
+   "hosts": [
+    "todoist.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "tasks",
+    "todo"
+   ]
+  },
+  {
+   "id": "airtable",
+   "name": "Airtable",
+   "url": "https://airtable.com/",
+   "category": "Work",
+   "description": "Databases that work like spreadsheets.",
+   "hosts": [
+    "airtable.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "database",
+    "spreadsheet"
+   ]
+  },
+  {
+   "id": "evernote",
+   "name": "Evernote",
+   "url": "https://www.evernote.com/",
+   "category": "Work",
+   "description": "Notes and web clippings.",
+   "hosts": [
+    "evernote.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "notes"
+   ]
+  },
+  {
+   "id": "clickup",
+   "name": "ClickUp",
+   "url": "https://app.clickup.com/",
+   "category": "Work",
+   "description": "Tasks, docs and goals in one place.",
+   "hosts": [
+    "clickup.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "projects",
+    "tasks"
+   ]
+  },
+  {
+   "id": "linear",
+   "name": "Linear",
+   "url": "https://linear.app/",
+   "category": "Work",
+   "description": "Issue tracking for software teams.",
+   "hosts": [
+    "linear.app"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "issues",
+    "tracker"
+   ]
+  },
+  {
+   "id": "monday",
+   "name": "monday.com",
+   "url": "https://monday.com/",
+   "category": "Work",
+   "description": "Work management for teams.",
+   "hosts": [
+    "monday.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "mondaydotcom",
+    "projects"
+   ]
+  },
+  {
+   "id": "calendly",
+   "name": "Calendly",
+   "url": "https://calendly.com/",
+   "category": "Work",
+   "description": "Schedule meetings without the back and forth.",
+   "hosts": [
+    "calendly.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "booking",
+    "scheduling"
+   ]
+  },
+  {
+   "id": "typeform",
+   "name": "Typeform",
+   "url": "https://www.typeform.com/",
+   "category": "Work",
+   "description": "Forms and surveys.",
+   "hosts": [
+    "typeform.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "forms",
+    "survey"
+   ]
+  },
+  {
+   "id": "zapier",
+   "name": "Zapier",
+   "url": "https://zapier.com/app/",
+   "category": "Work",
+   "description": "Connect your apps and automate.",
+   "hosts": [
+    "zapier.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "automation"
+   ]
+  },
+  {
+   "id": "hubspot",
+   "name": "HubSpot",
+   "url": "https://app.hubspot.com/",
+   "category": "Work",
+   "description": "CRM, marketing and sales.",
+   "hosts": [
+    "hubspot.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "crm"
+   ]
+  },
+  {
+   "id": "feedly",
+   "name": "Feedly",
+   "url": "https://feedly.com/",
+   "category": "Work",
+   "description": "Follow news and blogs in one feed.",
+   "hosts": [
+    "feedly.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "title",
+   "keywords": [
+    "rss",
+    "reader",
+    "news"
+   ]
   },
   {
    "id": "canva",
@@ -259,7 +2041,11 @@
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "design",
+    "graphics"
+   ]
   },
   {
    "id": "figma",
@@ -272,180 +2058,2400 @@
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "design",
+    "ui",
+    "prototypes"
+   ]
   },
   {
-   "id": "chatgpt",
-   "name": "ChatGPT",
-   "url": "https://chatgpt.com/",
-   "category": "AI",
-   "description": "AI assistant.",
+   "id": "adobeexpress",
+   "name": "Adobe Express",
+   "url": "https://new.express.adobe.com/",
+   "category": "Design",
+   "description": "Quick graphics, video and flyers.",
    "hosts": [
-    "chatgpt.com",
-    "openai.com",
-    "accounts.google.com",
+    "adobe.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "adobe",
+    "design"
+   ]
+  },
+  {
+   "id": "lucid",
+   "name": "Lucid",
+   "url": "https://lucid.app/",
+   "category": "Design",
+   "description": "Diagrams and flowcharts.",
+   "hosts": [
+    "lucid.app"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "lucidchart",
+    "lucidspark",
+    "diagrams"
+   ]
+  },
+  {
+   "id": "drawio",
+   "name": "draw.io",
+   "url": "https://app.diagrams.net/",
+   "category": "Design",
+   "description": "Free diagrams and flowcharts.",
+   "hosts": [
+    "diagrams.net"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "diagrams.net",
+    "diagrams",
+    "flowchart"
+   ]
+  },
+  {
+   "id": "excalidraw",
+   "name": "Excalidraw",
+   "url": "https://excalidraw.com/",
+   "category": "Design",
+   "description": "Hand drawn style whiteboard.",
+   "hosts": [
+    "excalidraw.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "whiteboard",
+    "sketch"
+   ]
+  },
+  {
+   "id": "penpot",
+   "name": "Penpot",
+   "url": "https://design.penpot.app/",
+   "category": "Design",
+   "description": "Open source design and prototyping.",
+   "hosts": [
+    "penpot.app"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "figma",
+    "alternative"
+   ]
+  },
+  {
+   "id": "framer",
+   "name": "Framer",
+   "url": "https://www.framer.com/",
+   "category": "Design",
+   "description": "Design and publish websites.",
+   "hosts": [
+    "framer.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "websites"
+   ]
+  },
+  {
+   "id": "behance",
+   "name": "Behance",
+   "url": "https://www.behance.net/",
+   "category": "Design",
+   "description": "Creative portfolios.",
+   "hosts": [
+    "behance.net"
+   ],
+   "badge": "none",
+   "keywords": [
+    "adobe",
+    "portfolio"
+   ]
+  },
+  {
+   "id": "dribbble",
+   "name": "Dribbble",
+   "url": "https://dribbble.com/",
+   "category": "Design",
+   "description": "Designer portfolios and inspiration.",
+   "hosts": [
+    "dribbble.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "portfolio"
+   ]
+  },
+  {
+   "id": "unsplash",
+   "name": "Unsplash",
+   "url": "https://unsplash.com/",
+   "category": "Design",
+   "description": "Free photos.",
+   "hosts": [
+    "unsplash.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "stock",
+    "photos"
+   ]
+  },
+  {
+   "id": "photopea",
+   "name": "Photopea",
+   "url": "https://www.photopea.com/",
+   "category": "Design",
+   "description": "Photo editor in your browser.",
+   "hosts": [
+    "photopea.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "photoshop",
+    "alternative"
+   ]
+  },
+  {
+   "id": "googlefonts",
+   "name": "Google Fonts",
+   "url": "https://fonts.google.com/",
+   "category": "Design",
+   "description": "Free fonts.",
+   "hosts": [
     "google.com"
    ],
-   "badge": "title"
+   "badge": "none",
+   "keywords": [
+    "typefaces"
+   ]
   },
   {
    "id": "github",
    "name": "GitHub",
    "url": "https://github.com/",
-   "category": "Tools",
+   "category": "Dev",
    "description": "Code hosting.",
    "hosts": [
     "github.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "git",
+    "code",
+    "repository"
+   ]
   },
   {
-   "id": "linkedin",
-   "name": "LinkedIn",
-   "url": "https://www.linkedin.com/feed/",
-   "category": "Social",
-   "description": "Professional network.",
+   "id": "gitlab",
+   "name": "GitLab",
+   "url": "https://gitlab.com/",
+   "category": "Dev",
+   "description": "Code hosting and DevOps.",
    "hosts": [
-    "linkedin.com"
+    "gitlab.com"
    ],
-   "badge": "title"
-  },
-  {
-   "id": "facebook",
-   "name": "Facebook",
-   "url": "https://www.facebook.com/",
-   "category": "Social",
-   "description": "Social network.",
-   "hosts": [
-    "facebook.com"
+   "authHosts": [
+    "accounts.google.com"
    ],
-   "badge": "title"
+   "badge": "none",
+   "keywords": [
+    "git",
+    "repository"
+   ]
   },
   {
-   "id": "instagram",
-   "name": "Instagram",
-   "url": "https://www.instagram.com/",
-   "category": "Social",
-   "description": "Photos and reels.",
+   "id": "bitbucket",
+   "name": "Bitbucket",
+   "url": "https://bitbucket.org/",
+   "category": "Dev",
+   "description": "Git code hosting from Atlassian.",
    "hosts": [
-    "instagram.com",
-    "facebook.com"
+    "bitbucket.org",
+    "atlassian.com"
    ],
-   "badge": "title"
+   "badge": "none",
+   "keywords": [
+    "git",
+    "repository"
+   ]
   },
   {
-   "id": "x",
-   "name": "X",
-   "url": "https://x.com/",
-   "category": "Social",
-   "description": "Posts and news.",
+   "id": "stackoverflow",
+   "name": "Stack Overflow",
+   "url": "https://stackoverflow.com/",
+   "category": "Dev",
+   "description": "Programming questions and answers.",
    "hosts": [
-    "x.com",
-    "twitter.com"
+    "stackoverflow.com",
+    "stackexchange.com"
    ],
-   "badge": "title"
-  },
-  {
-   "id": "tiktok",
-   "name": "TikTok",
-   "url": "https://www.tiktok.com/",
-   "category": "Social",
-   "description": "Short videos.",
-   "hosts": [
-    "tiktok.com"
+   "authHosts": [
+    "accounts.google.com"
    ],
-   "badge": "title"
+   "badge": "none",
+   "keywords": [
+    "stack",
+    "overflow",
+    "coding",
+    "questions"
+   ]
   },
   {
-   "id": "reddit",
-   "name": "Reddit",
-   "url": "https://www.reddit.com/",
-   "category": "Social",
-   "description": "Communities.",
+   "id": "codepen",
+   "name": "CodePen",
+   "url": "https://codepen.io/",
+   "category": "Dev",
+   "description": "Front-end playground.",
    "hosts": [
-    "reddit.com"
+    "codepen.io"
    ],
-   "badge": "title"
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "html",
+    "css",
+    "javascript"
+   ]
   },
   {
-   "id": "pinterest",
-   "name": "Pinterest",
-   "url": "https://www.pinterest.com/",
-   "category": "Social",
-   "description": "Ideas and boards.",
+   "id": "replit",
+   "name": "Replit",
+   "url": "https://replit.com/",
+   "category": "Dev",
+   "description": "Write and run code in the browser.",
    "hosts": [
-    "pinterest.com",
+    "replit.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "repl",
+    "ide"
+   ]
+  },
+  {
+   "id": "vercel",
+   "name": "Vercel",
+   "url": "https://vercel.com/dashboard",
+   "category": "Dev",
+   "description": "Deploy web projects.",
+   "hosts": [
+    "vercel.com",
+    "github.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "hosting",
+    "deploy",
+    "next.js"
+   ]
+  },
+  {
+   "id": "cloudflare",
+   "name": "Cloudflare",
+   "url": "https://dash.cloudflare.com/",
+   "category": "Dev",
+   "description": "Manage your sites and Workers.",
+   "hosts": [
+    "cloudflare.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "cloudflare",
+    "dashboard",
+    "dns",
+    "cdn"
+   ]
+  },
+  {
+   "id": "netlify",
+   "name": "Netlify",
+   "url": "https://app.netlify.com/",
+   "category": "Dev",
+   "description": "Build and host websites.",
+   "hosts": [
+    "netlify.com",
+    "github.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "hosting",
+    "deploy"
+   ]
+  },
+  {
+   "id": "npm",
+   "name": "npm",
+   "url": "https://www.npmjs.com/",
+   "category": "Dev",
+   "description": "JavaScript packages.",
+   "hosts": [
+    "npmjs.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "node",
+    "packages"
+   ]
+  },
+  {
+   "id": "pypi",
+   "name": "PyPI",
+   "url": "https://pypi.org/",
+   "category": "Dev",
+   "description": "Python packages.",
+   "hosts": [
+    "pypi.org"
+   ],
+   "badge": "none",
+   "keywords": [
+    "python",
+    "packages",
+    "pip"
+   ]
+  },
+  {
+   "id": "dockerhub",
+   "name": "Docker Hub",
+   "url": "https://hub.docker.com/",
+   "category": "Dev",
+   "description": "Container images.",
+   "hosts": [
+    "docker.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "docker",
+    "containers"
+   ]
+  },
+  {
+   "id": "mdn",
+   "name": "MDN Web Docs",
+   "url": "https://developer.mozilla.org/",
+   "category": "Dev",
+   "description": "Web platform documentation.",
+   "hosts": [
+    "mozilla.org"
+   ],
+   "badge": "none",
+   "keywords": [
+    "mozilla",
+    "docs",
+    "html",
+    "css",
+    "javascript"
+   ]
+  },
+  {
+   "id": "devto",
+   "name": "DEV",
+   "url": "https://dev.to/",
+   "category": "Dev",
+   "description": "A community of developers.",
+   "hosts": [
+    "dev.to"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "dev.to",
+    "community"
+   ]
+  },
+  {
+   "id": "leetcode",
+   "name": "LeetCode",
+   "url": "https://leetcode.com/",
+   "category": "Dev",
+   "description": "Coding practice.",
+   "hosts": [
+    "leetcode.com",
+    "github.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "interview",
+    "algorithms"
+   ]
+  },
+  {
+   "id": "kaggle",
+   "name": "Kaggle",
+   "url": "https://www.kaggle.com/",
+   "category": "Dev",
+   "description": "Data science and ML competitions.",
+   "hosts": [
+    "kaggle.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "data",
+    "science",
+    "notebooks"
+   ]
+  },
+  {
+   "id": "colab",
+   "name": "Google Colab",
+   "url": "https://colab.research.google.com/",
+   "category": "Dev",
+   "description": "Python notebooks in the cloud.",
+   "hosts": [
+    "google.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "jupyter",
+    "notebooks",
+    "python"
+   ]
+  },
+  {
+   "id": "gcloud",
+   "name": "Google Cloud Console",
+   "url": "https://console.cloud.google.com/",
+   "category": "Dev",
+   "description": "Manage Google Cloud.",
+   "hosts": [
+    "google.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "gcp"
+   ]
+  },
+  {
+   "id": "aws",
+   "name": "AWS Console",
+   "url": "https://aws.amazon.com/console/",
+   "category": "Dev",
+   "description": "Manage Amazon Web Services.",
+   "hosts": [
+    "amazon.com",
+    "awsapps.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "amazon",
+    "web",
+    "services"
+   ]
+  },
+  {
+   "id": "azure",
+   "name": "Azure Portal",
+   "url": "https://portal.azure.com/",
+   "category": "Dev",
+   "description": "Manage Microsoft Azure.",
+   "hosts": [
+    "azure.com"
+   ],
+   "authHosts": [
+    "login.microsoftonline.com",
+    "login.live.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "microsoft",
+    "cloud"
+   ]
+  },
+  {
+   "id": "firebase",
+   "name": "Firebase",
+   "url": "https://console.firebase.google.com/",
+   "category": "Dev",
+   "description": "Build and run apps with Google.",
+   "hosts": [
+    "google.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "google"
+   ]
+  },
+  {
+   "id": "supabase",
+   "name": "Supabase",
+   "url": "https://supabase.com/dashboard",
+   "category": "Dev",
+   "description": "Open source Postgres platform.",
+   "hosts": [
+    "supabase.com",
+    "github.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "database",
+    "postgres"
+   ]
+  },
+  {
+   "id": "postman",
+   "name": "Postman",
+   "url": "https://web.postman.co/",
+   "category": "Dev",
+   "description": "Build and test APIs.",
+   "hosts": [
+    "postman.co"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "api"
+   ]
+  },
+  {
+   "id": "regex101",
+   "name": "regex101",
+   "url": "https://regex101.com/",
+   "category": "Dev",
+   "description": "Build and test regular expressions.",
+   "hosts": [
+    "regex101.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "regex"
+   ]
+  },
+  {
+   "id": "caniuse",
+   "name": "Can I use",
+   "url": "https://caniuse.com/",
+   "category": "Dev",
+   "description": "Browser support tables.",
+   "hosts": [
+    "caniuse.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "browser",
+    "compatibility"
+   ]
+  },
+  {
+   "id": "w3schools",
+   "name": "W3Schools",
+   "url": "https://www.w3schools.com/",
+   "category": "Dev",
+   "description": "Web development tutorials.",
+   "hosts": [
+    "w3schools.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "html",
+    "css",
+    "tutorials"
+   ]
+  },
+  {
+   "id": "freecodecamp",
+   "name": "freeCodeCamp",
+   "url": "https://www.freecodecamp.org/",
+   "category": "Dev",
+   "description": "Learn to code for free.",
+   "hosts": [
+    "freecodecamp.org"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "coding",
+    "tutorials"
+   ]
+  },
+  {
+   "id": "openaiplatform",
+   "name": "OpenAI Platform",
+   "url": "https://platform.openai.com/",
+   "category": "Dev",
+   "description": "OpenAI API and playground.",
+   "hosts": [
+    "openai.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "openai",
+    "api"
+   ]
+  },
+  {
+   "id": "wordpress",
+   "name": "WordPress.com",
+   "url": "https://wordpress.com/",
+   "category": "Dev",
+   "description": "Make a website or blog.",
+   "hosts": [
+    "wordpress.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "blog",
+    "websites"
+   ]
+  },
+  {
+   "id": "wix",
+   "name": "Wix",
+   "url": "https://www.wix.com/",
+   "category": "Dev",
+   "description": "Build a website.",
+   "hosts": [
+    "wix.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "websites"
+   ]
+  },
+  {
+   "id": "amazon",
+   "name": "Amazon",
+   "url": "https://www.amazon.co.uk/",
+   "category": "Shopping",
+   "description": "Shop millions of products.",
+   "hosts": [
+    "amazon.co.uk",
+    "amazon.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "amazon.co.uk",
+    "prime"
+   ]
+  },
+  {
+   "id": "ebay",
+   "name": "eBay",
+   "url": "https://www.ebay.co.uk/",
+   "category": "Shopping",
+   "description": "Buy and sell almost anything.",
+   "hosts": [
+    "ebay.co.uk",
+    "ebay.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "auctions"
+   ]
+  },
+  {
+   "id": "etsy",
+   "name": "Etsy",
+   "url": "https://www.etsy.com/",
+   "category": "Shopping",
+   "description": "Handmade and vintage goods.",
+   "hosts": [
+    "etsy.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "handmade",
+    "crafts"
+   ]
+  },
+  {
+   "id": "vinted",
+   "name": "Vinted",
+   "url": "https://www.vinted.co.uk/",
+   "category": "Shopping",
+   "description": "Buy and sell second-hand clothes.",
+   "hosts": [
+    "vinted.co.uk",
+    "vinted.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "secondhand",
+    "clothes"
+   ]
+  },
+  {
+   "id": "asos",
+   "name": "ASOS",
+   "url": "https://www.asos.com/",
+   "category": "Shopping",
+   "description": "Fashion and beauty.",
+   "hosts": [
+    "asos.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "clothes",
+    "fashion"
+   ]
+  },
+  {
+   "id": "argos",
+   "name": "Argos",
+   "url": "https://www.argos.co.uk/",
+   "category": "Shopping",
+   "description": "Home, tech and toys.",
+   "hosts": [
+    "argos.co.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "catalogue"
+   ]
+  },
+  {
+   "id": "tesco",
+   "name": "Tesco",
+   "url": "https://www.tesco.com/",
+   "category": "Shopping",
+   "description": "Groceries and more.",
+   "hosts": [
+    "tesco.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "groceries",
+    "supermarket"
+   ]
+  },
+  {
+   "id": "sainsburys",
+   "name": "Sainsbury's",
+   "url": "https://www.sainsburys.co.uk/",
+   "category": "Shopping",
+   "description": "Groceries and more.",
+   "hosts": [
+    "sainsburys.co.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "groceries",
+    "supermarket"
+   ]
+  },
+  {
+   "id": "asda",
+   "name": "Asda",
+   "url": "https://www.asda.com/",
+   "category": "Shopping",
+   "description": "Groceries and more.",
+   "hosts": [
+    "asda.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "groceries",
+    "supermarket"
+   ]
+  },
+  {
+   "id": "johnlewis",
+   "name": "John Lewis",
+   "url": "https://www.johnlewis.com/",
+   "category": "Shopping",
+   "description": "Home, fashion and tech.",
+   "hosts": [
+    "johnlewis.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "department",
+    "store"
+   ]
+  },
+  {
+   "id": "currys",
+   "name": "Currys",
+   "url": "https://www.currys.co.uk/",
+   "category": "Shopping",
+   "description": "Electronics and appliances.",
+   "hosts": [
+    "currys.co.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "tech",
+    "electronics"
+   ]
+  },
+  {
+   "id": "ikea",
+   "name": "IKEA",
+   "url": "https://www.ikea.com/gb/en/",
+   "category": "Shopping",
+   "description": "Furniture and home.",
+   "hosts": [
+    "ikea.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "furniture"
+   ]
+  },
+  {
+   "id": "aliexpress",
+   "name": "AliExpress",
+   "url": "https://www.aliexpress.com/",
+   "category": "Shopping",
+   "description": "Products from around the world.",
+   "hosts": [
+    "aliexpress.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "alibaba"
+   ]
+  },
+  {
+   "id": "temu",
+   "name": "Temu",
+   "url": "https://www.temu.com/",
+   "category": "Shopping",
+   "description": "Low-price products.",
+   "hosts": [
+    "temu.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "deals"
+   ]
+  },
+  {
+   "id": "walmart",
+   "name": "Walmart",
+   "url": "https://www.walmart.com/",
+   "category": "Shopping",
+   "description": "Groceries and general goods.",
+   "hosts": [
+    "walmart.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "supermarket"
+   ]
+  },
+  {
+   "id": "target",
+   "name": "Target",
+   "url": "https://www.target.com/",
+   "category": "Shopping",
+   "description": "Home, fashion and more.",
+   "hosts": [
+    "target.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "retail"
+   ]
+  },
+  {
+   "id": "bestbuy",
+   "name": "Best Buy",
+   "url": "https://www.bestbuy.com/",
+   "category": "Shopping",
+   "description": "Electronics and appliances.",
+   "hosts": [
+    "bestbuy.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "tech",
+    "electronics"
+   ]
+  },
+  {
+   "id": "nike",
+   "name": "Nike",
+   "url": "https://www.nike.com/gb/",
+   "category": "Shopping",
+   "description": "Shoes and sportswear.",
+   "hosts": [
+    "nike.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "trainers",
+    "sport"
+   ]
+  },
+  {
+   "id": "gumtree",
+   "name": "Gumtree",
+   "url": "https://www.gumtree.com/",
+   "category": "Shopping",
+   "description": "Local classified ads.",
+   "hosts": [
+    "gumtree.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "classifieds",
+    "secondhand"
+   ]
+  },
+  {
+   "id": "rightmove",
+   "name": "Rightmove",
+   "url": "https://www.rightmove.co.uk/",
+   "category": "Shopping",
+   "description": "Homes to buy and rent.",
+   "hosts": [
+    "rightmove.co.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "property",
+    "houses",
+    "rent"
+   ]
+  },
+  {
+   "id": "ubereats",
+   "name": "Uber Eats",
+   "url": "https://www.ubereats.com/",
+   "category": "Shopping",
+   "description": "Food delivery.",
+   "hosts": [
+    "ubereats.com",
+    "uber.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "takeaway",
+    "food",
+    "delivery"
+   ]
+  },
+  {
+   "id": "deliveroo",
+   "name": "Deliveroo",
+   "url": "https://deliveroo.co.uk/",
+   "category": "Shopping",
+   "description": "Takeaway delivered.",
+   "hosts": [
+    "deliveroo.co.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "takeaway",
+    "food",
+    "delivery"
+   ]
+  },
+  {
+   "id": "justeat",
+   "name": "Just Eat",
+   "url": "https://www.just-eat.co.uk/",
+   "category": "Shopping",
+   "description": "Order takeaway.",
+   "hosts": [
+    "just-eat.co.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "takeaway",
+    "food",
+    "delivery"
+   ]
+  },
+  {
+   "id": "doordash",
+   "name": "DoorDash",
+   "url": "https://www.doordash.com/",
+   "category": "Shopping",
+   "description": "Food delivery.",
+   "hosts": [
+    "doordash.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "takeaway",
+    "food",
+    "delivery"
+   ]
+  },
+  {
+   "id": "ticketmaster",
+   "name": "Ticketmaster",
+   "url": "https://www.ticketmaster.co.uk/",
+   "category": "Shopping",
+   "description": "Tickets for events.",
+   "hosts": [
+    "ticketmaster.co.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "tickets",
+    "concerts"
+   ]
+  },
+  {
+   "id": "eventbrite",
+   "name": "Eventbrite",
+   "url": "https://www.eventbrite.co.uk/",
+   "category": "Shopping",
+   "description": "Find and book events.",
+   "hosts": [
+    "eventbrite.co.uk",
+    "eventbrite.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "tickets",
+    "events"
+   ]
+  },
+  {
+   "id": "fiverr",
+   "name": "Fiverr",
+   "url": "https://www.fiverr.com/",
+   "category": "Shopping",
+   "description": "Hire freelancers.",
+   "hosts": [
+    "fiverr.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "freelance",
+    "gigs"
+   ]
+  },
+  {
+   "id": "yelp",
+   "name": "Yelp",
+   "url": "https://www.yelp.com/",
+   "category": "Shopping",
+   "description": "Local business reviews.",
+   "hosts": [
+    "yelp.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "restaurants",
+    "reviews"
+   ]
+  },
+  {
+   "id": "airbnb",
+   "name": "Airbnb",
+   "url": "https://www.airbnb.co.uk/",
+   "category": "Travel",
+   "description": "Stays and experiences.",
+   "hosts": [
+    "airbnb.co.uk",
+    "airbnb.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "holiday",
+    "rentals"
+   ]
+  },
+  {
+   "id": "booking",
+   "name": "Booking.com",
+   "url": "https://www.booking.com/",
+   "category": "Travel",
+   "description": "Hotels and places to stay.",
+   "hosts": [
+    "booking.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "hotels",
+    "holiday"
+   ]
+  },
+  {
+   "id": "skyscanner",
+   "name": "Skyscanner",
+   "url": "https://www.skyscanner.net/",
+   "category": "Travel",
+   "description": "Compare flights, hotels and cars.",
+   "hosts": [
+    "skyscanner.net",
+    "skyscanner.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "flights",
+    "holiday"
+   ]
+  },
+  {
+   "id": "uber",
+   "name": "Uber",
+   "url": "https://www.uber.com/gb/en/",
+   "category": "Travel",
+   "description": "Get a ride.",
+   "hosts": [
+    "uber.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "taxi",
+    "cab"
+   ]
+  },
+  {
+   "id": "bolt",
+   "name": "Bolt",
+   "url": "https://bolt.eu/",
+   "category": "Travel",
+   "description": "Rides and scooters.",
+   "hosts": [
+    "bolt.eu"
+   ],
+   "badge": "none",
+   "keywords": [
+    "taxi",
+    "cab"
+   ]
+  },
+  {
+   "id": "tripadvisor",
+   "name": "Tripadvisor",
+   "url": "https://www.tripadvisor.co.uk/",
+   "category": "Travel",
+   "description": "Travel reviews and bookings.",
+   "hosts": [
+    "tripadvisor.co.uk",
+    "tripadvisor.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "hotels",
+    "restaurants",
+    "reviews"
+   ]
+  },
+  {
+   "id": "expedia",
+   "name": "Expedia",
+   "url": "https://www.expedia.co.uk/",
+   "category": "Travel",
+   "description": "Flights, hotels and holidays.",
+   "hosts": [
+    "expedia.co.uk",
+    "expedia.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "flights",
+    "hotels",
+    "holiday"
+   ]
+  },
+  {
+   "id": "trainline",
+   "name": "Trainline",
+   "url": "https://www.thetrainline.com/",
+   "category": "Travel",
+   "description": "Train and coach tickets.",
+   "hosts": [
+    "thetrainline.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "trains",
+    "rail",
+    "tickets"
+   ]
+  },
+  {
+   "id": "nationalrail",
+   "name": "National Rail",
+   "url": "https://www.nationalrail.co.uk/",
+   "category": "Travel",
+   "description": "UK train times and journey planner.",
+   "hosts": [
+    "nationalrail.co.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "trains",
+    "rail",
+    "times"
+   ]
+  },
+  {
+   "id": "tfl",
+   "name": "TfL",
+   "url": "https://tfl.gov.uk/",
+   "category": "Travel",
+   "description": "London transport journey planner and status.",
+   "hosts": [
+    "tfl.gov.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "transport",
+    "for",
+    "london",
+    "tube",
+    "bus"
+   ]
+  },
+  {
+   "id": "citymapper",
+   "name": "Citymapper",
+   "url": "https://citymapper.com/",
+   "category": "Travel",
+   "description": "Journey planning in cities.",
+   "hosts": [
+    "citymapper.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "transit",
+    "public",
+    "transport"
+   ]
+  },
+  {
+   "id": "ryanair",
+   "name": "Ryanair",
+   "url": "https://www.ryanair.com/",
+   "category": "Travel",
+   "description": "Low-fare flights.",
+   "hosts": [
+    "ryanair.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "flights",
+    "airline"
+   ]
+  },
+  {
+   "id": "easyjet",
+   "name": "easyJet",
+   "url": "https://www.easyjet.com/",
+   "category": "Travel",
+   "description": "Flights and holidays.",
+   "hosts": [
+    "easyjet.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "flights",
+    "airline"
+   ]
+  },
+  {
+   "id": "flightradar24",
+   "name": "Flightradar24",
+   "url": "https://www.flightradar24.com/",
+   "category": "Travel",
+   "description": "Live flight tracker.",
+   "hosts": [
+    "flightradar24.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "planes",
+    "tracker"
+   ]
+  },
+  {
+   "id": "eurostar",
+   "name": "Eurostar",
+   "url": "https://www.eurostar.com/",
+   "category": "Travel",
+   "description": "High speed trains to Europe.",
+   "hosts": [
+    "eurostar.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "trains"
+   ]
+  },
+  {
+   "id": "waze",
+   "name": "Waze",
+   "url": "https://www.waze.com/live-map/",
+   "category": "Travel",
+   "description": "Live traffic and navigation.",
+   "hosts": [
+    "waze.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "maps",
+    "traffic"
+   ]
+  },
+  {
+   "id": "bbcnews",
+   "name": "BBC News",
+   "url": "https://www.bbc.co.uk/news",
+   "category": "News",
+   "description": "News from the BBC.",
+   "hosts": [
+    "bbc.co.uk",
+    "bbc.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "bbc",
+    "headlines"
+   ]
+  },
+  {
+   "id": "guardian",
+   "name": "The Guardian",
+   "url": "https://www.theguardian.com/",
+   "category": "News",
+   "description": "News, opinion and sport.",
+   "hosts": [
+    "theguardian.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "guardian",
+    "news",
+    "uk"
+   ]
+  },
+  {
+   "id": "reuters",
+   "name": "Reuters",
+   "url": "https://www.reuters.com/",
+   "category": "News",
+   "description": "Global news.",
+   "hosts": [
+    "reuters.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "news",
+    "world"
+   ]
+  },
+  {
+   "id": "nyt",
+   "name": "The New York Times",
+   "url": "https://www.nytimes.com/",
+   "category": "News",
+   "description": "News and opinion.",
+   "hosts": [
+    "nytimes.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "new",
+    "york",
+    "times",
+    "nytimes"
+   ]
+  },
+  {
+   "id": "apnews",
+   "name": "AP News",
+   "url": "https://apnews.com/",
+   "category": "News",
+   "description": "Associated Press news.",
+   "hosts": [
+    "apnews.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "associated",
+    "press",
+    "news"
+   ]
+  },
+  {
+   "id": "skynews",
+   "name": "Sky News",
+   "url": "https://news.sky.com/",
+   "category": "News",
+   "description": "Breaking news and live TV.",
+   "hosts": [
+    "sky.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "sky",
+    "headlines"
+   ]
+  },
+  {
+   "id": "telegraph",
+   "name": "The Telegraph",
+   "url": "https://www.telegraph.co.uk/",
+   "category": "News",
+   "description": "News and opinion.",
+   "hosts": [
+    "telegraph.co.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "news",
+    "uk"
+   ]
+  },
+  {
+   "id": "independent",
+   "name": "The Independent",
+   "url": "https://www.independent.co.uk/",
+   "category": "News",
+   "description": "News and opinion.",
+   "hosts": [
+    "independent.co.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "news",
+    "uk"
+   ]
+  },
+  {
+   "id": "dailymail",
+   "name": "Daily Mail",
+   "url": "https://www.dailymail.co.uk/",
+   "category": "News",
+   "description": "News and showbiz.",
+   "hosts": [
+    "dailymail.co.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "news",
+    "uk",
+    "mail",
+    "online"
+   ]
+  },
+  {
+   "id": "ft",
+   "name": "Financial Times",
+   "url": "https://www.ft.com/",
+   "category": "News",
+   "description": "Business and world news.",
+   "hosts": [
+    "ft.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "ft",
+    "news",
+    "business"
+   ]
+  },
+  {
+   "id": "bloomberg",
+   "name": "Bloomberg",
+   "url": "https://www.bloomberg.com/",
+   "category": "News",
+   "description": "Business and markets news.",
+   "hosts": [
+    "bloomberg.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "news",
+    "markets",
+    "business"
+   ]
+  },
+  {
+   "id": "cnn",
+   "name": "CNN",
+   "url": "https://edition.cnn.com/",
+   "category": "News",
+   "description": "Breaking news.",
+   "hosts": [
+    "cnn.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "news",
+    "world"
+   ]
+  },
+  {
+   "id": "aljazeera",
+   "name": "Al Jazeera",
+   "url": "https://www.aljazeera.com/",
+   "category": "News",
+   "description": "World news.",
+   "hosts": [
+    "aljazeera.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "news",
+    "world"
+   ]
+  },
+  {
+   "id": "hackernews",
+   "name": "Hacker News",
+   "url": "https://news.ycombinator.com/",
+   "category": "News",
+   "description": "Tech and startup links.",
+   "hosts": [
+    "ycombinator.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "hn",
+    "ycombinator"
+   ]
+  },
+  {
+   "id": "techcrunch",
+   "name": "TechCrunch",
+   "url": "https://techcrunch.com/",
+   "category": "News",
+   "description": "Startup and tech news.",
+   "hosts": [
+    "techcrunch.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "tech",
+    "news"
+   ]
+  },
+  {
+   "id": "theverge",
+   "name": "The Verge",
+   "url": "https://www.theverge.com/",
+   "category": "News",
+   "description": "Tech, science and culture.",
+   "hosts": [
+    "theverge.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "tech",
+    "news"
+   ]
+  },
+  {
+   "id": "bbcsport",
+   "name": "BBC Sport",
+   "url": "https://www.bbc.co.uk/sport",
+   "category": "News",
+   "description": "Scores, results and stories.",
+   "hosts": [
+    "bbc.co.uk",
+    "bbc.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "bbc",
+    "football",
+    "sport"
+   ]
+  },
+  {
+   "id": "skysports",
+   "name": "Sky Sports",
+   "url": "https://www.skysports.com/",
+   "category": "News",
+   "description": "Sport news and scores.",
+   "hosts": [
+    "skysports.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "football",
+    "sport"
+   ]
+  },
+  {
+   "id": "flashscore",
+   "name": "Flashscore",
+   "url": "https://www.flashscore.com/",
+   "category": "News",
+   "description": "Live scores.",
+   "hosts": [
+    "flashscore.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "football",
+    "sport",
+    "scores"
+   ]
+  },
+  {
+   "id": "wikipedia",
+   "name": "Wikipedia",
+   "url": "https://www.wikipedia.org/",
+   "category": "Reference",
+   "description": "The free encyclopedia.",
+   "hosts": [
+    "wikipedia.org"
+   ],
+   "badge": "none",
+   "keywords": [
+    "wiki",
+    "encyclopedia"
+   ]
+  },
+  {
+   "id": "wolframalpha",
+   "name": "Wolfram Alpha",
+   "url": "https://www.wolframalpha.com/",
+   "category": "Reference",
+   "description": "Computational answers.",
+   "hosts": [
+    "wolframalpha.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "maths",
+    "calculator"
+   ]
+  },
+  {
+   "id": "khanacademy",
+   "name": "Khan Academy",
+   "url": "https://www.khanacademy.org/",
+   "category": "Reference",
+   "description": "Free lessons for learners.",
+   "hosts": [
+    "khanacademy.org"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "learning",
+    "school"
+   ]
+  },
+  {
+   "id": "duolingo",
+   "name": "Duolingo",
+   "url": "https://www.duolingo.com/",
+   "category": "Reference",
+   "description": "Learn a language.",
+   "hosts": [
+    "duolingo.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "languages",
+    "learning"
+   ]
+  },
+  {
+   "id": "coursera",
+   "name": "Coursera",
+   "url": "https://www.coursera.org/",
+   "category": "Reference",
+   "description": "Online courses.",
+   "hosts": [
+    "coursera.org"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "learning",
+    "courses"
+   ]
+  },
+  {
+   "id": "udemy",
+   "name": "Udemy",
+   "url": "https://www.udemy.com/",
+   "category": "Reference",
+   "description": "Online courses.",
+   "hosts": [
+    "udemy.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "learning",
+    "courses"
+   ]
+  },
+  {
+   "id": "ted",
+   "name": "TED",
+   "url": "https://www.ted.com/",
+   "category": "Reference",
+   "description": "Talks worth sharing.",
+   "hosts": [
+    "ted.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "talks"
+   ]
+  },
+  {
+   "id": "archive",
+   "name": "Internet Archive",
+   "url": "https://archive.org/",
+   "category": "Reference",
+   "description": "Books, media and the Wayback Machine.",
+   "hosts": [
+    "archive.org"
+   ],
+   "badge": "none",
+   "keywords": [
+    "wayback",
+    "books"
+   ]
+  },
+  {
+   "id": "gscholar",
+   "name": "Google Scholar",
+   "url": "https://scholar.google.com/",
+   "category": "Reference",
+   "description": "Scholarly articles.",
+   "hosts": [
+    "google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "research",
+    "papers",
+    "academic"
+   ]
+  },
+  {
+   "id": "govuk",
+   "name": "GOV.UK",
+   "url": "https://www.gov.uk/",
+   "category": "Reference",
+   "description": "UK government services and information.",
+   "hosts": [
+    "www.gov.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "government",
+    "uk"
+   ]
+  },
+  {
+   "id": "nhs",
+   "name": "NHS",
+   "url": "https://www.nhs.uk/",
+   "category": "Reference",
+   "description": "Health information and services.",
+   "hosts": [
+    "nhs.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "health",
+    "uk"
+   ]
+  },
+  {
+   "id": "quizlet",
+   "name": "Quizlet",
+   "url": "https://quizlet.com/",
+   "category": "Reference",
+   "description": "Flashcards and study sets.",
+   "hosts": [
+    "quizlet.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "flashcards",
+    "study"
+   ]
+  },
+  {
+   "id": "bitesize",
+   "name": "BBC Bitesize",
+   "url": "https://www.bbc.co.uk/bitesize",
+   "category": "Reference",
+   "description": "Revision and learning.",
+   "hosts": [
+    "bbc.co.uk",
+    "bbc.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "school",
+    "revision",
+    "gcse"
+   ]
+  },
+  {
+   "id": "chesscom",
+   "name": "Chess.com",
+   "url": "https://www.chess.com/",
+   "category": "Games",
+   "description": "Play chess online.",
+   "hosts": [
+    "chess.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "chess"
+   ]
+  },
+  {
+   "id": "lichess",
+   "name": "Lichess",
+   "url": "https://lichess.org/",
+   "category": "Games",
+   "description": "Free, open source chess.",
+   "hosts": [
+    "lichess.org"
+   ],
+   "badge": "none",
+   "keywords": [
+    "chess"
+   ]
+  },
+  {
+   "id": "steam",
+   "name": "Steam",
+   "url": "https://store.steampowered.com/",
+   "category": "Games",
+   "description": "PC games and community.",
+   "hosts": [
+    "steampowered.com",
+    "steamcommunity.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "valve",
+    "games"
+   ]
+  },
+  {
+   "id": "xboxcloud",
+   "name": "Xbox Cloud Gaming",
+   "url": "https://www.xbox.com/play",
+   "category": "Games",
+   "description": "Play Xbox games in your browser.",
+   "hosts": [
+    "xbox.com"
+   ],
+   "authHosts": [
+    "login.microsoftonline.com",
+    "login.live.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "xcloud",
+    "game",
+    "pass"
+   ]
+  },
+  {
+   "id": "geforcenow",
+   "name": "GeForce NOW",
+   "url": "https://play.geforcenow.com/",
+   "category": "Games",
+   "description": "Cloud gaming from NVIDIA.",
+   "hosts": [
+    "geforcenow.com",
+    "nvidia.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "nvidia",
+    "cloud",
+    "gaming"
+   ]
+  },
+  {
+   "id": "epicgames",
+   "name": "Epic Games Store",
+   "url": "https://store.epicgames.com/",
+   "category": "Games",
+   "description": "PC games and free weekly titles.",
+   "hosts": [
+    "epicgames.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "epic",
+    "fortnite"
+   ]
+  },
+  {
+   "id": "roblox",
+   "name": "Roblox",
+   "url": "https://www.roblox.com/",
+   "category": "Games",
+   "description": "Play millions of games.",
+   "hosts": [
+    "roblox.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "games"
+   ]
+  },
+  {
+   "id": "wordle",
+   "name": "Wordle",
+   "url": "https://www.nytimes.com/games/wordle/index.html",
+   "category": "Games",
+   "description": "The daily word game.",
+   "hosts": [
+    "nytimes.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "nyt",
+    "word",
+    "puzzle"
+   ]
+  },
+  {
+   "id": "crazygames",
+   "name": "CrazyGames",
+   "url": "https://www.crazygames.com/",
+   "category": "Games",
+   "description": "Free online games.",
+   "hosts": [
+    "crazygames.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "games"
+   ]
+  },
+  {
+   "id": "geoguessr",
+   "name": "GeoGuessr",
+   "url": "https://www.geoguessr.com/",
+   "category": "Games",
+   "description": "Guess where you are.",
+   "hosts": [
+    "geoguessr.com"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "maps",
+    "game"
+   ]
+  },
+  {
+   "id": "gmaps",
+   "name": "Google Maps",
+   "url": "https://www.google.com/maps",
+   "category": "Tools",
+   "description": "Maps and directions.",
+   "hosts": [
     "accounts.google.com",
     "google.com"
    ],
-   "badge": "title"
+   "badge": "title",
+   "keywords": [
+    "google",
+    "maps",
+    "directions"
+   ]
   },
   {
-   "id": "youtube",
-   "name": "YouTube",
-   "url": "https://www.youtube.com/",
-   "category": "Media",
-   "description": "Videos.",
+   "id": "gtranslate",
+   "name": "Google Translate",
+   "url": "https://translate.google.com/",
+   "category": "Tools",
+   "description": "Translate text and websites.",
    "hosts": [
-    "youtube.com",
-    "accounts.google.com",
     "google.com"
    ],
-   "badge": "title",
-   "adblock": true
+   "badge": "none",
+   "keywords": [
+    "translator",
+    "languages"
+   ]
   },
   {
-   "id": "twitch",
-   "name": "Twitch",
-   "url": "https://www.twitch.tv/",
-   "category": "Media",
-   "description": "Live streams.",
+   "id": "deepl",
+   "name": "DeepL",
+   "url": "https://www.deepl.com/translator",
+   "category": "Tools",
+   "description": "Translate with DeepL.",
    "hosts": [
-    "twitch.tv"
+    "deepl.com"
    ],
-   "badge": "title",
-   "adblock": true
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "translator",
+    "languages"
+   ]
   },
   {
-   "id": "spotify",
-   "name": "Spotify",
-   "url": "https://open.spotify.com/",
-   "category": "Media",
-   "description": "Music. Playback needs Widevine, see the README.",
+   "id": "grammarly",
+   "name": "Grammarly",
+   "url": "https://app.grammarly.com/",
+   "category": "Tools",
+   "description": "Writing help.",
    "hosts": [
-    "spotify.com",
-    "accounts.google.com",
-    "google.com",
-    "facebook.com"
+    "grammarly.com"
    ],
-   "badge": "title",
-   "drm": true
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "spelling",
+    "grammar"
+   ]
   },
   {
-   "id": "netflix",
-   "name": "Netflix",
-   "url": "https://www.netflix.com/browse",
-   "category": "Media",
-   "description": "Video. Needs Widevine, see the README.",
+   "id": "duckduckgo",
+   "name": "DuckDuckGo",
+   "url": "https://duckduckgo.com/",
+   "category": "Tools",
+   "description": "Private search.",
    "hosts": [
-    "netflix.com"
+    "duckduckgo.com"
    ],
-   "badge": "title",
-   "drm": true
+   "badge": "none",
+   "keywords": [
+    "ddg",
+    "search"
+   ]
   },
   {
-   "id": "disney",
-   "name": "Disney+",
-   "url": "https://www.disneyplus.com/",
-   "category": "Media",
-   "description": "Video. Needs Widevine, see the README.",
+   "id": "bravesearch",
+   "name": "Brave Search",
+   "url": "https://search.brave.com/",
+   "category": "Tools",
+   "description": "Private search.",
    "hosts": [
-    "disneyplus.com",
-    "disney.com",
-    "bamgrid.com"
+    "brave.com"
    ],
-   "badge": "title",
-   "drm": true
+   "badge": "none",
+   "keywords": [
+    "brave",
+    "search"
+   ]
+  },
+  {
+   "id": "speedtest",
+   "name": "Speedtest",
+   "url": "https://www.speedtest.net/",
+   "category": "Tools",
+   "description": "Test your internet speed.",
+   "hosts": [
+    "speedtest.net"
+   ],
+   "badge": "none",
+   "keywords": [
+    "broadband",
+    "ookla"
+   ]
+  },
+  {
+   "id": "fastcom",
+   "name": "Fast.com",
+   "url": "https://fast.com/",
+   "category": "Tools",
+   "description": "Quick internet speed test.",
+   "hosts": [
+    "fast.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "speed",
+    "test",
+    "netflix"
+   ]
+  },
+  {
+   "id": "ilovepdf",
+   "name": "iLovePDF",
+   "url": "https://www.ilovepdf.com/",
+   "category": "Tools",
+   "description": "Merge, split and convert PDFs.",
+   "hosts": [
+    "ilovepdf.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "pdf",
+    "merge"
+   ]
+  },
+  {
+   "id": "tinypng",
+   "name": "TinyPNG",
+   "url": "https://tinypng.com/",
+   "category": "Tools",
+   "description": "Compress images.",
+   "hosts": [
+    "tinypng.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "image",
+    "compression"
+   ]
+  },
+  {
+   "id": "bitwarden",
+   "name": "Bitwarden",
+   "url": "https://vault.bitwarden.com/",
+   "category": "Tools",
+   "description": "Password manager vault.",
+   "hosts": [
+    "bitwarden.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "passwords"
+   ]
+  },
+  {
+   "id": "linktree",
+   "name": "Linktree",
+   "url": "https://linktr.ee/",
+   "category": "Tools",
+   "description": "One link for everything.",
+   "hosts": [
+    "linktr.ee"
+   ],
+   "authHosts": [
+    "accounts.google.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "links",
+    "bio"
+   ]
+  },
+  {
+   "id": "timeanddate",
+   "name": "timeanddate",
+   "url": "https://www.timeanddate.com/",
+   "category": "Tools",
+   "description": "Time zones, calendars and clocks.",
+   "hosts": [
+    "timeanddate.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "time",
+    "zones",
+    "world",
+    "clock"
+   ]
+  },
+  {
+   "id": "metoffice",
+   "name": "Met Office",
+   "url": "https://www.metoffice.gov.uk/",
+   "category": "Tools",
+   "description": "UK weather forecasts.",
+   "hosts": [
+    "metoffice.gov.uk"
+   ],
+   "badge": "none",
+   "keywords": [
+    "weather",
+    "forecast",
+    "uk"
+   ]
+  },
+  {
+   "id": "bbcweather",
+   "name": "BBC Weather",
+   "url": "https://www.bbc.co.uk/weather",
+   "category": "Tools",
+   "description": "Weather forecasts.",
+   "hosts": [
+    "bbc.co.uk",
+    "bbc.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "weather",
+    "forecast"
+   ]
+  },
+  {
+   "id": "accuweather",
+   "name": "AccuWeather",
+   "url": "https://www.accuweather.com/",
+   "category": "Tools",
+   "description": "Weather forecasts.",
+   "hosts": [
+    "accuweather.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "weather",
+    "forecast"
+   ]
+  },
+  {
+   "id": "windy",
+   "name": "Windy",
+   "url": "https://www.windy.com/",
+   "category": "Tools",
+   "description": "Wind, rain and weather maps.",
+   "hosts": [
+    "windy.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "weather",
+    "forecast",
+    "map"
+   ]
+  },
+  {
+   "id": "weathercom",
+   "name": "The Weather Channel",
+   "url": "https://weather.com/",
+   "category": "Tools",
+   "description": "Forecasts and radar.",
+   "hosts": [
+    "weather.com"
+   ],
+   "badge": "none",
+   "keywords": [
+    "weather",
+    "forecast"
+   ]
   }
  ]
 }

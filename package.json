@@ -17,7 +17,7 @@
     "dist": "node tools/gen-notices.js && node tools/protect.js && electron-builder",
     "dist:win": "node tools/gen-notices.js && node tools/protect.js && electron-builder --win nsis",
     "dist:mac": "node tools/gen-notices.js && node tools/protect.js && electron-builder --mac dmg",
-    "dist:linux": "node tools/gen-notices.js && node tools/protect.js && electron-builder --linux AppImage deb",
+    "dist:linux": "node tools/gen-notices.js && node tools/protect.js && electron-builder --linux AppImage deb --x64 --arm64",
     "fetch-lists": "node tools/fetch-lists.js",
     "update-rates": "node tools/update-rates.js",
     "protect": "node tools/protect.js",

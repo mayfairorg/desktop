@@ -5,7 +5,8 @@
 const { JsonStore } = require('./stores');
 
 const ID = /^[a-z][a-z0-9-]{0,31}$/;
-const CATEGORIES = ['Chat', 'Work', 'Mail', 'Files', 'Tools', 'Design', 'AI', 'Social', 'Media'];
+// display order of the App Library tabs
+const CATEGORIES = ['AI', 'Social', 'Chat', 'Media', 'Mail', 'Office', 'Files', 'Work', 'Design', 'Dev', 'Shopping', 'Travel', 'News', 'Reference', 'Games', 'Tools'];
 
 function validateCatalogue(list) {
   const apps = []; const errors = []; const seen = new Set();
@@ -19,10 +20,12 @@ function validateCatalogue(list) {
     if (typeof a.name !== 'string' || !a.name.trim() || a.name.length > 40) { why('bad name'); continue; }
     const hosts = (Array.isArray(a.hosts) ? a.hosts : []).filter((h) => typeof h === 'string' && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(h));
     const authHosts = (Array.isArray(a.authHosts) ? a.authHosts : []).filter((h) => typeof h === 'string' && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(h));
+    // search aliases ('openai' for ChatGPT, 'insta' for Instagram): short lower-case words, at most 12
+    const keywords = (Array.isArray(a.keywords) ? a.keywords : []).filter((k) => typeof k === 'string' && /^[a-z0-9][a-z0-9 .&+'-]{0,23}$/.test(k)).slice(0, 12);
     seen.add(a.id);
     apps.push({
       id: a.id, name: a.name.trim(), url: u.toString(), category: CATEGORIES.includes(a.category) ? a.category : 'Tools',
-      description: String(a.description || '').slice(0, 120), hosts: [...new Set([u.hostname, ...hosts, ...authHosts])], authHosts: [...new Set(authHosts)],
+      description: String(a.description || '').slice(0, 120), keywords, hosts: [...new Set([u.hostname, ...hosts, ...authHosts])], authHosts: [...new Set(authHosts)],
       badge: a.badge === 'none' ? 'none' : 'title', drm: !!a.drm, adblock: !!a.adblock,
     });
   }
@@ -45,8 +48,13 @@ function matchApp(apps, url) {
   let u; try { u = new URL(url); } catch { return null; }
   if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
   const h = u.hostname.toLowerCase();
-  const own = apps.map((a) => ({ id: a.id, host: new URL(a.url).hostname.toLowerCase() }));
-  const exact = own.filter((x) => x.host === h); if (exact.length) return exact[0].id;
+  const own = apps.map((a) => { const x = new URL(a.url); return { id: a.id, host: x.hostname.toLowerCase(), path: x.pathname.toLowerCase().replace(/\/+$/, '') }; });
+  const exact = own.filter((x) => x.host === h);
+  if (exact.length) {   // several apps on one host (Google Docs and Sheets, the BBC apps): the one whose path the address is under, longest first
+    const p = u.pathname.toLowerCase();
+    const under = exact.filter((x) => x.path && (p === x.path || p.startsWith(x.path + '/'))).sort((a, b) => b.path.length - a.path.length);
+    return (under[0] || exact[0]).id;
+  }
   const sub = own.filter((x) => h.endsWith('.' + x.host) || x.host.endsWith('.' + h)); if (sub.length === 1) return sub[0].id;
   if (sub.length > 1) return null;
   const reg = own.filter((x) => registrable(x.host) === registrable(h)); return reg.length === 1 ? reg[0].id : null;

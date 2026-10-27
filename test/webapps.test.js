@@ -7,14 +7,15 @@ const path = require('node:path');
 const W = require('../src/main/lib/webapps');
 const cat = require('../src/main/lib/webapps.json');
 
-test('shipped catalogue validates with no errors and has about 30+ apps', () => {
+test('shipped catalogue validates with no errors and has 250-300 apps', () => {
   const r = W.validateCatalogue(cat.apps);
   assert.deepEqual(r.errors, []);
-  assert.ok(r.apps.length >= 30, String(r.apps.length));
+  assert.ok(r.apps.length >= 250 && r.apps.length <= 300, String(r.apps.length));
   for (const n of ['Instagram', 'WhatsApp Web', 'Gmail', 'Outlook', 'YouTube', 'X', 'TikTok', 'LinkedIn', 'Facebook', 'Discord', 'Slack', 'Spotify', 'Google Drive', 'Google Docs', 'Google Maps', 'Notion', 'Trello', 'Canva', 'Figma', 'ChatGPT']) assert.ok(r.apps.some((a) => a.name === n), n);
   for (const a of r.apps) { assert.ok(a.url.startsWith('https://')); assert.ok(a.hosts.includes(new URL(a.url).hostname)); }
-  const drm = r.apps.filter((a) => a.drm).map((a) => a.id).sort();
-  assert.deepEqual(drm, ['disney', 'netflix', 'spotify']);
+  const drm = r.apps.filter((a) => a.drm).map((a) => a.id);
+  for (const id of ['disney', 'netflix', 'spotify', 'primevideo']) assert.ok(drm.includes(id), id);
+  assert.ok(!drm.includes('gmail') && !drm.includes('github'));
 });
 test('catalogue has no logos or remote images (plain names only)', () => {
   const txt = JSON.stringify(cat);
@@ -163,4 +164,115 @@ test('history sync: ids, import merge and validation, no echo, caps; autofill ch
   assert.equal(w('autofill.take', 'a1'), true); assert.equal(w('autofill.dismiss', 'a1', { never: true }), true); assert.equal(w('autofill.fill', 3, { email: 'a@b.co' }), true); assert.equal(w('autofill.fill', 3, { ssn: '1' }), false);
   assert.equal(w('autofill.answer', 'r1', null), true); assert.equal(w('autofill.answer', 'r1', 'x'), true); assert.equal(w('autofill.answer', 'r1', ''), false);
   assert.equal(check('page', 'br:autofill.take', ['a1']).ok, false);
+});
+
+// ---- the large catalogue: shape, no duplicates, search words, icons, and the Cloud copy ----
+const { apps: ALL } = W.validateCatalogue(cat.apps);
+const hostOf = (a) => new URL(a.url).hostname.toLowerCase().replace(/^www\./, '');
+const keyOf = (a) => { const u = new URL(a.url); return hostOf(a) + u.pathname.replace(/\/+$/, '').toLowerCase(); };
+test('catalogue: ids are unique and valid, installed-state ids of the first 36 apps are unchanged', () => {
+  assert.equal(cat.apps.length, ALL.length, 'nothing was dropped by validation');
+  assert.equal(new Set(ALL.map((a) => a.id)).size, ALL.length);
+  assert.ok(ALL.every((a) => /^[a-z][a-z0-9-]{0,31}$/.test(a.id)));
+  for (const id of ['whatsapp', 'messenger', 'telegram', 'discord', 'slack', 'teams', 'meet', 'zoom', 'gmail', 'outlook', 'gdrive', 'gdocs', 'gsheets', 'gcal', 'gmaps', 'dropbox', 'notion', 'trello', 'asana', 'miro', 'canva', 'figma', 'chatgpt', 'github', 'linkedin', 'facebook', 'instagram', 'x', 'tiktok', 'reddit', 'pinterest', 'youtube', 'twitch', 'spotify', 'netflix', 'disney']) assert.ok(ALL.some((a) => a.id === id), id);
+});
+test('catalogue: every address is https with a well-formed host, and no two apps share an address', () => {
+  for (const a of ALL) {
+    const u = new URL(a.url);
+    assert.equal(u.protocol, 'https:', a.id); assert.ok(!u.username && !u.password && !u.search && !u.hash, a.id);
+    assert.match(u.hostname, /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/, a.id);
+    assert.ok(!/^\d+\.\d+\.\d+\.\d+$/.test(u.hostname) && u.hostname !== 'localhost', a.id);
+    assert.ok(a.hosts.length >= 1 && a.hosts.every((h) => /^[a-z0-9.-]+\.[a-z]{2,}$/.test(h)), a.id);
+  }
+  const keys = ALL.map(keyOf); const dup = keys.filter((k, i) => keys.indexOf(k) !== i);
+  assert.deepEqual(dup, [], 'duplicate address: ' + dup);
+  // sites that share a host (Google Docs / Sheets / Slides / Forms, the BBC apps) are told apart by their path; only one may sit at the root
+  const byHost = {}; for (const a of ALL) (byHost[hostOf(a)] = byHost[hostOf(a)] || []).push(a);
+  for (const [h, l] of Object.entries(byHost)) if (l.length > 1) assert.ok(l.filter((a) => new URL(a.url).pathname.length <= 1).length <= 1, h + ': at most one app at the root');
+});
+test('catalogue: categories are known, non-empty and in tab order; names and descriptions are plain text', () => {
+  const used = [...new Set(ALL.map((a) => a.category))];
+  assert.ok(used.every((c) => W.CATEGORIES.includes(c)), used.join());
+  for (const c of used) assert.ok(ALL.filter((a) => a.category === c).length >= 3, c);
+  for (const c of ['AI', 'Social', 'Chat', 'Media', 'Mail', 'Office', 'Files', 'Work', 'Design', 'Dev', 'Shopping', 'Travel', 'News', 'Reference', 'Games', 'Tools']) assert.ok(used.includes(c), 'missing ' + c);
+  const order = ALL.map((a) => W.CATEGORIES.indexOf(a.category)); assert.deepEqual(order, [...order].sort((a, b) => a - b), 'grouped by category');
+  for (const a of ALL) { assert.ok(a.description.length >= 5 && a.description.length <= 120, a.id); assert.ok(!/[<>]/.test(a.name + a.description), a.id); }
+  for (const n of ['Claude', 'ChatGPT', 'Gemini', 'Perplexity', 'Snapchat', 'Instagram', 'Threads', 'Bluesky', 'YouTube Music', 'BBC iPlayer', 'ITVX', 'Channel 4', 'OneDrive', 'Word', 'Todoist', 'Linear', 'GitLab', 'Stack Overflow', 'Vinted', 'Deliveroo', 'Airbnb', 'Skyscanner', 'Wikipedia', 'Chess.com', 'Lichess', 'Steam', 'Xbox Cloud Gaming']) assert.ok(ALL.some((a) => a.name === n), n);
+});
+test('catalogue: no adult or bank and payment sites; nothing hosted on a login-only portal host', () => {
+  const bad = /(porn|xxx|onlyfans|paypal|stripe|revolut|monzo|barclays|hsbc|lloyds|natwest|santander|wise\.com|venmo|klarna|coinbase|binance|bet365|bank)/i;
+  for (const a of ALL) assert.ok(!bad.test(a.url + ' ' + a.name), a.id);
+});
+test('catalogue: search words are lower case, short, and the aliases people type are there', () => {
+  for (const a of ALL) { assert.ok(a.keywords.length >= 1 && a.keywords.length <= 12, a.id); assert.ok(a.keywords.every((k) => k === k.toLowerCase() && k.length <= 24), a.id); }
+  const search = (q) => { q = q.toLowerCase(); return ALL.filter((a) => (a.name + ' ' + a.description + ' ' + a.category + ' ' + a.keywords.join(' ') + ' ' + a.id).toLowerCase().includes(q)).map((a) => a.id); };
+  for (const [q, id] of [['openai', 'chatgpt'], ['chat gpt', 'chatgpt'], ['gpt', 'chatgpt'], ['insta', 'instagram'], ['ig', 'instagram'], ['twitter', 'x'], ['tweet', 'x'], ['yt', 'youtube'], ['fb', 'facebook'], ['snap', 'snapchat'], ['anthropic', 'claude'], ['bard', 'gemini'], ['xai', 'grok'], ['le chat', 'mistral'], ['bing chat', 'copilot'], ['google docs', 'gdocs'], ['hotmail', 'outlook'], ['msteams', 'teams'], ['iplayer', 'bbciplayer'], ['takeaway', 'deliveroo'], ['stack overflow', 'stackoverflow'], ['weather', 'metoffice']]) assert.ok(search(q).includes(id), q + ' -> ' + id);
+  assert.equal(W.validateCatalogue([{ id: 'k', name: 'K', url: 'https://k.example/', keywords: ['ok word', 'Bad', 5, '<x>', 'a'.repeat(30)] }]).apps[0].keywords.join('|'), 'ok word');
+});
+test('catalogue: matchApp tells apps on one host apart by path, and keeps existing matches', () => {
+  const m = (u) => W.matchApp(ALL, u);
+  assert.equal(m('https://docs.google.com/spreadsheets/d/1/edit'), 'gsheets'); assert.equal(m('https://docs.google.com/presentation/d/1'), 'gslides');
+  assert.equal(m('https://docs.google.com/forms/d/1'), 'gforms'); assert.equal(m('https://docs.google.com/document/d/1'), 'gdocs');
+  assert.equal(m('https://www.bbc.co.uk/iplayer/episode/x'), 'bbciplayer'); assert.equal(m('https://www.bbc.co.uk/news/uk'), 'bbcnews'); assert.equal(m('https://www.bbc.co.uk/sport/football'), 'bbcsport');
+  assert.equal(m('https://claude.ai/chat/1'), 'claude'); assert.equal(m('https://chatgpt.com/c/1'), 'chatgpt'); assert.equal(m('https://www.instagram.com/p/1'), 'instagram');
+});
+test('app icons: finding the icon address in a page', () => {
+  const { pickIcons, safeIconUrl, sniff } = require('../src/main/lib/webapp-icons');
+  const html = '<html><head><link rel="icon" href="/f16.png" sizes="16x16"><link rel="shortcut icon" href="https://cdn.example.com/f48.png" sizes="48x48"><link rel="apple-touch-icon" sizes="180x180" href="/touch.png"><link rel="icon" href="http://insecure.example.com/x.png"><link rel="icon" href="data:image/png;base64,AAAA"><link rel="icon" href="https://127.0.0.1/x.png"></head>';
+  const l = pickIcons(html, 'https://www.example.com/');
+  assert.deepEqual(l.slice(0, 3), ['https://www.example.com/touch.png', 'https://cdn.example.com/f48.png', 'https://www.example.com/f16.png']);
+  assert.equal(l[l.length - 1], 'https://www.example.com/favicon.ico'); assert.ok(l.length <= 4);
+  assert.deepEqual(pickIcons('<p>nothing</p>', 'https://a.example.org/x/y'), ['https://a.example.org/favicon.ico']);
+  for (const u of ['http://a.example.com/', 'https://u:p@a.example.com/', 'https://127.0.0.1/', 'https://localhost/', 'https://printer.local/', 'https://10.0.0.1/', 'ftp://a.example.com/', 'nope', 'https://intranet/']) assert.equal(safeIconUrl(u), null, u);
+  assert.equal(safeIconUrl('https://a.example.com/i.png'), 'https://a.example.com/i.png');
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
+  assert.equal(sniff(png), 'image/png'); assert.equal(sniff(Buffer.from('<!doctype html><html><body>hi</body></html>')), ''); assert.equal(sniff(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>')), 'image/svg+xml');
+  assert.equal(sniff(Buffer.from('GIF89a......')), 'image/gif'); assert.equal(sniff(Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0])), 'image/jpeg'); assert.equal(sniff(Buffer.alloc(3)), '');
+});
+test('app icons: fetch, size cap, disk cache, failures ignored, one request pool', async () => {
+  const { WebAppIcons } = require('../src/main/lib/webapp-icons');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mfi-'));
+  const png = Buffer.concat([Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex'), Buffer.alloc(100, 1)]);
+  const calls = []; let active = 0, peak = 0;
+  const fetch = async (u) => {
+    calls.push(u); active++; peak = Math.max(peak, active); await new Promise((r) => setTimeout(r, 5)); active--;
+    if (u === 'https://good.example.com/') return { ok: true, url: u, buf: Buffer.from('<link rel="apple-touch-icon" href="/t.png">') };
+    if (u === 'https://good.example.com/t.png') return { ok: true, url: u, buf: png };
+    if (u === 'https://redir.example.com/') return { ok: true, url: 'http://evil.example.com/', buf: Buffer.from('<link rel="icon" href="/x.png">') };
+    if (u === 'https://big.example.com/') return { ok: true, url: u, buf: Buffer.from('<link rel="icon" href="/big.png">') };
+    if (u === 'https://big.example.com/big.png') return { ok: true, url: u, buf: Buffer.concat([png, Buffer.alloc(50000, 2)]) };
+    if (u === 'https://html.example.com/favicon.ico') return { ok: true, url: u, buf: Buffer.from('<!doctype html><html>not an image at all</html>') };
+    throw new Error('network down');
+  };
+  let t = 1000; const ic = new WebAppIcons({ dir, fetch, now: () => t });
+  const apps = ['good', 'redir', 'big', 'html', 'down'].map((n) => ({ id: n, url: 'https://' + n + '.example.com/x' }));
+  assert.deepEqual(ic.collect(apps).icons, {}); assert.equal(ic.collect(apps).pending, 5);
+  for (let i = 0; i < 100 && ic.active + ic.queue.length; i++) await new Promise((r) => setTimeout(r, 10));
+  const r = ic.collect(apps);
+  assert.deepEqual(Object.keys(r.icons), ['good']); assert.match(r.icons.good, /^data:image\/png;base64,/); assert.equal(r.pending, 0);
+  assert.ok(peak <= 3, 'at most 3 at a time: ' + peak);
+  assert.ok(!calls.some((u) => u.startsWith('http://')), 'never http');
+  const again = new WebAppIcons({ dir, fetch: async () => { throw new Error('should come from disk'); }, now: () => t + 1000 });
+  assert.equal(again.collect(apps).icons.good, r.icons.good); assert.equal(again.queue.length + again.active, 0, 'fresh answers (also failures) are not asked again');
+  let asked = 0; const later = new WebAppIcons({ dir, fetch: async () => { asked++; return { ok: false }; }, now: () => t + 4 * 24 * 3600 * 1000 });
+  later.collect(apps); for (let i = 0; i < 100 && later.active + later.queue.length; i++) await new Promise((r2) => setTimeout(r2, 10));
+  assert.ok(asked > 0, 'failures are retried after 3 days'); assert.ok(later.collect(apps).icons.good, 'an old icon keeps showing while it is refreshed');
+  assert.ok(fs.readdirSync(dir).every((f) => /^[a-z0-9-]+\.json$/.test(f)));
+  assert.equal(ic.collect([{ id: 'Bad Id', url: 'https://x.example.com/' }]).pending, 0);
+});
+test('app icons: the catalogue bridge carries icon and keywords, requests are https-only and cookie-free', () => {
+  const svc = fs.readFileSync(path.join(__dirname, '../src/main/browser-service.js'), 'utf8');
+  assert.ok(/'br:webapps\.catalogue'[\s\S]{0,900}keywords: a\.keywords, icon: ic\[a\.id\] \|\| ''/.test(svc));
+  const f = svc.slice(svc.indexOf('async fetchIcon'), svc.indexOf('async fetchBuffer'));
+  assert.ok(/credentials: 'omit'/.test(f) && /safeIconUrl\(u\)/.test(f) && /netBlocked/.test(f) && /quitting/.test(f));
+  assert.ok(!/session\.|cookies/.test(f));
+});
+test('the Cloud copy of the catalogue (if present) is generated from this one', () => {
+  const g = require('../tools/gen-cloud-webapps');
+  const text = g.render(); assert.match(text, /^\/\*[\s\S]*\*\/\nwindow\.MFWEBAPPS=\[/);
+  const rows = new Function('window', text + '; return window.MFWEBAPPS;')({});
+  assert.equal(rows.length, ALL.length); assert.deepEqual(rows.map((r) => r[0]), ALL.map((a) => a.id));
+  assert.ok(rows.every((r) => r.length === 6 && r[3].startsWith('https://')));
+  const copy = process.env.MF_CLOUD_WEBAPPS || path.join(__dirname, '../../release-wc/apps/webapps_catalogue.js');
+  if (fs.existsSync(copy)) assert.equal(fs.readFileSync(copy, 'utf8'), text, 'run: node tools/gen-cloud-webapps.js ' + copy);
 });

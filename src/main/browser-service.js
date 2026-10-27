@@ -9,7 +9,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const {
-  app, BaseWindow, BrowserWindow, WebContentsView, net, session, ipcMain, Menu, Notification, dialog, shell, screen, clipboard,
+  app, BaseWindow, BrowserWindow, WebContentsView, nativeImage, net, session, ipcMain, Menu, Notification, dialog, shell, screen, clipboard,
 } = require('electron');
 
 const O = require('./lib/origins');
@@ -22,6 +22,7 @@ const { safeFilename, uniquePath, chooseDir } = require('./lib/downloads-path');
 const { popupAllowed, decidePermission } = require('./lib/policy');
 const IPC = require('./lib/ipc-allowlist');
 const W = require('./lib/webapps');
+const WI = require('./lib/webapp-icons');
 const { DetailsLog } = require('./lib/details');
 const PV = require('./lib/privacy');
 const SG = require('./lib/suggest');
@@ -35,8 +36,16 @@ const PROT = require('./lib/protect');
 const { actionForKey } = require('./lib/shortcuts');
 const ABOUT = require('./lib/about');
 const KC = require('./lib/keepcookies');
+const SEARCH_DARK_JS = `(()=>{try{const c=getComputedStyle(document.body).backgroundColor,m=/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/.exec(c);return !!m&&(+m[1]+ +m[2]+ +m[3])<260}catch(e){return false}})()`;
+const SEARCH_TAB_JS = `(()=>{try{const light=c=>{const m=/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*([\\d.]+))?\\)/.exec(c||'');return !!m&&(m[4]===undefined||+m[4]>0.5)&&+m[1]>190&&+m[2]>190&&+m[3]>190};
+const root=document.querySelector('#hdtb,#hdtb-msb,[role=navigation],[role=list]')||document.body;let n=0;
+for(const el of root.querySelectorAll('a,div,span,li')){if(n>3||el.hasAttribute('data-mfsel'))continue;const r=el.getBoundingClientRect();if(r.width<10||r.top<0||r.top>400)continue;
+const cs=getComputedStyle(el),a=getComputedStyle(el,'::after');
+if(light(cs.borderBottomColor)&&parseFloat(cs.borderBottomWidth)>=2&&parseFloat(cs.borderBottomWidth)<=4){el.setAttribute('data-mfsel','1');n++;continue}
+if(a.content!=='none'&&light(a.backgroundColor)&&parseFloat(a.height)>=2&&parseFloat(a.height)<=4){el.setAttribute('data-mfsel','1');n++}}}catch(e){}})()`;
 const SEARCH_MATCH_CSS = '@media (prefers-color-scheme: dark){html,body,#main,#cnt,#searchform,.sfbg,#hdtb,#hdtb-msb,#appbar,#sfcnt{background-color:#171716 !important}}'
   + ' html{accent-color:#ffa800}input,textarea{caret-color:#ffa800}::selection{background:#ffa800;color:#0a0a0a}:focus-visible{outline-color:#ffa800 !important}'
+  + ' [data-mfsel]{border-bottom-color:#ffa800 !important}[data-mfsel]::after,[data-mfsel]::before{background-color:#ffa800 !important;border-color:#ffa800 !important}'
   + ' [role=tab][aria-selected=true]::after,[aria-current=page]::after,#hdtb-msb .hdtb-msel::after{background-color:#ffa800 !important;border-color:#ffa800 !important}';
 
 const UI_DIR = path.join(__dirname, '..', 'ui');
@@ -78,6 +87,7 @@ class BrowserService {
     this.restoreGroupList = Array.isArray(this.tabsStore.data.groups) ? this.tabsStore.data.groups.slice(0, 8).map(okUrls).filter((g) => g.length) : [];
     this.appsStore = new W.AppsStore(f('apps.json'));
     this.catalogue = this.loadCatalogue(f('webapps-custom.json'));
+    this.icons = new WI.WebAppIcons({ dir: f('webapp-icons'), fetch: (u, o) => this.fetchIcon(u, o), normalise: (buf) => { const im = nativeImage.createFromBuffer(buf); if (im.isEmpty()) return null; const sz = im.getSize(); const out = Math.max(sz.width, sz.height) > 64 ? im.resize({ width: sz.width >= sz.height ? 64 : Math.round(64 * sz.width / sz.height), quality: 'best' }) : im; return { buf: out.toPNG(), mime: 'image/png' }; } });
     this.appBadges = new Map(); // app id -> unread count
     this.appWindows = new Map(); // app id -> BrowserWindow
     this.hardened = new Set();
@@ -252,6 +262,19 @@ class BrowserService {
     const had = this.ext.remove(id);
     if (id === 'blocker') { this.blocker = new Blocker(parseList(fs.readFileSync(path.join(__dirname, 'lib', 'blocklist.txt'), 'utf8'))); }
     return had;
+  }
+  // One request for a web app's own icon (or its home page to find it): https only, no cookies, capped size and time, failures just return not-ok
+  async fetchIcon(u, { max }) {
+    if (this.quitting || this.netBlocked || !WI.safeIconUrl(u)) return { ok: false };
+    const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 6000);
+    try {
+      const r = await net.fetch(u, { headers: { 'user-agent': 'MayfairDesktop/' + this.version + ' (app icon, no tracking)', accept: 'text/html,image/*;q=0.9' }, credentials: 'omit', signal: ctl.signal, redirect: 'follow' });
+      if (!r.ok || !r.body || !WI.safeIconUrl(r.url || u)) return { ok: false };
+      const len = Number(r.headers.get('content-length') || 0); if (len > max * 4) return { ok: false };
+      const chunks = []; let n = 0; const rd = r.body.getReader();
+      for (;;) { const { done, value } = await rd.read(); if (done) break; chunks.push(Buffer.from(value)); n += value.length; if (n >= max) { try { await rd.cancel(); } catch { /* ignore */ } break; } }
+      return { ok: true, url: r.url || u, buf: Buffer.concat(chunks).subarray(0, max) };
+    } catch { return { ok: false }; } finally { clearTimeout(timer); }
   }
   async fetchBuffer(u, max) {
     const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 30000);
@@ -844,8 +867,13 @@ class BrowserService {
     };
     wc.on('did-navigate', (e, url) => { onNav(e, url); this.afterNavigation(id, t); });
     // Google's results page already follows the dark theme; this only swaps its grey for Mayfair's own background so the two match. Background only, search pages only.
-    const matchColors = () => { try { if (this.settings.get().matchSearchColors !== false && /^https:\/\/www\.google\.[a-z.]+\/search/.test(wc.getURL()) && !wc.isDestroyed()) wc.insertCSS(SEARCH_MATCH_CSS).catch(() => {}); } catch {} };
-    wc.on('dom-ready', matchColors);
+    const matchOn = () => !webapp && !priv && this.settings.get().matchSearchColors !== false && !wc.isDestroyed() && /^https:\/\/www\.google\.[a-z.]+\/search/.test(wc.getURL());
+    // only when Google itself is already showing its dark theme (otherwise a dark background under dark text would be unreadable)
+    const matchColors = () => { try { if (!matchOn()) return; wc.executeJavaScript(SEARCH_DARK_JS, true).then((dark) => { if (dark && matchOn()) wc.insertCSS(SEARCH_MATCH_CSS).catch(() => {}); }).catch(() => {}); } catch {} };
+    // Google draws the selected tab's underline in a changing class: find the thin light bar under the active result tab by how it looks and mark it, so the CSS can colour it
+    const markTab = () => { try { if (!matchOn()) return; wc.executeJavaScript(SEARCH_TAB_JS, true).catch(() => {}); } catch {} };
+    wc.on('dom-ready', () => { matchColors(); markTab(); setTimeout(markTab, 700); setTimeout(markTab, 2000); });
+    wc.on('did-finish-load', markTab);
     wc.on('did-navigate-in-page', matchColors);
     wc.on('did-navigate-in-page', (_e, url, isMain) => { if (isMain) onNav(_e, url); });
     wc.on('did-fail-load', (_e, code, desc, url, isMain) => {
@@ -1495,7 +1523,10 @@ class BrowserService {
       'br:permissions.reset': (e, origin) => { this.sitePerms.resetSite(origin); return true; },
       'br:permissions.answer': (e, id, allow, remember) => this.answerPermission(id, allow, remember),
       'br:popups.allow': (e, id) => { const p = this.popups.get(id); if (!p) return false; this.popups.delete(id); this.newTab({ url: p.url, afterActive: true, private: p.priv, gid: p.gid != null && this.groups.has(p.gid) ? p.gid : null }); return true; },
-      'br:webapps.catalogue': () => this.appsView().map((a) => ({ id: a.id, name: a.name, url: a.url, category: a.category, description: a.description, adblock: !!a.adblock, badge: this.appById(a.id).badge, installed: a.installed, pinned: a.pinned, window: a.window, badgeCount: a.badge, open: a.open, match: [...new Set([W.registrable(new URL(a.url).hostname)])] })),
+      'br:webapps.catalogue': () => {
+        const view = this.appsView(); const ic = this.icons.collect(view).icons;   // icons already known; the rest are fetched in the background and show on the next call
+        return view.map((a) => ({ id: a.id, name: a.name, url: a.url, category: a.category, description: a.description, keywords: a.keywords, icon: ic[a.id] || '', adblock: !!a.adblock, badge: this.appById(a.id).badge, installed: a.installed, pinned: a.pinned, window: a.window, badgeCount: a.badge, open: a.open, match: [...new Set([W.registrable(new URL(a.url).hostname)])] }));
+      },
       'br:webapps.open': (e, id, o) => this.openApp(id, o && o.window ? { window: true } : {}),
       'br:webapps.pin': (e, id, on) => { if (!this.appById(id)) return false; this.appsStore.add(id); const ok = this.appsStore.setPinned(id, on); this.onAppsChanged(); return ok; },
       'br:webapps.reset': (e, id) => this.resetApp(id),

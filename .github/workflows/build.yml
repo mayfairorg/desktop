@@ -43,11 +43,11 @@ jobs:
         continue-on-error: true
         run: |
           # Tor is optional: if the download fails the build still works and ships without the Tor private tab (the app says so).
-          mkdir -p vendor/tor/win-x64 vendor/tor/linux-x64 vendor/tor/mac-x64 vendor/tor/mac-arm64
+          mkdir -p vendor/tor/win-x64 vendor/tor/linux-x64 vendor/tor/linux-arm64 vendor/tor/mac-x64 vendor/tor/mac-arm64
           # The version is looked up from the Tor Project itself unless the repository variable TOR_BUNDLE_VERSION pins one.
           case "${{ matrix.name }}" in
             windows) node tools/fetch-tor.js win x64 ;;
-            linux)   node tools/fetch-tor.js linux x64 ;;
+            linux)   node tools/fetch-tor.js linux x64; node tools/fetch-tor.js linux arm64 || echo "::warning::Tor for ARM Linux (Chromebooks) was not fetched; that build ships without the Tor private tab" ;;
             macos)   node tools/fetch-tor.js mac x64 && node tools/fetch-tor.js mac arm64 ;;
           esac || echo "::warning::Tor was not fetched; this build ships without the Tor private tab"
           for d in vendor/tor/*; do [ -n "$(ls -A "$d")" ] || echo "Tor is not included in this build." > "$d/NOT_INCLUDED.txt"; done

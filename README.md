@@ -171,6 +171,8 @@ Could not be done here, and why:
 - The address bar is drawn by the Browser app in Mayfair Cloud. This app supplies the logic (`go(id,text)`: address or search with your engine, command shortcuts) and `suggest(text)` (your bookmarks and history, no network).
 - Video-site sign-in pop-ups that need `window.opener` (for example "Sign in with Google" popups) are loaded in the same tab instead and may not complete.
 
+**Chromebooks (ChromeOS).** ChromeOS cannot run an Electron app directly, so Chromebooks use the Linux build inside ChromeOS's built-in Linux environment (Settings, About ChromeOS, Developers). The Linux job builds an Intel/AMD (amd64) and an ARM (arm64) AppImage and .deb; Tor for ARM is fetched when the Tor Project publishes it and the build ships without the Tor tab otherwise. Not verified (no Chromebook here): that the app runs inside the Linux container on either chip (graphics, sandbox, window integration), that ARM Tor is available, and that Linux is allowed on school and work Chromebooks (administrators can switch it off). Without Linux, Chromebook users can install Mayfair Cloud from Chrome (Install) and lose the built-in browser, Tor and web apps.
+
 ## 11. Folder map
 
 ```
