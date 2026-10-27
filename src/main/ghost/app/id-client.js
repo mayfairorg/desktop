@@ -5,10 +5,10 @@
 // Only the issuer's own address is ever called (discovery may not point anywhere else). Responses are size-capped, calls time out, and nothing
 // from the service is shown without being reduced to known fields. `fetch` is passed in so tests run against a local mock and never the network.
 const ISSUER = 'https://mayfairmail.com';
-const CLIENT_ID = 'mayfair-ghost';
-const SCOPE = 'openid profile email offline_access';
+const CLIENT_ID = 'mayfair-desktop';   // the same public client as Mayfair Desktop; the scope below is what lets it read the Ghost entitlement
+const SCOPE = 'openid profile email offline_access ghost.access';
 const GRANT_DEVICE = 'urn:ietf:params:oauth:grant-type:device_code';
-const ENTITLEMENT_PATH = '/api/ghost/entitlement';
+const ENTITLEMENT_PATH = '/api/platform/v1/ghost/entitlement';
 const APPLY_URL = ISSUER + '/ghost/apply';
 const MAX_BODY = 64 * 1024;
 const MODULES = ['scanning', 'geolocation'];          // modules that are off until an operator switches them on for the account
@@ -22,14 +22,19 @@ const strOrNull = (v, n) => (typeof v === 'string' && v.length <= n ? v : null);
 function normalizeEntitlement(raw, { now = Date.now(), issuer = ISSUER } = {}) {
   const e = isObj(raw) ? raw : {};
   const known = ['approved', 'none', 'pending', 'rejected', 'revoked', 'expired'];
-  let status = known.includes(e.status) ? e.status : (e.approved === true ? 'approved' : 'none');
-  const operator = e.operator === true;
-  const expiresAt = typeof e.expiresAt === 'string' && Number.isFinite(Date.parse(e.expiresAt)) ? new Date(Date.parse(e.expiresAt)).toISOString() : null;
+  // The Mayfair ID service answers status 'operator' or 'draft' too; 'draft' (application not yet sent) counts as no application.
+  let status = known.includes(e.status) ? e.status : (e.status === 'operator' ? 'approved' : (e.status === 'draft' ? 'none' : (e.approved === true ? 'approved' : 'none')));
+  const operator = e.operator === true || e.status === 'operator';
+  // expiry: ISO text (expiresAt) or milliseconds (expires_at, what the service sends)
+  const expRaw = e.expiresAt !== undefined ? e.expiresAt : e.expires_at;
+  const expMs = typeof expRaw === 'number' && Number.isFinite(expRaw) ? expRaw : (typeof expRaw === 'string' ? Date.parse(expRaw) : NaN);
+  const expiresAt = Number.isFinite(expMs) && expMs > 0 ? new Date(expMs).toISOString() : null;
   if (operator) status = 'approved';
   else if (status === 'approved' && expiresAt && Date.parse(expiresAt) <= now) status = 'expired';
   const modules = {};
   const given = isObj(e.modules) ? e.modules : {};
-  for (const m of MODULES) modules[m] = operator ? true : (status === 'approved' && given[m] === true);
+  const alias = { scanning: 'active_scanning', geolocation: 'image_geolocation' };   // the service's names for the same switches
+  for (const m of MODULES) modules[m] = operator ? true : (status === 'approved' && (given[m] === true || given[alias[m]] === true));
   let applyUrl = issuer + '/ghost/apply';
   try { const u = new URL(String(e.applyUrl || '')); if (u.origin === issuer && u.protocol === 'https:') applyUrl = u.origin + u.pathname; } catch { /* keep the default */ }
   return { status, approved: status === 'approved', operator, expiresAt: operator ? null : expiresAt, modules, applyUrl, note: strOrNull(e.note, 300) };

@@ -23,7 +23,7 @@ Ghost is an app inside Mayfair Desktop (category Research, not preinstalled). It
 
 - Installed from the Cloud App Library through the `ghost.app.library`, `ghost.app.open` and `ghost.app.remove` bridge calls. The library entry says Research, not preinstalled, needs Desktop.
 - Sign-in is the Mayfair ID device flow (RFC 8628). The session is stored sealed in the vault. Refresh tokens rotate.
-- Access is `GET /api/ghost/entitlement` with the access token. Unapproved accounts see the apply screen. Operators (`operator: true`) get every module and no expiry. A refusal takes effect at once; if Mayfair cannot be reached the last good answer is used for 72 hours. It is asked again at start and every 6 hours.
+- Access is `GET /api/platform/v1/ghost/entitlement` with the access token. Unapproved accounts see the apply screen. Operators (`operator: true`) get every module and no expiry. A refusal takes effect at once; if Mayfair cannot be reached the last good answer is used for 72 hours. It is asked again at start and every 6 hours.
 - Terms are Ghost's own, accepted once per version (version and SHA-256 recorded with the time). `terms-text.js` still has `[[ ]]` gaps for legal review; `termsGet()` reports how many.
 
 ## Server contracts that are assumed (not built yet)
@@ -31,7 +31,7 @@ Ghost is an app inside Mayfair Desktop (category Research, not preinstalled). It
 These are the owner's to build. The client and the tests use a local stand-in (`test/ghost-app-mock.js`).
 
 1. OpenID discovery at `https://mayfairmail.com/.well-known/openid-configuration` with `device_authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, all on the issuer origin. Client id `mayfair-ghost`, scope `openid profile email offline_access`.
-2. `GET https://mayfairmail.com/api/ghost/entitlement` (Bearer) answering `{ status: "approved|pending|rejected|revoked|expired|none", operator?: bool, expiresAt?, modules?: { scanning?: bool, geolocation?: bool }, applyUrl?, note? }`. `404` means never applied. Anything unexpected is treated as not approved.
+2. `GET https://mayfairmail.com/api/platform/v1/ghost/entitlement` (Bearer) answering `{ status: "approved|pending|rejected|revoked|expired|none", operator?: bool, expiresAt?, modules?: { scanning?: bool, geolocation?: bool }, applyUrl?, note? }`. `404` means never applied. Anything unexpected is treated as not approved.
 3. `GET https://cloud.mayfairmail.com/ghost/index.json` with `{ components: [{ id, version, size }] }` (`404` means none). The list is not signature-verified yet.
 
 ## Modules and connectors
