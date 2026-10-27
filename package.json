@@ -36,6 +36,7 @@
     "acorn": "^8.14.0"
   },
   "build": {
+    "npmRebuild": false,
     "appId": "com.mayfairmail.desktop",
     "productName": "Mayfair Desktop",
     "copyright": "Copyright (c) 2022-2026 The Mayfair Organization. All rights reserved.",
