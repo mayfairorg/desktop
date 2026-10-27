@@ -111,11 +111,20 @@ test('wrong passphrase and wrong phrase are refused; right ones unlock (device k
   const other = (await (async () => { const o = mk(); o.open(); return withBackup(o); })());
   await rejects(w.unlock({ phrase: other }), 'wrong-secret');
   await rejects(w.unlock({ phrase: phrase.slice(0, 11) }), 'bad-phrase');
-  const typo = phrase.slice(); typo[0] = typo[0] === 'zz' ? 'aa' : bipOther(typo[0]); await rejects(w.unlock({ phrase: typo }), 'bad-phrase');
+  const typo = typoOf(phrase); await rejects(w.unlock({ phrase: typo }), 'bad-phrase');
   assert.equal(w.status().state, 'locked');
   await w.unlock({ passphrase: PASS }); assert.deepEqual(w.getJSON('cases', 'a'), { ok: 1 });
   const x = mk(v.dir); await x.unlock({ phrase: phrase.join(' ').toUpperCase() }); assert.deepEqual(x.getJSON('cases', 'a'), { ok: 1 });
 });
+// a one-word change that really breaks the 4-bit checksum (a random swap passes it about 1 time in 16, which made this test flaky)
+function typoOf(phrase) {
+  const B = require('../src/main/ghost/vault/bip39'); const L = B.words();
+  for (let k = 1; k < 200; k++) {
+    const t = phrase.slice(); t[0] = L[(L.indexOf(t[0]) + k) % 2048];
+    try { B.fromWords(t); } catch (e) { if (e.code === 'bad-phrase') return t; }
+  }
+  throw new Error('no breaking typo found');
+}
 function bipOther(w) { const L = require('../src/main/ghost/vault/bip39').words(); return L[(L.indexOf(w) + 5) % 2048]; }
 test('requirePassphrase removes the device key; turning it off brings it back', async () => {
   const v = mk(); v.open(); await rejects(Promise.resolve().then(() => v.setRequirePassphrase(true)), 'backup-off');
