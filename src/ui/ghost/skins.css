@@ -1,0 +1,209 @@
+/* ==========================================================================
+   MAYFAIR GHOST: skins. A skin is a set of variables, picked by data-skin on <html> (and on the preview tiles in Settings > Appearance).
+   Every skin defines the same variables (a test checks this and checks contrast). 'mayfair' takes its colours from mf-tokens.css
+   (dark or light); the other four are dark and define their own. Decorations are optional and driven only by the --gh-deco-* / --gh-bracket / --gh-ph-* variables.
+   ========================================================================== */
+
+/* derived colour: the same formulas as mf-tokens.css, repeated here so a preview tile (which is not <html>) works out its own */
+[data-skin]{
+  --mf-hair:color-mix(in srgb,var(--mf-text) 11%,transparent);
+  --mf-hair2:color-mix(in srgb,var(--mf-text) 6%,transparent);
+  --mf-sel:color-mix(in srgb,var(--mf-accent) 18%,transparent);
+  --mf-glass:color-mix(in srgb,var(--mf-surface) 72%,transparent);
+  --mf-mica:color-mix(in srgb,var(--mf-surface) 90%,transparent);
+  color:var(--mf-text);
+}
+
+/* ---------- Mayfair (default): the Cloud client's own skin ---------- */
+[data-skin=mayfair]{
+  --mf-font:'Inter',system-ui,sans-serif;
+  --mf-mono:'Mayfair Mono',ui-monospace,monospace;
+  --mf-r-sm:6px;--mf-r-ctl:8px;--mf-r-pop:16px;--mf-r-dlg:16px;--mf-r-pill:8px;
+  --gh-bg:var(--mf-surface);
+  --gh-panel:var(--mf-surface);
+  --gh-raised:var(--mf-soft);
+  --gh-rail:var(--mf-soft);
+  --gh-grid:var(--mf-hair2);
+  --gh-focus:var(--mf-accent-ink);
+  --gh-hot:var(--mf-accent-ink);
+  --gh-gap:var(--mf-s4);
+  --gh-g-bg:var(--mf-surface);
+  --gh-g-ink:var(--mf-text);
+  --gh-g-edge:color-mix(in srgb,var(--mf-mute) 90%,var(--gh-g-bg));
+  --gh-g-hi:var(--mf-accent-ink);
+  --gh-g-sel:color-mix(in srgb,var(--mf-accent) 16%,var(--mf-surface));
+  --gh-dot:var(--mf-mute);
+  --gh-deco-grid:0;
+  --gh-deco-scan:0;
+  --gh-bracket:0px;
+  --gh-bracket-size:0px;
+  --gh-ph-case:none;
+  --gh-ph-track:0;
+  --gh-ph-bg:transparent;
+  --gh-ph-mark:"";
+  --gh-ph-rule:0px;
+  --gh-art:0;
+}
+
+/* ---------- Terminal green ---------- */
+[data-skin=terminal],[data-skin=terminal] body{--mf-accent-ink:#39ff7a}
+[data-skin=terminal]{
+  color-scheme:dark;
+  --mf-surface:#050d08;--mf-soft:#0a1810;--mf-soft2:#112519;
+  --mf-text:#c9f7d4;--mf-mute:#7fb892;--mf-line:#245236;
+  --mf-accent:#39ff7a;--mf-on-accent:#03140a;
+  --mf-danger:#ff8080;--mf-ok:#7dffb0;--mf-warn:#f2e05a;--mf-info:#5fd7ff;
+  --mf-scene:#020604;--mf-black:#020604;
+  --mf-hov:color-mix(in srgb,var(--mf-text) 8%,transparent);
+  --mf-act:color-mix(in srgb,var(--mf-text) 14%,transparent);
+  --mf-font:'Mayfair Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --mf-mono:'Mayfair Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --mf-r-sm:2px;--mf-r-ctl:3px;--mf-r-pop:4px;--mf-r-dlg:4px;--mf-r-pill:2px;
+  --gh-bg:var(--mf-scene);
+  --gh-panel:var(--mf-surface);
+  --gh-raised:var(--mf-soft);
+  --gh-rail:var(--mf-surface);
+  --gh-grid:color-mix(in srgb,var(--mf-accent) 9%,transparent);
+  --gh-focus:var(--mf-accent);
+  --gh-hot:var(--mf-accent);
+  --gh-gap:var(--mf-s3);
+  --gh-g-bg:var(--mf-scene);
+  --gh-g-ink:var(--mf-text);
+  --gh-g-edge:color-mix(in srgb,var(--mf-mute) 90%,var(--gh-g-bg));
+  --gh-g-hi:var(--mf-accent);
+  --gh-g-sel:color-mix(in srgb,var(--mf-accent) 18%,var(--mf-scene));
+  --gh-dot:var(--mf-accent);
+  --gh-deco-grid:.16;
+  --gh-deco-scan:.05;
+  --gh-bracket:1px;
+  --gh-bracket-size:10px;
+  --gh-ph-case:uppercase;
+  --gh-ph-track:.12em;
+  --gh-ph-bg:transparent;
+  --gh-ph-mark:"> ";
+  --gh-ph-rule:1px;
+  --gh-art:1;
+}
+
+/* ---------- Cyan HUD ---------- */
+[data-skin=hud],[data-skin=hud] body{--mf-accent-ink:#2ee6ea}
+[data-skin=hud]{
+  color-scheme:dark;
+  --mf-surface:#04141c;--mf-soft:#082230;--mf-soft2:#0e3144;
+  --mf-text:#d6f6ff;--mf-mute:#86bccf;--mf-line:#1b5a70;
+  --mf-accent:#2ee6ea;--mf-on-accent:#021518;
+  --mf-danger:#ff9090;--mf-ok:#62e6a8;--mf-warn:#ffd166;--mf-info:#8accff;
+  --mf-scene:#020b10;--mf-black:#020b10;
+  --mf-hov:color-mix(in srgb,var(--mf-text) 8%,transparent);
+  --mf-act:color-mix(in srgb,var(--mf-text) 14%,transparent);
+  --mf-font:'Inter',system-ui,sans-serif;
+  --mf-mono:'Mayfair Mono',ui-monospace,monospace;
+  --mf-r-sm:2px;--mf-r-ctl:4px;--mf-r-pop:6px;--mf-r-dlg:6px;--mf-r-pill:4px;
+  --gh-bg:var(--mf-scene);
+  --gh-panel:var(--mf-surface);
+  --gh-raised:var(--mf-soft);
+  --gh-rail:var(--mf-surface);
+  --gh-grid:color-mix(in srgb,var(--mf-accent) 10%,transparent);
+  --gh-focus:var(--mf-accent);
+  --gh-hot:var(--mf-accent);
+  --gh-gap:var(--mf-s4);
+  --gh-g-bg:var(--mf-scene);
+  --gh-g-ink:var(--mf-text);
+  --gh-g-edge:color-mix(in srgb,var(--mf-mute) 90%,var(--gh-g-bg));
+  --gh-g-hi:var(--mf-accent);
+  --gh-g-sel:color-mix(in srgb,var(--mf-accent) 20%,var(--mf-scene));
+  --gh-dot:var(--mf-accent);
+  --gh-deco-grid:.2;
+  --gh-deco-scan:.04;
+  --gh-bracket:2px;
+  --gh-bracket-size:14px;
+  --gh-ph-case:uppercase;
+  --gh-ph-track:.14em;
+  --gh-ph-bg:color-mix(in srgb,var(--mf-accent) 8%,transparent);
+  --gh-ph-mark:"";
+  --gh-ph-rule:1px;
+  --gh-art:1;
+}
+
+/* ---------- Mono minimal ---------- */
+[data-skin=mono],[data-skin=mono] body{--mf-accent-ink:#f2f2f2}
+[data-skin=mono]{
+  color-scheme:dark;
+  --mf-surface:#0c0c0c;--mf-soft:#141414;--mf-soft2:#1e1e1e;
+  --mf-text:#ececec;--mf-mute:#a2a2a2;--mf-line:#3a3a3a;
+  --mf-accent:#f2f2f2;--mf-on-accent:#0c0c0c;
+  --mf-danger:#ff9c9c;--mf-ok:#9be3a8;--mf-warn:#ffd98a;--mf-info:#9ec9ff;
+  --mf-scene:#080808;--mf-black:#080808;
+  --mf-hov:color-mix(in srgb,var(--mf-text) 8%,transparent);
+  --mf-act:color-mix(in srgb,var(--mf-text) 14%,transparent);
+  --mf-font:'Mayfair Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --mf-mono:'Mayfair Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --mf-r-sm:0px;--mf-r-ctl:0px;--mf-r-pop:0px;--mf-r-dlg:0px;--mf-r-pill:0px;
+  --gh-bg:var(--mf-scene);
+  --gh-panel:var(--mf-surface);
+  --gh-raised:var(--mf-soft);
+  --gh-rail:var(--mf-scene);
+  --gh-grid:color-mix(in srgb,var(--mf-text) 7%,transparent);
+  --gh-focus:var(--mf-accent);
+  --gh-hot:var(--mf-text);
+  --gh-gap:var(--mf-s4);
+  --gh-g-bg:var(--mf-surface);
+  --gh-g-ink:var(--mf-text);
+  --gh-g-edge:color-mix(in srgb,var(--mf-mute) 90%,var(--gh-g-bg));
+  --gh-g-hi:var(--mf-accent);
+  --gh-g-sel:var(--mf-soft2);
+  --gh-dot:var(--mf-text);
+  --gh-deco-grid:.22;
+  --gh-deco-scan:0;
+  --gh-bracket:0px;
+  --gh-bracket-size:0px;
+  --gh-ph-case:none;
+  --gh-ph-track:.04em;
+  --gh-ph-bg:transparent;
+  --gh-ph-mark:"";
+  --gh-ph-rule:0px;
+  --gh-art:0;
+}
+
+/* ---------- Operations ---------- */
+[data-skin=ops],[data-skin=ops] body{--mf-accent-ink:#4cc9f0}
+[data-skin=ops]{
+  color-scheme:dark;
+  --mf-surface:#0e1319;--mf-soft:#151c24;--mf-soft2:#1e2733;
+  --mf-text:#e6edf3;--mf-mute:#9aa8b8;--mf-line:#2b3646;
+  --mf-accent:#4cc9f0;--mf-on-accent:#04141c;
+  --mf-danger:#ff7070;--mf-ok:#4fd08a;--mf-warn:#f5b94a;--mf-info:#6cb6ff;
+  --mf-scene:#0a0e13;--mf-black:#0a0e13;
+  --mf-hov:color-mix(in srgb,var(--mf-text) 7%,transparent);
+  --mf-act:color-mix(in srgb,var(--mf-text) 13%,transparent);
+  --mf-font:'Inter',system-ui,sans-serif;
+  --mf-mono:'Mayfair Mono',ui-monospace,monospace;
+  --mf-r-sm:3px;--mf-r-ctl:4px;--mf-r-pop:6px;--mf-r-dlg:6px;--mf-r-pill:4px;
+  --gh-bg:var(--mf-scene);
+  --gh-panel:var(--mf-surface);
+  --gh-raised:var(--mf-soft);
+  --gh-rail:var(--mf-surface);
+  --gh-grid:color-mix(in srgb,var(--mf-text) 5%,transparent);
+  --gh-focus:var(--mf-accent);
+  --gh-hot:var(--mf-danger);
+  --gh-gap:var(--mf-s3);
+  --gh-g-bg:var(--mf-scene);
+  --gh-g-ink:var(--mf-text);
+  --gh-g-edge:color-mix(in srgb,var(--mf-mute) 90%,var(--gh-g-bg));
+  --gh-g-hi:var(--mf-accent);
+  --gh-g-sel:color-mix(in srgb,var(--mf-accent) 18%,var(--mf-scene));
+  --gh-dot:var(--mf-mute);
+  --gh-deco-grid:.1;
+  --gh-deco-scan:0;
+  --gh-bracket:0px;
+  --gh-bracket-size:0px;
+  --gh-ph-case:uppercase;
+  --gh-ph-track:.1em;
+  --gh-ph-bg:var(--mf-soft);
+  --gh-ph-mark:"";
+  --gh-ph-rule:1px;
+  --gh-art:0;
+}
+
+/* The user can switch decorations off in Settings > Appearance (data-deco="off" on <html>). Colours and type stay. */
+html[data-deco=off]{--gh-deco-grid:0;--gh-deco-scan:0;--gh-bracket:0px;--gh-bracket-size:0px;--gh-ph-mark:"";--gh-art:0}

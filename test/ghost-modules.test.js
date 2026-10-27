@@ -12,6 +12,7 @@ const fixtures = require('./fixtures/ghost-modules.json');
 const mods = require('../src/main/ghost/modules');
 const { core } = mods;
 const { validateResult } = require('../src/main/ghost/result');
+const M_gdeltDoc = require('../src/main/ghost/modules/lib/gdelt-doc');
 const { validateManifest } = require('../src/main/ghost/manifest');
 const X = require('../src/main/ghost/modules/lib/exif-parse');
 
@@ -168,21 +169,25 @@ test('dns-doh: CNAME chain, NXDOMAIN, other resolver, bad input and no request f
 });
 
 // ---------------- rdap-domain ----------------
-test('rdap-domain: registration facts from the registry the bootstrap names; natural persons never reported', async () => {
+test('rdap-domain: registration facts from the registry the bootstrap names; contacts passed on as published, registry redactions counted', async () => {
   const r = await run('rdap-domain', { domain: 'EXAMPLE.com' });
   assert.equal(r.status, 'ok'); valid(r, 'rdap-domain');
   assert.equal(r.network, 'rate-limited'); assert.equal(r.requests, 2);
   assert.deepEqual(r.fetch.log, ['https://data.iana.org/rdap/dns.json', 'https://rdap.registry-fixture.example/domain/example.com']);
   const d = find(r, 'domain', 'example.com');
   assert.deepEqual(d.raw.status, ['client transfer prohibited', 'active']);
-  assert.equal(d.raw.dnssec, true); assert.equal(d.raw.redacted, true); assert.equal(d.raw.personalContactsWithheld, 1);
+  assert.equal(d.raw.dnssec, true); assert.equal(d.raw.redacted, true); assert.equal(d.raw.registryRedactedContacts, 1); assert.equal(d.raw.personalContactsWithheld, undefined);
   assert.deepEqual(vals(r, 'event'), ['registration of example.com: 1995-08-14', 'expiration of example.com: 2027-08-13', 'last changed of example.com: 2026-08-14']);
   assert.equal(find(r, 'event', 'expiration of example.com: 2027-08-13').raw.t, '2027-08-13T04:00:00.000Z');
   assert.deepEqual(vals(r, 'domain').sort(), ['example.com', 'ns1.example.com', 'ns2.example.com']);
   assert.deepEqual(vals(r, 'org'), ['Fixture Registrar Inc.']);
   const mail = r.results.find((x) => x.entity.type === 'email');
   assert.equal(mail.entity.value, 'abuse@registrar-fixture.example'); assert.equal(mail.raw.role, 'abuse-contact');
-  assert.ok(!/Jane|jane@|person-fixture|REDACTED/.test(text(r)));
+  // the individual the registry published is passed on, with the role and the mailbox as published; the registry's own REDACTED placeholder is not reported
+  assert.deepEqual(vals(r, 'person'), ['Jane Fixture-Person']);
+  const jane = find(r, 'person', 'Jane Fixture-Person'); assert.deepEqual(jane.raw.roles, ['technical']); assert.deepEqual(jane.raw.emails, ['jane@person-fixture.example']); assert.equal(jane.raw.of, 'example.com');
+  assert.ok(!/REDACTED/.test(text(r))); assert.ok(r.notes.some((n) => /1 contact\(s\) were redacted by the registry itself/.test(n)));
+  assert.equal(r.results.filter((x) => x.entity.type === 'email').length, 1, 'only the abuse mailbox is an email result');
   assert.equal(r.results.every((x) => x.source.url.startsWith('https://rdap.registry-fixture.example/')), true);
 });
 test('rdap-domain: not found, TLD without service, wrong object, hostile bootstrap, bad input', async () => {
@@ -200,15 +205,15 @@ test('rdap-domain: not found, TLD without service, wrong object, hostile bootstr
 });
 
 // ---------------- rdap-ip-asn ----------------
-test('rdap-ip-asn: IP block record with operator organisation, person contact dropped', async () => {
+test('rdap-ip-asn: IP block record with operator organisation, individual contact passed on', async () => {
   const r = await run('rdap-ip-asn', { kind: 'ip', value: '11.22.33.44' });
   assert.equal(r.status, 'ok'); valid(r, 'rdap-ip-asn');
   const ip = find(r, 'ip', '11.22.33.0/24');
-  assert.equal(ip.raw.name, 'FIXTURE-NET'); assert.equal(ip.raw.country, 'GB'); assert.equal(ip.raw.queried, '11.22.33.44'); assert.equal(ip.raw.redacted, true);
+  assert.equal(ip.raw.name, 'FIXTURE-NET'); assert.equal(ip.raw.country, 'GB'); assert.equal(ip.raw.queried, '11.22.33.44'); assert.equal(ip.raw.redacted, undefined);
   assert.deepEqual(vals(r, 'org'), ['Fixture Network Operations Ltd']);
   assert.equal(r.results.find((x) => x.entity.type === 'email').entity.value, 'abuse@fno-fixture.example');
   assert.equal(vals(r, 'event').length, 2);
-  assert.ok(!/Pat |Fixture-Person/.test(text(r)));
+  assert.deepEqual(vals(r, 'person'), ['Pat Fixture-Person']); assert.deepEqual(find(r, 'person', 'Pat Fixture-Person').raw.roles, ['technical']);
   assert.deepEqual(r.fetch.log, ['https://data.iana.org/rdap/ipv4.json', 'https://rdap.rir-fixture.example/ip/11.22.33.44']);
   const v6 = await run('rdap-ip-asn', { kind: 'ip', value: '2a00:1450:4001::1' });
   assert.equal(v6.status, 'ok'); assert.equal(v6.fetch.log[0], 'https://data.iana.org/rdap/ipv6.json');
@@ -303,11 +308,12 @@ test('gdelt-doc: articles and timeline, one request, citation-ready, relevance n
   assert.equal(t.status, 'ok'); valid(t, 'gdelt-doc');
   assert.deepEqual(t.results.map((x) => x.raw.t), ['2026-03-01T00:00:00.000Z', '2026-03-02T00:00:00.000Z']); assert.equal(t.results[1].raw.volumePercent, 0.034);
 });
-test('gdelt-doc: queries that look like a person\'s contact details are refused before any request', async () => {
+test('gdelt-doc: no query is refused for how it looks; it is sent as typed, and bad input is still caught', async () => {
   for (const q of ['someone@example.com', '+44 7700 900123', '07700 900123', '@somehandle', '#tag', 'https://example.com/x', 'a/b']) {
-    const r = await run('gdelt-doc', { kind: 'topic', query: q });
-    assert.equal(r.status, 'bad-input', q); assert.equal(r.requests, 0, q);
+    const r = await run('gdelt-doc', { kind: 'topic', query: q }, { overrides: [{ match: { host: 'api.gdeltproject.org' }, json: { articles: [{ url: 'https://news.example.org/q', title: 'Fixture', seendate: '20260310T091500Z', domain: 'news.example.org' }] } }] });
+    assert.equal(r.status, 'ok', q); assert.equal(r.requests, 1, q); assert.equal(r.results.length, 1, q);
   }
+  assert.equal(M_gdeltDoc.buildQuery('topic', 'someone@example.com'), 'someone@example.com');
   assert.equal((await run('gdelt-doc', { kind: 'domain', query: 'not a domain' })).status, 'bad-input');
   const rl = await run('gdelt-doc', { kind: 'topic', query: 'plant' }, { overrides: [{ match: { host: 'api.gdeltproject.org' }, text: 'Please limit requests to one every 5 seconds or review the API documentation.' }] });
   assert.equal(rl.status, 'rate-limited'); assert.equal(rl.exitCode, 75);
@@ -318,7 +324,7 @@ test('gdelt-doc: queries that look like a person\'s contact details are refused 
 });
 
 // ---------------- wikidata ----------------
-test('wikidata organisations: items for people withheld, website and inception reported, matches marked likely', async () => {
+test('wikidata organisations: items for people are reported as people, website and inception reported, matches marked likely', async () => {
   const r = await run('wikidata', { kind: 'organisation', query: 'Fixture Corp' });
   assert.equal(r.status, 'ok'); valid(r, 'wikidata'); assert.equal(r.requests, 2);
   assert.deepEqual(vals(r, 'org'), ['Fixture Corp', 'Fixture Corp Holdings']);
@@ -327,8 +333,8 @@ test('wikidata organisations: items for people withheld, website and inception r
   assert.deepEqual(vals(r, 'url'), ['https://www.fixture-corp.example/']);
   assert.deepEqual(vals(r, 'event'), ['inception of Fixture Corp: 1998-09-04']);
   assert.equal(r.results.every((x) => x.confidence === 'likely'), true);
-  assert.ok(!text(r).includes('Q1002') && !/a person with this name/.test(text(r)));
-  assert.ok(r.notes.some((n) => /1 item\(s\) about people were withheld/.test(n)));
+  const human = find(r, 'person', 'Fixture Corp'); assert.equal(human.raw.qid, 'Q1002'); assert.equal(human.raw.description, 'a person with this name'); assert.equal(human.source.url, 'https://www.wikidata.org/wiki/Q1002'); assert.equal(human.confidence, 'likely');
+  assert.ok(!r.notes.some((n) => /withheld/.test(n)));
 });
 test('wikidata places and edge cases', async () => {
   const r = await run('wikidata', { kind: 'place', query: 'Fixtureville' });
@@ -410,7 +416,7 @@ test('hard line and the egress rules are visible in the code', () => {
   const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) { if (e.name !== 'samples') walk(p); } else if (/\.(js|json)$/.test(e.name) && /modules|node-runner/.test(p)) files.push(p); } };
   walk(root);
   assert.ok(files.length >= 28);
-  const allHosts = new Set(['data.iana.org', 'opensource.org', 'github.com', 'exiftool.org', 'mediaarea.net', 'gdal.org', 'www.qgis.org', 'ffmpeg.org', 'www.apache.org', 'example.com']);   // the licence links (and a sample address in a parser self-check) in manifests, never requested
+  const allHosts = new Set(['data.iana.org', 'opensource.org', 'github.com', 'exiftool.org', 'mediaarea.net', 'gdal.org', 'www.qgis.org', 'ffmpeg.org', 'www.apache.org', 'example.com', 'nvd.nist.gov', 'search.gleif.org', 'www.openstreetmap.org']);   // the licence links (and a sample address in a parser self-check) in manifests, never requested
   for (const m of mods.MODULES) for (const h of m.meta.hosts) allHosts.add(h);
   for (const f of files) {
     const src = fs.readFileSync(f, 'utf8');

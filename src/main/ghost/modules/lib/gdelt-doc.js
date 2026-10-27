@@ -7,7 +7,7 @@ const meta = {
   description: 'Recent news articles or a coverage-volume timeline for an organisation, a domain, a place or a topic, from the GDELT project.',
   capabilities: ['news', 'gdelt', 'timeline', 'passive'], scope: 'passive', network: 'rate-limited',
   hosts: ['api.gdeltproject.org'], client: { rps: 0.2, maxRequests: 2, timeoutMs: 30000, maxBytes: 2097152 },
-  restrictions: 'GDELT asks for one request every 5 seconds and offers no guarantee of availability. Use free to use with citation of GDELT. This module is for organisations, domains, places and topics: queries that look like a person\'s contact details (an email address, a phone number, a handle) are refused, and it must not be used to follow or profile a private individual.',
+  restrictions: 'GDELT asks for one request every 5 seconds and offers no guarantee of availability. Use free to use with citation of GDELT. Any query text is sent to GDELT as typed; a domain query must be a valid domain.',
   licence: { spdx: 'MIT', url: 'https://opensource.org/license/mit' }, dataTerms: 'GDELT Project data, free to use with citation',
   inputs: [
     { name: 'kind', type: 'enum', label: 'What the query names', values: ['organisation', 'domain', 'place', 'topic'] },
@@ -23,7 +23,6 @@ const MAX_ARTICLES = 75;
 function buildQuery(kind, raw) {
   const q = String(raw || '').trim();
   if (kind === 'domain') return `domain:${needDomain(q)}`;
-  if (/@/.test(q) || /(?:\+?\d[\s().-]*){8,}/.test(q) || /^[#@]/.test(q) || /[/\\]/.test(q) || /^https?:/i.test(q)) throw new ModuleError('bad-input', 'this module takes an organisation, place or topic, not an email address, phone number, handle or address');
   const clean = q.replace(/["()<>\[\]{}:]/g, ' ').replace(/\s+/g, ' ').trim();
   if (clean.length < 2) throw new ModuleError('bad-input', 'the query is too short');
   return /\s/.test(clean) ? `"${clean}"` : clean;

@@ -4,13 +4,19 @@
 // every save, so a case that breaks the provenance rule is never written to the vault.
 (function (root, factory) { if (typeof module === 'object' && module.exports) module.exports = factory(); else root.GhostCase = factory(); })(typeof self !== 'undefined' ? self : this, function () {
   const FORMAT = 'mayfair-ghost-case/1';
-  // The case entity types. The first eleven are the spec list. `service` (an open port or service) and `finding` (anything else a tool reports, kept with its own kind)
-  // let the security connectors land on the board without a person type ever existing.
-  const ENTITY_TYPES = ['domain', 'ip', 'asn', 'cert', 'org', 'document', 'image', 'place', 'event', 'url', 'email', 'service', 'finding'];
-  const REL = ['resolves-to', 'name-server', 'mail-exchanger', 'announced-by', 'covers', 'issued-by', 'registered-by', 'registrar', 'located-at', 'subdomain-of', 'contains', 'depicts', 'mentions', 'archived-as', 'linked-to', 'same-as', 'found-for'];
+  // The case entity types. `person` connects CEOs, directors and owners to organisations; it is filled by hand from sources the analyst found (or passed through from a registry
+  // that published it). `service` (an open port or service) and `finding` (anything else a tool reports, kept with its own kind) let the security connectors land on the board.
+  const ENTITY_TYPES = ['domain', 'ip', 'asn', 'cert', 'org', 'person', 'document', 'image', 'place', 'event', 'url', 'email', 'service', 'finding'];
+  // `custom` is a link with a free-text label of the analyst's choosing (any link can also carry a label).
+  const REL = ['resolves-to', 'name-server', 'mail-exchanger', 'announced-by', 'covers', 'issued-by', 'registered-by', 'registrar', 'located-at', 'subdomain-of', 'contains', 'depicts', 'mentions', 'archived-as', 'linked-to', 'same-as', 'found-for', 'ceo-of', 'director-of', 'owner-of', 'works-with', 'custom'];
+  const SYMMETRIC = ['same-as', 'works-with'];
+  // Custom fields: any title, any value. The kind only tells the page how to show and edit it; nothing is refused because of what a title or value says.
+  const FIELD_KINDS = ['text', 'longtext', 'link', 'date', 'number'];
+  // Suggested fields for a Person (professional ones). Offered by the form; the person may use, rename or delete them.
+  const PERSON_SUGGESTED = [{ title: 'Role / title', kind: 'text' }, { title: 'Organisation(s)', kind: 'text' }, { title: 'Appointed date', kind: 'date' }, { title: 'Public profile link', kind: 'link' }];
   const EMAIL_ROLES = ['abuse-contact', 'registrar-contact', 'security-contact', 'mx', 'cert-subject', 'dmarc-report', 'soa-contact'];
   const UNDO_LIMIT = 50;
-  const LIMITS = { entities: 5000, edges: 20000, sources: 5000, notes: 2000, tags: 24, tagLen: 32, noteLen: 20000, label: 300, title: 200 };
+  const LIMITS = { entities: 5000, edges: 20000, sources: 5000, notes: 2000, tags: 24, tagLen: 32, noteLen: 20000, label: 300, title: 200, fields: 200, fieldTitle: 300, fieldValue: 20000, fieldSource: 1000, edgeLabel: 200 };
 
   const ALIASES = {
     domain: ['domain', 'hostname', 'host', 'fqdn', 'subdomain', 'dns-name'],
@@ -18,6 +24,7 @@
     asn: ['asn', 'autonomous-system'],
     cert: ['cert', 'certificate', 'tls-cert', 'tls-certificate', 'x509'],
     org: ['org', 'organisation', 'organization', 'company', 'registered-entity'],
+    person: ['person', 'people', 'individual'],
     document: ['document', 'doc', 'file', 'pdf'],
     image: ['image', 'photo', 'picture'],
     place: ['place', 'location', 'site', 'landmark'],
@@ -28,8 +35,9 @@
   };
   const ALIAS_TO_TYPE = {};
   for (const [t, list] of Object.entries(ALIASES)) for (const a of list) ALIAS_TO_TYPE[a] = t;
-  // Anything aimed at one private person is never stored. The case has no type for it; a connector that reports one gets it withheld and counted.
-  const PERSON_TYPE = /(^|[-_.])(person|people|individual|user|username|handle|account|profile|social|phone|telephone|mobile|face|name|surname|relative|resident|occupant)([-_.]|$)/i;
+  // Account-style kinds (usernames, handles, profiles, phone numbers, faces ...) are not a case type; a connector that reports one gets it withheld and counted.
+  // A `person` result is a Person entity.
+  const ACCOUNT_KIND = /(^|[-_.])(user|username|handle|account|profile|social|phone|telephone|mobile|face|name|surname|relative|resident|occupant)([-_.]|$)/i;
 
   const clip = (s, n) => String(s === undefined || s === null ? '' : s).slice(0, n);
   const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -41,7 +49,7 @@
   const nowIso = (now) => new Date(now === undefined ? Date.now() : now).toISOString();
 
   // ---------- types and keys ----------
-  function isPersonType(raw) { return PERSON_TYPE.test(String(raw || '')); }
+  function isAccountKind(raw) { return ACCOUNT_KIND.test(String(raw || '')); }
   function mapType(raw) {
     const r = String(raw || '').toLowerCase().trim();
     if (ENTITY_TYPES.includes(r) && r !== 'finding') return { type: r, kind: null };
@@ -57,7 +65,7 @@
       case 'ip': { if (v.indexOf(':') >= 0) { try { return new URL('http://[' + v.replace(/^\[|\]$/g, '') + ']/').hostname.slice(1, -1); } catch { return v.toLowerCase(); } } return v; }
       case 'asn': { const m = /(\d{1,10})/.exec(v); return m ? 'AS' + Number(m[1]) : v.toUpperCase(); }
       case 'cert': return v.replace(/[^0-9a-f]/gi, '').toLowerCase() || v.toLowerCase();
-      case 'org': return v.toLowerCase().replace(/\s+/g, ' ');
+      case 'org': case 'person': return v.toLowerCase().replace(/\s+/g, ' ');
       case 'url': { try { const u = new URL(v); return u.protocol + '//' + u.host.toLowerCase() + (u.pathname === '/' ? '' : u.pathname); } catch { return v; } }
       case 'email': return v.toLowerCase();
       case 'finding': return (kind || 'finding') + ':' + v;
@@ -80,32 +88,75 @@
     return id;
   }
   // Adds an entity, or merges into the one with the same type and key (sources joined, first and last seen widened).
+  // `o.duplicate` (used for people added by hand: two different people can share a name) always makes a new entity instead of merging by name.
+  // `o.fields` is a list of {title, value, kind?, source?} added as custom fields (on a merge, the ones the entity does not already have).
   function addEntity(c, o) {
     const type = ENTITY_TYPES.includes(o.type) ? o.type : 'finding';
-    const key = canonKey(type, o.key !== undefined ? o.key : o.value !== undefined ? o.value : o.label, o.attrs && o.attrs.kind);
-    const found = Object.values(c.entities).find((e) => e.type === type && e.key === key);
+    let key = canonKey(type, o.key !== undefined ? o.key : o.value !== undefined ? o.value : o.label, o.attrs && o.attrs.kind);
+    const found = o.duplicate ? null : Object.values(c.entities).find((e) => e.type === type && e.key === key);
     const seen = o.seen || nowIso();
     const srcs = (o.sources || []).filter((s) => c.sources[s]);
     if (found) {
       for (const s of srcs) if (!found.sources.includes(s)) found.sources.push(s);
       if (seen < found.firstSeen) found.firstSeen = seen; if (seen > found.lastSeen) found.lastSeen = seen;
       if (o.attrs) for (const [k, v] of Object.entries(o.attrs)) if (found.attrs[k] === undefined) found.attrs[k] = v;
+      found.fields = found.fields || [];
+      for (const f of o.fields || []) if (!hasField(found, f)) pushField(found, f, seen);
       return { id: found.id, merged: true };
     }
     if (Object.keys(c.entities).length >= LIMITS.entities) return { id: null, error: 'This case already holds ' + LIMITS.entities + ' entities.' };
     const id = o.id || uid();
-    c.entities[id] = { id, type, key, label: clip(o.label || o.value || key, LIMITS.label), attrs: isObj(o.attrs) ? { ...o.attrs } : {}, sources: srcs, tags: [], firstSeen: seen, lastSeen: seen, manual: !!o.manual, pos: o.pos || null, pinned: false };
+    if (o.duplicate && Object.values(c.entities).some((e) => e.type === type && e.key === key)) key = key + '#' + id.slice(0, 6);
+    const ent = { id, type, key, label: clip(o.label || o.value || key, LIMITS.label), attrs: isObj(o.attrs) ? { ...o.attrs } : {}, fields: [], sources: srcs, tags: [], firstSeen: seen, lastSeen: seen, manual: !!o.manual, pos: o.pos || null, pinned: false };
+    for (const f of o.fields || []) pushField(ent, f, seen);
+    c.entities[id] = ent;
     return { id, merged: false };
   }
+
+  // ---------- custom fields (every entity type, Person included) ----------
+  // A field is {id, title, value, kind, source, t, updated}: a title and a value of the analyst's choosing, where it came from (free text), when it was recorded and when it last changed.
+  // Nothing is refused for what a title or value says; only the size limits apply. Order is the order of the list.
+  const fieldKind = (k) => (FIELD_KINDS.includes(k) ? k : 'text');
+  const fieldText = (v, n) => clip(typeof v === 'number' && Number.isFinite(v) ? String(v) : v, n);
+  function makeField(f, when) {
+    f = isObj(f) ? f : {};
+    return { id: typeof f.id === 'string' && f.id ? clip(f.id, 64) : uid(), title: fieldText(f.title, LIMITS.fieldTitle), value: fieldText(f.value, LIMITS.fieldValue), kind: fieldKind(f.kind), source: fieldText(f.source, LIMITS.fieldSource), t: typeof f.t === 'string' && f.t ? f.t : when, updated: typeof f.updated === 'string' && f.updated ? f.updated : (typeof f.t === 'string' && f.t ? f.t : when) };
+  }
+  function pushField(e, f, when) { if ((e.fields || (e.fields = [])).length >= LIMITS.fields) return null; const x = makeField(f, when || nowIso()); e.fields.push(x); return x.id; }
+  const sameField = (a, b) => String(a.title) === String(b.title) && String(a.value) === String(b.value) && fieldKind(a.kind) === fieldKind(b.kind);
+  const hasField = (e, f) => (e.fields || []).some((x) => sameField(x, makeField(f, '')));
+  function addField(c, entityId, f, now) { const e = c.entities[entityId]; if (!e) return null; const id = pushField(e, f, nowIso(now)); if (id) touch(c, now); return id; }
+  // patch may carry title, value, kind, source; anything missing stays.
+  function updateField(c, entityId, fieldId, patch, now) {
+    const e = c.entities[entityId], f = e && (e.fields || []).find((x) => x.id === fieldId); if (!f || !isObj(patch)) return false;
+    if (patch.title !== undefined) f.title = fieldText(patch.title, LIMITS.fieldTitle);
+    if (patch.value !== undefined) f.value = fieldText(patch.value, LIMITS.fieldValue);
+    if (patch.kind !== undefined) f.kind = fieldKind(patch.kind);
+    if (patch.source !== undefined) f.source = fieldText(patch.source, LIMITS.fieldSource);
+    f.updated = nowIso(now); touch(c, now); return true;
+  }
+  function removeField(c, entityId, fieldId) { const e = c.entities[entityId]; if (!e || !e.fields) return false; const i = e.fields.findIndex((x) => x.id === fieldId); if (i < 0) return false; e.fields.splice(i, 1); touch(c); return true; }
+  // to: a new index, or 'up' / 'down' / 'top' / 'bottom'.
+  function moveField(c, entityId, fieldId, to) {
+    const e = c.entities[entityId], list = e && e.fields; if (!list) return false;
+    const i = list.findIndex((x) => x.id === fieldId); if (i < 0) return false;
+    const j = to === 'up' ? i - 1 : to === 'down' ? i + 1 : to === 'top' ? 0 : to === 'bottom' ? list.length - 1 : Number(to);
+    if (!Number.isInteger(j) || j < 0 || j >= list.length || j === i) return false;
+    const [x] = list.splice(i, 1); list.splice(j, 0, x); touch(c); return true;
+  }
+  const fieldsOf = (e) => (Array.isArray(e && e.fields) ? e.fields : []);
   function addEdge(c, o) {
     if (!c.entities[o.from] || !c.entities[o.to] || o.from === o.to) return { id: null };
     const rel = REL.includes(o.rel) ? o.rel : 'linked-to';
-    const dup = Object.values(c.edges).find((e) => e.rel === rel && ((e.from === o.from && e.to === o.to) || (rel === 'same-as' && e.from === o.to && e.to === o.from)));
+    const label = clip(o.label, LIMITS.edgeLabel).trim();
+    const dup = Object.values(c.edges).find((e) => e.rel === rel && (e.label || '') === label && ((e.from === o.from && e.to === o.to) || (SYMMETRIC.includes(rel) && e.from === o.to && e.to === o.from)));
     const srcs = (o.sources || []).filter((s) => c.sources[s]);
     if (dup) { for (const s of srcs) if (!dup.sources.includes(s)) dup.sources.push(s); return { id: dup.id, merged: true }; }
     if (Object.keys(c.edges).length >= LIMITS.edges) return { id: null, error: 'This case already holds ' + LIMITS.edges + ' links.' };
     const id = o.id || uid();
     c.edges[id] = { id, from: o.from, to: o.to, rel, sources: srcs, t: o.t || nowIso(), manual: !!o.manual };
+    if (label) c.edges[id].label = label;
+    if (o.sourceNote) c.edges[id].sourceNote = clip(o.sourceNote, LIMITS.fieldSource);
     return { id, merged: false };
   }
 
@@ -123,18 +174,30 @@
     let target = null;
     const qtype = query && ({ domain: 'domain', ip: 'ip', asn: 'asn', url: 'url', 'cert-hash': 'cert', org: 'org', place: 'place' })[query.kind];
     const first = srcFor('');
-    if (qtype && query.value && !isPersonType(query.kind)) { const r = addEntity(c, { type: qtype, value: query.value, label: query.value, sources: [first], manual: false, seen: nowIso(now) }); target = r.id; }
+    if (qtype && query.value) { const r = addEntity(c, { type: qtype, value: query.value, label: query.value, sources: [first], manual: false, seen: nowIso(now) }); target = r.id; }
     for (const r of results || []) {
       const e = r && r.entity; if (!e || typeof e.type !== 'string' || typeof e.value !== 'string') { withhold('invalid'); continue; }
-      if (isPersonType(e.type)) { withhold('person'); continue; }
+      if (isAccountKind(e.type)) { withhold('account'); continue; }
       const m = mapType(e.type);
       if (m.type === 'email') { const role = r.raw && r.raw.role; if (!EMAIL_ROLES.includes(role)) { withhold('email'); continue; } }
-      if (m.type === 'finding' && isPersonType(m.kind)) { withhold('person'); continue; }
+      if (m.type === 'finding' && isAccountKind(m.kind)) { withhold('account'); continue; }
       const sid = srcFor(r.source && r.source.url);
       const attrs = {}; if (m.kind) attrs.kind = m.kind; if (r.confidence) attrs.confidence = r.confidence; if (r.uncertaintyNote) attrs.uncertaintyNote = clip(r.uncertaintyNote, 300);
       if (m.type === 'email') attrs.role = r.raw.role;
       const seen = r.observedAt || nowIso(now);
-      const res = addEntity(c, { type: m.type, value: e.value, label: e.value, attrs, sources: [sid], manual: false, seen });
+      // what a registry or database published about a person goes in as fields, each with the connector it came from and the time
+      const fields = [];
+      if (m.type === 'person' && isObj(r.raw)) {
+        const src = connector.id + (r.source && r.source.url ? ' ' + stripQuery(r.source.url) : '');
+        const roles = Array.isArray(r.raw.roles) ? r.raw.roles.join(', ') : r.raw.role;
+        if (roles) fields.push({ title: 'Role', value: roles, source: src, t: seen });
+        if (r.raw.description) fields.push({ title: 'Description', value: r.raw.description, source: src, t: seen });
+        if (r.raw.of) fields.push({ title: 'Associated with', value: r.raw.of, source: src, t: seen });
+        if (Array.isArray(r.raw.emails)) for (const m of r.raw.emails.slice(0, 5)) fields.push({ title: 'Email (as published)', value: String(m), source: src, t: seen });
+        if (r.raw.handle) fields.push({ title: 'Registry handle', value: r.raw.handle, source: src, t: seen });
+        if (r.raw.qid) fields.push({ title: 'Wikidata item', value: 'https://www.wikidata.org/wiki/' + r.raw.qid, kind: 'link', source: src, t: seen });
+      }
+      const res = addEntity(c, { type: m.type, value: e.value, label: e.value, attrs, fields, sources: [sid], manual: false, seen });
       if (!res.id) { withhold('limit'); continue; }
       res.merged ? out.merged++ : out.added++; out.ids.push(res.id);
       if (target && res.id !== target) { const ed = addEdge(c, { from: target, to: res.id, rel: 'found-for', sources: [sid], t: seen }); if (ed.id && !ed.merged) out.links++; }
@@ -218,7 +281,9 @@
   }
   function search(c, q) {
     const t = String(q || '').trim().toLowerCase(); if (!t) return Object.keys(c.entities);
-    return Object.values(c.entities).filter((e) => e.label.toLowerCase().includes(t) || e.key.toLowerCase().includes(t) || e.type === t || e.tags.some((x) => x.includes(t)) || Object.values(e.attrs || {}).some((v) => typeof v === 'string' && v.toLowerCase().includes(t))).map((e) => e.id);
+    const has = (v) => String(v === undefined || v === null ? '' : v).toLowerCase().includes(t);
+    return Object.values(c.entities).filter((e) => e.label.toLowerCase().includes(t) || e.key.toLowerCase().includes(t) || e.type === t || e.tags.some((x) => x.includes(t)) || Object.values(e.attrs || {}).some((v) => typeof v === 'string' && v.toLowerCase().includes(t))
+      || fieldsOf(e).some((f) => has(f.title) || has(f.value) || has(f.source))).map((e) => e.id);
   }
   function stats(c) { return { entities: Object.keys(c.entities).length, edges: Object.keys(c.edges).length, sources: Object.keys(c.sources).length, notes: c.notes.length, places: Object.values(c.entities).filter((e) => e.type === 'place' && placeCoords(e)).length }; }
   function placeCoords(e) { const a = e.attrs || {}; const lat = Number(a.lat), lon = Number(a.lon); return Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && a.lat !== '' && a.lon !== '' ? { lat, lon } : null; }
@@ -260,7 +325,7 @@
     for (const [id, e] of Object.entries(c.entities)) {
       if (!isObj(e) || e.id !== id) { p.push('Entity ' + id + ' is malformed.'); continue; }
       if (!ENTITY_TYPES.includes(e.type)) p.push('Entity ' + id + ' has a type Ghost does not store (' + clip(e.type, 20) + ').');
-      if (isPersonType(e.type)) p.push('Entity ' + id + ' is a type Ghost never stores.');
+      if (e.fields !== undefined) { if (!Array.isArray(e.fields)) p.push('Entity ' + id + ' has fields that are not a list.'); else if (e.fields.length > LIMITS.fields) p.push('Entity ' + id + ' has too many fields.'); else for (const f of e.fields) if (!isObj(f) || typeof f.id !== 'string' || !f.id || typeof f.title !== 'string' || typeof f.value !== 'string') { p.push('Entity ' + id + ' has a malformed field.'); break; } }
       if (typeof e.key !== 'string' || !e.key) p.push('Entity ' + id + ' has no key.');
       if (e.type === 'email' && !(e.attrs && EMAIL_ROLES.includes(e.attrs.role))) p.push('Entity ' + id + ' is an email without an infrastructure role.');
       if (!e.manual && (!Array.isArray(e.sources) || !e.sources.length)) p.push('Entity "' + clip(e.label, 60) + '" has no source and was not added by hand.');
@@ -269,6 +334,7 @@
     for (const [id, e] of Object.entries(c.edges)) {
       if (!isObj(e) || e.id !== id || !c.entities[e.from] || !c.entities[e.to]) { p.push('Link ' + id + ' points at something missing.'); continue; }
       if (!REL.includes(e.rel)) p.push('Link ' + id + ' has an unknown relation.');
+      if (e.label !== undefined && typeof e.label !== 'string') p.push('Link ' + id + ' has a label that is not text.');
       if (!e.manual && (!Array.isArray(e.sources) || !e.sources.length)) p.push('Link ' + id + ' has no source and was not added by hand.');
     }
     return p;
@@ -276,10 +342,84 @@
   // Repairs what can be repaired on load (missing optional fields, old shapes) without inventing anything.
   function normalize(c) {
     c.settings = isObj(c.settings) ? c.settings : {}; c.settings.hideFromReport = Array.isArray(c.settings.hideFromReport) ? c.settings.hideFromReport : []; c.settings.reportAuthor = clip(c.settings.reportAuthor, 120);
-    for (const e of Object.values(c.entities)) { e.tags = Array.isArray(e.tags) ? e.tags : []; e.sources = Array.isArray(e.sources) ? e.sources : []; e.attrs = isObj(e.attrs) ? e.attrs : {}; e.label = e.label || e.key; e.firstSeen = e.firstSeen || c.created; e.lastSeen = e.lastSeen || c.created; if (e.pos && !(Number.isFinite(e.pos.x) && Number.isFinite(e.pos.y))) e.pos = null; }
-    for (const e of Object.values(c.edges)) e.sources = Array.isArray(e.sources) ? e.sources : [];
+    for (const e of Object.values(c.entities)) { e.tags = Array.isArray(e.tags) ? e.tags : []; e.sources = Array.isArray(e.sources) ? e.sources : []; e.attrs = isObj(e.attrs) ? e.attrs : {}; e.fields = Array.isArray(e.fields) ? e.fields.filter(isObj).slice(0, LIMITS.fields).map((f) => makeField(f, e.firstSeen || c.created)) : []; e.label = e.label || e.key; e.firstSeen = e.firstSeen || c.created; e.lastSeen = e.lastSeen || c.created; if (e.pos && !(Number.isFinite(e.pos.x) && Number.isFinite(e.pos.y))) e.pos = null; }
+    for (const e of Object.values(c.edges)) { e.sources = Array.isArray(e.sources) ? e.sources : []; if (e.label !== undefined) { e.label = clip(e.label, LIMITS.edgeLabel); if (!e.label) delete e.label; } }
     c.timeline = c.timeline.filter(isObj); c.notes = c.notes.filter(isObj).map((n) => ({ ...n, refs: Array.isArray(n.refs) ? n.refs : [] }));
     return c;
+  }
+
+  // Changes how a link you made reads: the relation, a free-text label and where you found it. Returns false when nothing matches or the change would repeat another link.
+  function updateEdge(c, id, patch, now) {
+    const e = c.edges[id]; if (!e || !isObj(patch)) return false;
+    const rel = patch.rel !== undefined ? (REL.includes(patch.rel) ? patch.rel : e.rel) : e.rel;
+    const label = patch.label !== undefined ? clip(patch.label, LIMITS.edgeLabel).trim() : (e.label || '');
+    if (Object.values(c.edges).some((x) => x.id !== id && x.rel === rel && (x.label || '') === label && x.from === e.from && x.to === e.to)) return false;
+    e.rel = rel; if (label) e.label = label; else delete e.label;
+    if (patch.sourceNote !== undefined) { const n = clip(patch.sourceNote, LIMITS.fieldSource); if (n) e.sourceNote = n; else delete e.sourceNote; }
+    touch(c, now); return true;
+  }
+
+  // ---------- case file: export, import, merge ----------
+  // The case file is the case itself (format mayfair-ghost-case/1), custom fields, link labels and sources included.
+  function exportJson(c) { return JSON.stringify(c, null, 2); }
+  // Reads a case file. -> { case, problems }. `case` is null when the text is not a case Ghost can open; nothing is invented or dropped for what a field says.
+  function importJson(text) {
+    let o; try { o = JSON.parse(String(text)); } catch { return { case: null, problems: ['That file is not valid JSON.'] }; }
+    if (!isObj(o)) return { case: null, problems: ['That file is not a case.'] };
+    if (o.format !== FORMAT) return { case: null, problems: ['Unknown case format.'] };
+    if (!isObj(o.entities) || !isObj(o.edges) || !isObj(o.sources)) return { case: null, problems: ['The case file is missing its entities, links or sources.'] };
+    o.timeline = Array.isArray(o.timeline) ? o.timeline : []; o.notes = Array.isArray(o.notes) ? o.notes : [];
+    normalize(o);
+    const problems = validate(o);
+    return { case: problems.length ? null : o, problems };
+  }
+  // Merges another case into `c` (the same entity type and key is one entity; a person is keyed by name). Fields, tags, sources, links, notes and timeline entries are kept
+  // and never overwrite what `c` already has. -> counts.
+  function mergeCase(c, other, now) {
+    const inc = JSON.parse(JSON.stringify(other)); normalize(inc);
+    const out = { entitiesAdded: 0, entitiesMerged: 0, fieldsAdded: 0, linksAdded: 0, sourcesAdded: 0, notesAdded: 0, eventsAdded: 0, skipped: 0 };
+    const srcMap = {}, entMap = {};
+    const sameSource = (a, b) => a.connector === b.connector && a.fetchedAt === b.fetchedAt && a.origin === b.origin && a.rawSha256 === b.rawSha256 && JSON.stringify(a.query) === JSON.stringify(b.query);
+    for (const s of Object.values(inc.sources)) {
+      const have = c.sources[s.id];
+      if (have && sameSource(have, s)) { srcMap[s.id] = s.id; continue; }
+      if (Object.keys(c.sources).length >= LIMITS.sources) { out.skipped++; continue; }
+      const id = have ? uid() : s.id; c.sources[id] = { ...s, id }; srcMap[s.id] = id; out.sourcesAdded++;
+    }
+    const mapSrcs = (list) => (list || []).map((x) => srcMap[x]).filter(Boolean);
+    for (const e of Object.values(inc.entities)) {
+      if (!ENTITY_TYPES.includes(e.type)) { out.skipped++; continue; }
+      const found = Object.values(c.entities).find((x) => x.type === e.type && x.key === e.key);
+      if (found) {
+        for (const s of mapSrcs(e.sources)) if (!found.sources.includes(s)) found.sources.push(s);
+        if (e.firstSeen < found.firstSeen) found.firstSeen = e.firstSeen; if (e.lastSeen > found.lastSeen) found.lastSeen = e.lastSeen;
+        for (const [k, v] of Object.entries(e.attrs || {})) if (found.attrs[k] === undefined) found.attrs[k] = v;
+        for (const t of e.tags || []) if (!found.tags.includes(t) && found.tags.length < LIMITS.tags) found.tags.push(t);
+        found.fields = found.fields || [];
+        for (const f of e.fields || []) if (!found.fields.some((x) => x.id === f.id || sameField(x, f)) && found.fields.length < LIMITS.fields) { found.fields.push({ ...f }); out.fieldsAdded++; }
+        found.manual = !!(found.manual || e.manual);
+        entMap[e.id] = found.id; out.entitiesMerged++; continue;
+      }
+      if (Object.keys(c.entities).length >= LIMITS.entities) { out.skipped++; continue; }
+      const id = c.entities[e.id] ? uid() : e.id;
+      c.entities[id] = { ...e, id, sources: mapSrcs(e.sources), tags: (e.tags || []).slice(0, LIMITS.tags), fields: (e.fields || []).map((f) => ({ ...f })), attrs: { ...(e.attrs || {}) }, pos: null, pinned: false };
+      entMap[e.id] = id; out.entitiesAdded++; out.fieldsAdded += c.entities[id].fields.length;
+    }
+    for (const e of Object.values(inc.edges)) {
+      const from = entMap[e.from], to = entMap[e.to]; if (!from || !to || from === to) { out.skipped++; continue; }
+      const label = e.label || '';
+      const dup = Object.values(c.edges).find((x) => x.rel === e.rel && (x.label || '') === label && ((x.from === from && x.to === to) || (SYMMETRIC.includes(e.rel) && x.from === to && x.to === from)));
+      if (dup) { for (const s of mapSrcs(e.sources)) if (!dup.sources.includes(s)) dup.sources.push(s); if (!dup.sourceNote && e.sourceNote) dup.sourceNote = e.sourceNote; continue; }
+      if (Object.keys(c.edges).length >= LIMITS.edges) { out.skipped++; continue; }
+      const id = c.edges[e.id] ? uid() : e.id;
+      c.edges[id] = { ...e, id, from, to, sources: mapSrcs(e.sources) }; out.linksAdded++;
+    }
+    const haveNote = new Set(c.notes.map((n) => n.id));
+    for (const n of inc.notes) if (n.id && !haveNote.has(n.id) && c.notes.length < LIMITS.notes) { c.notes.push({ ...n, refs: (n.refs || []).map((r) => entMap[r]).filter(Boolean) }); out.notesAdded++; }
+    const haveEv = new Set(c.timeline.map((t) => t.id));
+    for (const t of inc.timeline) if (t.id && !haveEv.has(t.id)) { c.timeline.push({ ...t, entity: t.entity ? entMap[t.entity] || null : null, sources: mapSrcs(t.sources) }); out.eventsAdded++; }
+    const hide = new Set(c.settings.hideFromReport || []); for (const x of (inc.settings && inc.settings.hideFromReport) || []) if (entMap[x]) hide.add(entMap[x]); c.settings.hideFromReport = [...hide];
+    touch(c, now); return out;
   }
 
   // ---------- undo and redo ----------
@@ -310,5 +450,5 @@
     return Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  return { FORMAT, ENTITY_TYPES, REL, EMAIL_ROLES, UNDO_LIMIT, LIMITS, newCase, uid, canonKey, mapType, isPersonType, addSource, addEntity, addEdge, ingest, removeEntity, removeEdge, removeSource, isUnsourced, addTag, removeTag, allTags, addNote, editNote, deleteNote, addEvent, deleteEvent, buildTimeline, neighbours, shortestPath, search, stats, placeCoords, layout, validate, normalize, History, hashRaw, touch };
+  return { FORMAT, ENTITY_TYPES, REL, SYMMETRIC, FIELD_KINDS, PERSON_SUGGESTED, EMAIL_ROLES, UNDO_LIMIT, LIMITS, newCase, uid, canonKey, mapType, isAccountKind, addField, updateField, removeField, moveField, fieldsOf, updateEdge, exportJson, importJson, mergeCase, addSource, addEntity, addEdge, ingest, removeEntity, removeEdge, removeSource, isUnsourced, addTag, removeTag, allTags, addNote, editNote, deleteNote, addEvent, deleteEvent, buildTimeline, neighbours, shortestPath, search, stats, placeCoords, layout, validate, normalize, History, hashRaw, touch };
 });

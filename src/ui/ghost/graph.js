@@ -18,6 +18,7 @@
       case 'asn': return poly([[0, -r], [r * 0.95, -r * 0.5], [r * 0.95, r * 0.5], [0, r], [-r * 0.95, r * 0.5], [-r * 0.95, -r * 0.5]]);
       case 'cert': return poly([[0, -r * 1.1], [r * 1.1, 0], [0, r * 1.1], [-r * 1.1, 0]]);
       case 'org': return rrect(r * 1.55, r * 0.85, 5);
+      case 'person': return circle(0, -r * 0.45, r * 0.5) + poly([[-r * 0.95, r * 0.95], [-r * 0.7, r * 0.2], [r * 0.7, r * 0.2], [r * 0.95, r * 0.95]]);
       case 'place': return poly([[0, -r * 1.05], [r * 1.05, r * 0.85], [-r * 1.05, r * 0.85]]);
       case 'email': return circle(0, 0, r) + circle(0, 0, r * 0.45);
       case 'document': return poly([[-r * 0.7, -r], [r * 0.25, -r], [r * 0.7, -r * 0.55], [r * 0.7, r], [-r * 0.7, r]]);

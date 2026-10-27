@@ -89,8 +89,10 @@
     for (const x of tabs) x.el.classList.toggle('on', x === t);
     $('empty').hidden = true;
     fit(t); drawTabs(); schedule(); sink.focus();
-    $('fMode').textContent = t.mode === 'pty' ? 'Terminal: full' : t.mode === 'python' ? 'Terminal: full (Python helper)' : 'Terminal: basic';
-    $('fShell').textContent = 'Shell: ' + t.shell;
+    $('fMode').textContent = t.mode === 'vm' ? 'Virtual computer' : t.mode === 'pty' ? 'Terminal: full' : t.mode === 'python' ? 'Terminal: full (Python helper)' : 'Terminal: basic';
+    $('fShell').textContent = (t.mode === 'vm' ? 'Runs in the virtual computer: ' : 'Shell: ') + t.shell;
+    $('fLocal').textContent = t.mode === 'vm' ? 'Not on this computer. It sees one shared folder. Nothing runs unless you type or paste it.' : 'Runs on this computer, outside the virtual computer. Nothing runs unless you type or paste it.';
+    if (!panel.hidden) mountToolsPanel();
   }
   function fit(t) {
     const g = gridSize();
@@ -99,12 +101,15 @@
     api.resize(t.id, g.cols, g.rows).catch(() => {});
     t.cache = t.cache.map(() => null);
   }
-  async function newTab() {
+  async function newTab(o) {
+    const local = !!(o && o.local);
+    // The virtual computer is the default. The cover (download, start, or why it cannot run) stays up until it is ready or the person leaves it.
+    if (!local && window.GhostVmUI && !(await window.GhostVmUI.ensure())) return;
     measure();
     const g = gridSize();
     let r;
-    try { r = await api.open(g.cols, g.rows); } catch (e) { say('Could not start a shell: ' + String(e.message || e).replace(/^Error: /, '')); return; }
-    const t = { id: r.id, mode: r.mode, shell: r.shell, screen: new Screen(g.cols, g.rows, { convertEol: r.mode === 'basic' }), el: h('div', { class: 'screen', role: 'log', 'aria-label': 'Terminal output' }), rowEls: [], cache: [], offset: 0, exited: false, editor: r.mode === 'basic' ? new LineEditor() : null, editing: null };
+    try { r = await api.open(g.cols, g.rows, local); } catch (e) { say('Could not start a shell: ' + String(e.message || e).replace(/^Error: /, '')); return; }
+    const t = { id: r.id, local, mode: r.mode, shell: r.shell, screen: new Screen(g.cols, g.rows, { convertEol: r.mode === 'basic' }), el: h('div', { class: 'screen', role: 'log', 'aria-label': 'Terminal output' }), rowEls: [], cache: [], offset: 0, exited: false, editor: r.mode === 'basic' ? new LineEditor() : null, editing: null };
     t.el.addEventListener('mousedown', () => setTimeout(() => { if (!String(getSelection())) sink.focus(); }, 0));
     t.el.addEventListener('wheel', (e) => { e.preventDefault(); const max = t.screen.scrollback.length; t.offset = Math.max(0, Math.min(max, t.offset + (e.deltaY < 0 ? 3 : -3))); schedule(); }, { passive: false });
     stage.append(t.el); tabs.push(t); select(t);
@@ -165,6 +170,7 @@
     const mod = isMac ? e.metaKey : e.ctrlKey;
     if (t.exited) { if (e.key === 'Enter') { e.preventDefault(); closeTab(t); } return; }
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't') { e.preventDefault(); newTab(); return; }
+    if (e.ctrlKey && e.shiftKey && e.key === 'Backspace') { e.preventDefault(); return; }          // main handles the kill key
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'w') { e.preventDefault(); closeTab(t); return; }
     const sel = String(getSelection());
     if ((isMac && e.metaKey && e.key === 'c') || (!isMac && e.ctrlKey && (e.shiftKey || sel) && e.key.toLowerCase() === 'c' && sel) || (e.ctrlKey && e.key === 'Insert' && sel)) { e.preventDefault(); navigator.clipboard.writeText(sel).catch(() => {}); return; }
@@ -205,15 +211,29 @@
   $('fontDown').addEventListener('click', () => setFont(-1));
   $('fontUp').addEventListener('click', () => setFont(1));
   const panel = $('panel');
+  // The Tools panel belongs to what is on screen: the virtual computer's panel for a virtual terminal (and when none is open), the local tools for a local one.
+  function mountToolsPanel() {
+    if (active && active.local) { if (window.GhostVmUI) window.GhostVmUI.unmountPanel(); window.GhostToolsUI.mount(panel, { api, info: () => info, refreshInfo }); }
+    else if (window.GhostVmUI) window.GhostVmUI.mountPanel(panel);
+    else window.GhostToolsUI.mount(panel, { api, info: () => info, refreshInfo });
+  }
   $('toolsBtn').addEventListener('click', () => {
     panel.hidden = !panel.hidden; $('toolsBtn').setAttribute('aria-expanded', String(!panel.hidden));
-    if (!panel.hidden) window.GhostToolsUI.mount(panel, { api, info: () => info, refreshInfo }); else sink.focus();
+    if (!panel.hidden) mountToolsPanel(); else { if (window.GhostVmUI) window.GhostVmUI.unmountPanel(); sink.focus(); }
     setTimeout(() => { if (active) { fit(active); schedule(); } }, 0);
   });
   let rt = 0;
   new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(() => { if (active) { fit(active); schedule(); } }, 40); }).observe(stage);
-  async function refreshInfo() { try { info = await api.info(); } catch { /* shown by the panel */ } return info; }
+  async function refreshInfo() { try { info = active && active.local ? await api.localInfo() : await api.info(); } catch { /* shown by the panel */ } return info; }
+  // Advanced: a shell on this computer. Main asks for confirmation every time; if it is refused the call fails and nothing opens.
+  function openLocal() { if (window.GhostVmUI) window.GhostVmUI.cancel(); return newTab({ local: true }); }
+  // Text from "Run from GitHub": typed at the prompt as if the person typed it, never followed by Enter.
+  function typeInto(text) { const t = active; if (!t || t.exited || t.local) return; send(t, String(text).replace(/[\r\n\x00-\x1f]+/g, ' ')); sink.focus(); }
   window.addEventListener('focus', () => sink.focus());
 
-  (async () => { measure(); await refreshInfo(); await newTab(); })();
+  (async () => {
+    measure(); await refreshInfo();
+    if (window.GhostVmUI) await window.GhostVmUI.init({ api, say, openLocal, typeInto, showPanel: () => { if (panel.hidden) $('toolsBtn').click(); } });
+    await newTab();
+  })();
 })();

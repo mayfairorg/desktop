@@ -22,6 +22,11 @@ const appOpt = (v) => obj(v) && (v.app === undefined || /^[a-z][a-z0-9-]{0,31}$/
 const gidObj = (v) => obj(v) && optGid(v.gid);
 const AF_KEYS = ['email', 'username', 'name', 'givenName', 'familyName', 'tel', 'address', 'address2', 'postalCode', 'city', 'region', 'country', 'organization', 'birthday'];
 const afFields = (v) => obj(v) && Object.keys(v).length > 0 && Object.keys(v).length <= 14 && Object.entries(v).every(([k, x]) => AF_KEYS.includes(k) && str(300)(x) && x.length > 0);
+// Ghost tool library list in the server's shape (Cloud /api/ghost/tools): only these fields, text no longer than the server allows. No path, command or case data has a field.
+const TL_TEXT = { tool_key: 64, name: 120, source_url: 2048, pinned_ref: 128, checksum: 128, version: 64, notes: 500 };
+const tlTool = (v) => obj(v) && Object.keys(v).every((k) => k in TL_TEXT || k === 'added_at' || k === 'updated_at') && str(64)(v.tool_key) && v.tool_key.length > 0
+  && Object.entries(TL_TEXT).every(([k, n]) => v[k] === undefined || str(n)(v[k])) && ['added_at', 'updated_at'].every((k) => v[k] === undefined || (Number.isSafeInteger(v[k]) && v[k] >= 0));
+const tlList = (v) => obj(v) && Object.keys(v).every((k) => k === 'tools') && Array.isArray(v.tools) && v.tools.length <= 200 && v.tools.every(tlTool);
 const W = ['web'];
 // Ghost connectors: ids, job ids, run requests. A run names a registered connector and carries input values and an optional scope declaration: never a command, argv, path or environment.
 const ghostId = (v) => typeof v === 'string' && /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(v);
@@ -83,7 +88,11 @@ const BR = {
   'ghost.vault.backup.disable': none, 'ghost.vault.backup.newPhrase': none, 'ghost.vault.changePassphrase': args(vChange), 'ghost.vault.resetPassphrase': args(vReset), 'ghost.vault.requirePassphrase': args(bool),
   'ghost.vault.rotateKeys': argsOpt(0, vRotate), 'ghost.vault.syncNow': none, 'ghost.vault.wipe': args(vWipe), 'ghost.vault.exportFile': none, 'ghost.vault.importFile': argsOpt(1, vImport),
   // Ghost app (App Library entry, Research): the library listing, open (the start flow runs in the Ghost window), remove. The app itself is a separate window with its own channels.
+  // Ghost tool library under the Mayfair account: read the list (server shape), restore a server list through the installer (fetch at the pinned commit, checksum, approval again), the keep-it-on-this-computer switch
+  'ghost.toollib.list': none, 'ghost.toollib.import': args(tlList), 'ghost.toollib.importStatus': none, 'ghost.toollib.localOnly': none, 'ghost.toollib.setLocalOnly': args(bool),
   'ghost.app.library': none, 'ghost.app.open': none, 'ghost.app.remove': none,
+  // Ghost is a view inside the Mayfair window: Cloud's Ghost window reports its area (same shape as setBounds, no gid), hides it, occludes it, captures it
+  'ghost.app.bounds': args((v) => obj(v) && Object.keys(v).every((k) => ['x', 'y', 'w', 'h', 'visible'].includes(k)) && num(v.x) && num(v.y) && num(v.w) && num(v.h) && optBool(v.visible)), 'ghost.app.hide': none, 'ghost.app.occluded': argsOpt(1, bool, (v) => obj(v) && Object.keys(v).every((k) => ['focus', 'capture'].includes(k)) && optBool(v.focus) && optBool(v.capture)), 'ghost.app.capture': none, 'ghost.app.state': none,
   about: none,
   subscribe: args(str(40), bool),
 };
@@ -130,7 +139,7 @@ for (const [name, check] of Object.entries(BR)) CH['br:' + name] = { roles: W, c
 
 // Channels the main process sends to renderers (one way). Used by the preload to filter listeners.
 // 'br:ev' carries every Browser bridge event as (name, payload); BR_EVENTS lists the names.
-const BR_EVENTS = ['ghost-job', 'state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus', 'windows', 'password-offer', 'password-offer-cancel', 'password-field', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'details-used'];
+const BR_EVENTS = ['ghost-job', 'state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus', 'windows', 'password-offer', 'password-offer-cancel', 'password-field', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'details-used', 'ghost-app', 'ghost-toollib'];
 const EVENTS = {
   web: ['file:open', 'deeplink', 'download:done', 'pw:request', 'search:query', 'br:ev'],
   start: [],

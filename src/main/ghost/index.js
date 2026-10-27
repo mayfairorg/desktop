@@ -14,7 +14,7 @@ const { createUtilityRunner } = require('./node-runner/adapter');
 
 class GhostService {
   // root: the userData folder. dialog: Electron's dialog. getWindow(): the parent window for native dialogs. emit(name, payload): bridge events.
-  constructor({ root, dialog, getWindow = () => null, emit = () => {}, nodePath = process.execPath, isPackaged = true, samplesDir, safeStorage = null, useVault = false, files = null, vaultOptions = {}, utilityProcess = null }) {
+  constructor({ root, dialog, getWindow = () => null, emit = () => {}, nodePath = process.execPath, isPackaged = true, samplesDir, safeStorage = null, useVault = false, files = null, vaultOptions = {}, utilityProcess = null, vm = null }) {
     this.dialog = dialog; this.getWindow = getWindow; this.isPackaged = isPackaged;
     this.ghostDir = path.join(root, 'ghost');
     // With the vault on (the app), connector state, job history, the audit trail and the scan log are sealed at rest. Without it (tests) they are plain files as before.
@@ -26,8 +26,8 @@ class GhostService {
     const nodeAvailable = !isPackaged || FUSES.RunAsNode === true;
     // fuse off (installed build): '@node' connectors run in an Electron utilityProcess through the node-runner adapter
     this.utility = nodeAvailable ? null : createUtilityRunner({ utilityProcess });
-    this.manager = new ConnectorManager({ root, io: vio.state || null, nodePath, nodeAvailable, utility: this.utility, log: this.log, confirm: (o) => this._confirm(o), ...(samplesDir ? { samplesDir } : {}) });
-    this.runner = new JobRunner({ manager: this.manager, log: this.log, ghostDir: this.ghostDir, picks: this.picks, utility: this.utility, emit, io: vio.jobs || null });
+    this.manager = new ConnectorManager({ root, io: vio.state || null, nodePath, nodeAvailable, utility: this.utility, vm, log: this.log, confirm: (o) => this._confirm(o), ...(samplesDir ? { samplesDir } : {}) });
+    this.runner = new JobRunner({ manager: this.manager, log: this.log, ghostDir: this.ghostDir, picks: this.picks, utility: this.utility, vm, emit, io: vio.jobs || null });
     this.manager.setRunner(this.runner);
     this.confirmOverride = null;
   }
@@ -53,6 +53,8 @@ class GhostService {
     if (!st.isFile()) return null;
     return { token: this.picks.add(r.filePaths[0], st.size), name: path.basename(r.filePaths[0]), size: st.size };
   }
+  // The virtual computer's connector runtime (src/main/ghost/vm/toolrun.js): connectors with a ghost-vm.json marker run inside it, never on this computer.
+  setVm(vm) { this.vm = vm; this.manager.vm = vm; this.runner.vm = vm; }
   shutdown() { this.runner.shutdown(); if (this.vaultSvc) this.vaultSvc.shutdown(); }
 
   // The bridge: one entry per allowlisted call (src/main/lib/ipc-allowlist.js, GH). Argument shapes are checked there first.

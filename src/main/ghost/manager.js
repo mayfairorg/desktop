@@ -10,6 +10,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const M = require('./manifest');
 const { runCheck, minimalEnv } = require('./proc');
+const VM_MARKER = 'ghost-vm.json';
 
 const MANIFEST_MAX = 64 * 1024;
 const AUDIT_MAX = 5 * 1024 * 1024;
@@ -19,7 +20,7 @@ const within = (root, p) => p === root || p.startsWith(root + path.sep);
 
 class ConnectorManager {
   // root: the userData folder. confirm({kind,title,message,detail,ok,cancel}) -> Promise<boolean>: the native dialog (injected so tests can answer it).
-  constructor({ root, confirm, nodePath = process.execPath, nodeAvailable = true, utility = null, samplesDir = path.join(__dirname, 'samples'), log = null, now = Date.now, io = null }) {
+  constructor({ root, confirm, nodePath = process.execPath, nodeAvailable = true, utility = null, vm = null, samplesDir = path.join(__dirname, 'samples'), log = null, now = Date.now, io = null }) {
     this.io = io;   // optional vault storage (vault/securefs.js); without it the files below are plain
     this.root = root;
     this.connectorsDir = path.join(root, 'connectors');
@@ -27,7 +28,7 @@ class ConnectorManager {
     this.stateFile = path.join(this.ghostDir, 'state.json');
     this.auditFile = path.join(this.ghostDir, 'audit.jsonl');
     this.confirm = confirm || (async () => false);        // no dialog available: nothing is ever approved
-    this.nodePath = nodePath; this.nodeAvailable = nodeAvailable; this.utility = utility;   // false when the app's own node is switched off (the RunAsNode fuse in an installed build): then "@node" is never started, because that would start the app itself
+    this.nodePath = nodePath; this.nodeAvailable = nodeAvailable; this.utility = utility; this.vm = vm;   // false when the app's own node is switched off (the RunAsNode fuse in an installed build): then "@node" is never started, because that would start the app itself
     this.samplesDir = samplesDir; this.log = log; this.now = now;
     this.runner = null;
     this.pending = new Map();                               // id -> promise of a dialog that is already open
@@ -246,7 +247,7 @@ class ConnectorManager {
     if (!a.l.ok) return { ok: false, error: 'invalid', errors: a.l.errors };
     if (a.rec && a.rec.approval) return { ok: true, state: this._stateOf(a.rec), already: true };
     const m = a.l.manifest;
-    const yes = await this.confirm({ kind: 'approve', title: 'Approve connector', message: `Allow the connector "${m.name}" (version ${m.version}) to run on this computer?`, detail: this._approvalText(m), ok: 'Approve', cancel: 'Cancel', scope: m.scope });
+    const yes = await this.confirm({ kind: 'approve', title: 'Approve connector', message: `Allow the connector "${m.name}" (version ${m.version}) to run on this computer?`, detail: this._vmApprovalNote(a.l) + this._approvalText(m), ok: 'Approve', cancel: 'Cancel', scope: m.scope });
     if (yes !== true) { if (this.log) this.log.info('approval-declined', { connector: id }); return { ok: false, error: 'declined' }; }
     // the files may have changed while the dialog was open: approve exactly what was shown
     const b = this._assess(id, { fresh: true });
@@ -279,14 +280,39 @@ class ConnectorManager {
     return { ok: true, state: 'disabled' };
   }
 
+  // A connector folder that holds ghost-vm.json runs INSIDE the Ghost virtual computer (src/main/ghost/vm/). The marker is read as data and checked:
+  // the guest folder is always /opt/ghost-tools/<id>, the files there are pinned to a commit, and the program is either a plain program name
+  // from a short list or a path inside that folder. The marker is hashed with the connector (the manifest names it in command.executable), so
+  // changing the pinned commit or the program withdraws approval.
+  _hasVmMarker(l) { try { return !!l && !!l.dir && fs.existsSync(path.join(l.dir, VM_MARKER)); } catch { return false; } }
+  _vmMarker(l) {
+    if (!this.vm || !l || !l.ok) return null;
+    let d; try { const f = path.join(l.dir, VM_MARKER); if (fs.lstatSync(f).isSymbolicLink() || fs.statSync(f).size > 4096) return null; d = JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; }
+    const id = l.manifest.id;
+    if (!d || d.v !== 1 || d.mode !== 'pin' || d.guestDir !== '/opt/ghost-tools/' + id || !/^[0-9a-f]{40}$/.test(d.commit || '')) return null;
+    if (typeof d.exe !== 'string' || !(/^(python3|node|go|cargo|make|ghost-wrap)$/.test(d.exe) || (d.exe.startsWith(d.guestDir + '/') && /^[A-Za-z0-9._\/-]{1,200}$/.test(d.exe) && !d.exe.includes('..')))) return null;
+    return { mode: 'pin', guestDir: d.guestDir, commit: d.commit, exe: d.exe };
+  }
+
+  // Shown first in the approval dialog for a tool that lives in the virtual computer: where it runs, which exact commit, and what is run.
+  _vmApprovalNote(l) {
+    const v = this._vmMarker(l);
+    if (!v) return this._hasVmMarker(l) ? 'This tool is meant to run inside the Ghost virtual computer, which is not available here.\n\n' : '';
+    const m = l.manifest;
+    return ['Runs INSIDE the Ghost virtual computer, not on this computer.', 'Tool files: ' + v.guestDir + ' at commit ' + v.commit.slice(0, 12), 'Program: ' + v.exe + ' ' + m.command.args.join(' ').slice(0, 300), ''].join('\n') + '\n';
+  }
+
   // Run the install requirement checks (argv arrays, no shell). Only for approved connectors: an unapproved connector's commands never run.
   async checkRequirements(id) {
     const a = this._assess(id, { fresh: true });
     if (!a.l.ok || !this._approvedBy(a.rec)) return this._requirements(a);
     const items = {};
     for (const r of a.l.manifest.installRequirements) {
+      const vmm = this._vmMarker(a.l);
+      if (!vmm && this._hasVmMarker(a.l)) { items[r.name] = { status: 'missing', detail: 'the virtual computer is not available here', t: this.now() }; continue; }
       const viaUtility = r.check[0] === M.NODE_TOKEN && !this.nodeAvailable && this.utility;
-      const res = viaUtility ? await this.utility.runCheck({ argv: r.check, cwd: a.l.dir, resolveRel: (rel) => this._resolveInside(a.l, rel) })
+      const res = vmm ? await this.vm.runCheck({ argv: r.check, guestDir: vmm.guestDir })
+        : viaUtility ? await this.utility.runCheck({ argv: r.check, cwd: a.l.dir, resolveRel: (rel) => this._resolveInside(a.l, rel) })
         : await runCheck({ argv: r.check, cwd: a.l.dir, nodePath: this.nodeAvailable ? this.nodePath : null, resolveRel: (rel) => this._resolveInside(a.l, rel) });
       items[r.name] = { ...res, t: this.now() };
     }
@@ -311,7 +337,7 @@ class ConnectorManager {
     let ok = false, detail = '';
     if (missing.length) detail = 'requirement not met: ' + missing.map((r) => r.name + (r.detail ? ' (' + r.detail + ')' : '')).join('; ');
     else if (m.network === 'unavailable') detail = 'the network service this connector needs is not available';
-    else if (m.command.executable === M.NODE_TOKEN && !this.nodeAvailable && !this.utility) detail = 'this build of the app has its built-in Node runtime switched off';
+    else if (m.command.executable === M.NODE_TOKEN && !this.nodeAvailable && !this.utility && !this._vmMarker(a.l)) detail = 'this build of the app has its built-in Node runtime switched off';
     else if (!this.runner) detail = 'no job runner';
     else {
       const sub = this.runner.submit({ connector: id, input: m.selfTest.input, scope, kind: 'selftest' });
@@ -341,8 +367,9 @@ class ConnectorManager {
     if (!this._approvedBy(a.rec)) return no('not-approved', 'the connector is not approved');
     if (!selftest && !a.rec.enabled) return no('not-enabled', 'the connector is not enabled');
     const m = a.l.manifest;
+    if (this._hasVmMarker(a.l) && !this._vmMarker(a.l)) return no('vm-unavailable', 'this tool runs inside the Ghost virtual computer, which is not available here, or its marker file is not valid');
     if (m.network === 'unavailable') return no('network-unavailable', 'the network service this connector needs is not available');
-    if (m.command.executable === M.NODE_TOKEN && !this.nodeAvailable && !this.utility) return no('runtime-unavailable', 'this build of the app has its built-in Node runtime switched off, so this connector cannot run');
+    if (m.command.executable === M.NODE_TOKEN && !this.nodeAvailable && !this.utility && !this._vmMarker(a.l)) return no('runtime-unavailable', 'this build of the app has its built-in Node runtime switched off, so this connector cannot run');
     const vi = M.validateInput(m, input === undefined ? {} : input);
     if (!vi.ok) return { ok: false, error: 'bad-input', message: vi.errors[0], errors: vi.errors };
     // scope guard: an ACTIVE connector needs a declaration for this run
@@ -374,7 +401,11 @@ class ConnectorManager {
     for (const t of tokens) picks.take(t);
     // command
     let exe, args = ex.args, runtime = 'process', execArgv = [];
-    if (m.command.executable === M.NODE_TOKEN && !this.nodeAvailable) {
+    const vmm = this._vmMarker(a.l);
+    if (vmm) {
+      // runs inside the virtual computer: argv only, the program is named by the marker, the arguments come from the manifest
+      runtime = 'vm'; exe = vmm.exe;
+    } else if (m.command.executable === M.NODE_TOKEN && !this.nodeAvailable) {
       // installed build (RunAsNode fuse off): the script runs in a utility process, same arguments, same limits
       runtime = 'utility'; exe = path.join(a.l.dir, ...args[0].split('/')); args = args.slice(1);
       if (m.limits.maxMemoryMb) execArgv = [`--max-old-space-size=${m.limits.maxMemoryMb}`];
@@ -389,7 +420,7 @@ class ConnectorManager {
       if (values[f.name] === undefined) continue;
       summary[f.name] = f.sensitive ? '***' : f.type === 'file' ? path.basename(String(values[f.name])) : String(values[f.name]).slice(0, 200);
     }
-    return { ok: true, spec: { id, version: m.version, dir: a.l.dir, exe, args, runtime, execArgv, node: m.command.executable === M.NODE_TOKEN && runtime === 'process', limits: { ...m.limits }, manifest: m, secrets, summary, scope: declared, scopeKind: m.scope, combined: a.fp.combined } };
+    return { ok: true, spec: { id, version: m.version, dir: a.l.dir, exe, args, runtime, execArgv, node: m.command.executable === M.NODE_TOKEN && runtime === 'process', vm: vmm ? { ...vmm, hostDir: a.l.dir } : null, limits: { ...m.limits }, manifest: m, secrets, summary, scope: declared, scopeKind: m.scope, combined: a.fp.combined } };
   }
 
   // Just before a queued job starts: the files must still be the approved ones.

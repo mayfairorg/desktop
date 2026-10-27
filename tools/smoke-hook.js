@@ -821,6 +821,87 @@ async function run(br, app) {
   rec('legacy installExtension refuses a foreign host', (await P(`window.mayfairDesktop.installExtension('deals','https://evil.example/x.zip','${'f'.repeat(64)}')`)).ok === false);
   rec('extensions.remove unloads and deletes', (await BR(`extensions.remove('deals')`)) === true && br.extIds.size === 6);
 
+  // ---- Ghost opens INSIDE the Mayfair window: one view, no separate window; its channels and the Cloud bridge stay apart ----
+  {
+    const { BrowserWindow } = require('electron');
+    const kids0 = br.win.contentView.children.length, wins0 = BrowserWindow.getAllWindows().length;
+    const content = () => br.win.getContentBounds();
+    const sameRect = (a, b) => a && b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+    rec('ghost view: nothing of Ghost is open before it is opened', !br.ghostApp.view() || (!br.ghostApp.view().isOpen() && !br.ghostApp.view().getView()), String(!!(br.ghostApp.view() && br.ghostApp.view().isOpen())));
+    const o = await BR('ghost.app.open()');
+    const gw = br.ghostApp.view();
+    const gv = gw && gw.getView(), gwc = gv && gv.webContents, waitedAtOpen = !!gw && !gw.isVisible();
+    rec('ghost view: App Library Open answers ok', o && o.ok === true, JSON.stringify(o));
+    rec('ghost view: opens as a view inside the main window (not a separate BrowserWindow)', !!gv && gw.isEmbedded() && br.win.contentView.children.includes(gv) && br.win.contentView.children.length === kids0 + 1 && BrowserWindow.getAllWindows().length === wins0 && !BrowserWindow.getAllWindows().some((w) => w.getTitle() === 'Mayfair Ghost'), 'children ' + kids0 + ' -> ' + br.win.contentView.children.length + ', windows ' + wins0 + ' -> ' + BrowserWindow.getAllWindows().length);
+    rec('ghost view: it is the topmost view of the window', br.win.contentView.children[br.win.contentView.children.length - 1] === gv);
+    await waitFor(() => gwc && /ui[\\/]ghost[\\/]index\.html/.test(decodeURIComponent(gwc.getURL())), 8000);
+    rec('ghost view: loads only the local Ghost page', !!gwc && gwc.getURL().startsWith('file://') && /ghost\/index\.html/.test(gwc.getURL()), gwc && gwc.getURL());
+    rec('ghost view: Cloud reported "ghost-app" opened and shown', (await events('ghost-app')).some((e) => e.open && e.shown && e.embedded), JSON.stringify((await events('ghost-app')).slice(-1)));
+    rec('ghost view: waits for the area Cloud will place instead of flashing full size', waitedAtOpen, 'hidden right after open: ' + waitedAtOpen);
+    // no area reported: after a short wait it fills the content area (no title bar of its own, no other bar)
+    await waitFor(() => gw.isVisible(), 4000);
+    rec('ghost view: with no area reported it fills the content area', gw.isVisible() && sameRect(gv.getBounds(), { x: 0, y: 0, width: content().width, height: content().height }), JSON.stringify(gv.getBounds()) + ' in ' + JSON.stringify(content()));
+    await shot('10-ghost-full');
+    // Cloud's Ghost window reports its area (CSS px of the Mayfair view)
+    const area = { x: 60, y: 48, w: 640, h: 440 }, zf = br.zf();
+    const bo = await BR(`ghost.app.bounds(${JSON.stringify(area)})`);
+    rec('ghost view: Cloud places it in its app area', bo && bo.ok === true && sameRect(gv.getBounds(), { x: Math.round(60 * zf), y: Math.round(48 * zf), width: Math.round(640 * zf), height: Math.round(440 * zf) }), JSON.stringify(gv.getBounds()));
+    rec('ghost view: refuses a bounds call with extra fields', /blocked/.test(((await BR(`ghost.app.bounds({x:0,y:0,w:10,h:10,url:'https://x'})`)) || {}).__err || ''));
+    await shot('11-ghost-in-area');
+    const st = await BR('ghost.app.state()');
+    rec('ghost view: state says open, shown, placed, embedded', st && st.open && st.shown && st.placed && st.embedded && !st.fallback, JSON.stringify(st));
+    // the window follows size changes
+    { const orig = br.win.getBounds(), was = br.win.isMaximized(); if (was) br.win.unmaximize();
+      br.win.setBounds({ x: 0, y: 0, width: 900, height: 600 }); await sleep(500);
+      const c = content(), r = gv.getBounds();
+      rec('ghost view: stays inside the window when it is resized to 900x600', r.x + r.width <= c.width && r.y + r.height <= c.height && r.width > 0, JSON.stringify(r) + ' in ' + JSON.stringify(c));
+      await BR('ghost.app.bounds({x:0,y:0,w:100000,h:100000})'); await sleep(200);
+      const c2 = content(), r2 = gv.getBounds(); rec('ghost view: an area larger than the window is clamped to it', r2.x + r2.width <= c2.width && r2.y + r2.height <= c2.height, JSON.stringify(r2));
+      br.win.setBounds(orig); if (was) br.win.maximize(); await sleep(400);
+      await BR(`ghost.app.bounds(${JSON.stringify(area)})`); await sleep(200); }
+    // security: the channels stay apart
+    const inGhost = (js) => gwc.executeJavaScript(js, true);
+    rec('ghost view: Ghost page has its own frozen bridge and no Mayfair bridge', (await inGhost("typeof window.ghostApp==='object'&&Object.isFrozen(window.ghostApp)&&typeof window.mayfairDesktop==='undefined'")) === true);
+    rec('ghost view: the Cloud page has no Ghost channels', (await P("typeof window.ghostApp==='undefined'")) === true);
+    rec('ghost view: its own call from the Ghost page works', (await inGhost('window.ghostApp.status().then((r)=>!!r&&r.ok===true)')) === true);
+    rec('ghost view: sender check uses the view webContents id', gw.trusted({ sender: gwc, senderFrame: Object.assign(gwc.mainFrame) }) === true && gw.trusted({ sender: home.wc, senderFrame: home.wc.mainFrame }) === false && gw.trusted({ sender: br.tabs.size ? [...br.tabs.values()][0].wc : home.wc, senderFrame: { url: gw.page } }) === false);
+    // no navigation away, no new windows
+    await inGhost("location.href='https://example.org/'").catch(() => {}); await sleep(600);
+    rec('ghost view: no navigation away', gwc.getURL().startsWith('file://'), gwc.getURL());
+    const wc0 = require('electron').webContents.getAllWebContents().length;
+    await inGhost("window.open('https://example.org/','_blank')").catch(() => {}); await sleep(500);
+    rec('ghost view: no new window', BrowserWindow.getAllWindows().length === wins0 && require('electron').webContents.getAllWebContents().length === wc0);
+    // keys: Ctrl+Shift+R, Ctrl+R and F5 do nothing (no reload, nothing reaches Mayfair's shortcuts)
+    await inGhost('window.__keep=1'); let stopped = 0;
+    for (const i of [{ type: 'keyDown', key: 'R', control: true, shift: true }, { type: 'keyDown', key: 'r', control: true }, { type: 'keyDown', key: 'F5' }]) gwc.emit('before-input-event', { preventDefault: () => { stopped++; } }, i);
+    gwc.sendInputEvent({ type: 'keyDown', keyCode: 'R', modifiers: ['control', 'shift'] }); await sleep(500);
+    rec('ghost view: Ctrl+Shift+R, Ctrl+R and F5 are swallowed; the page keeps its state', stopped === 3 && (await inGhost('window.__keep')) === 1, 'stopped ' + stopped);
+    // hide keeps it alive; opening again shows the same page
+    const wcId = gwc.id;
+    const hd = await BR('ghost.app.hide()');
+    rec('ghost view: closing the Cloud window hides it and keeps the page alive', hd && hd.ok && !gw.isVisible() && !gwc.isDestroyed() && br.win.contentView.children.includes(gv) && (await inGhost('window.__keep')) === 1);
+    await BR('ghost.app.open()'); await waitFor(() => gw.isVisible(), 4000);
+    rec('ghost view: Open again shows the same page (case state kept)', gw.isVisible() && gw.getWebContents().id === wcId && (await inGhost('window.__keep')) === 1);
+    await BR(`ghost.app.bounds(${JSON.stringify(area)})`); await sleep(200);      // Cloud's window places it again
+    // full screen of the app: the page asks, the view covers the whole content area and the window goes full screen
+    const fs0 = br.win.isFullScreen();
+    const fsr = await inGhost('window.ghostApp.window.fullscreen(true)'); await sleep(900);
+    rec('ghost view: Ghost full screen covers the whole window', fsr && fsr.ok && br.win.isFullScreen() && sameRect(gv.getBounds(), { x: 0, y: 0, width: content().width, height: content().height }), JSON.stringify(gv.getBounds()));
+    await inGhost('window.ghostApp.window.fullscreen(false)'); await sleep(900);
+    rec('ghost view: leaving full screen returns it to its area and the window to how it was', br.win.isFullScreen() === fs0 && !sameRect(gv.getBounds(), { x: 0, y: 0, width: content().width, height: content().height }), JSON.stringify(gv.getBounds()));
+    // occlusion, like a Browser tab
+    const oc = await BR('ghost.app.occluded(true,{capture:false})'); rec('ghost view: occluded hides it', oc && !gw.isVisible()); await BR('ghost.app.occluded(false)'); rec('ghost view: not occluded shows it', gw.isVisible());
+    // the terminal and the investigation browser are still windows of their own (they are created on use; none was created by opening Ghost)
+    rec('ghost view: opening Ghost created no other window', BrowserWindow.getAllWindows().length === wins0);
+    // clean close: Remove / quit release the view
+    gw.release(); await sleep(300);
+    rec('ghost view: release destroys the page and takes the view out of the window', gwc.isDestroyed() && !br.win.contentView.children.includes(gv) && br.win.contentView.children.length === kids0 && !gw.isOpen(), 'children ' + br.win.contentView.children.length);
+    rec('ghost view: Cloud was told it closed', (await events('ghost-app')).some((e) => e.open === false), JSON.stringify((await events('ghost-app')).slice(-1)));
+    rec('ghost view: state after release says closed', (await BR('ghost.app.state()')).open === false);
+    rec('ghost view: window still holds Mayfair only', br.win.contentView.children.length === kids0);
+    await shot('12-ghost-closed');
+  }
+
   // ---- session restore ----
   const rt1 = (await BR(`newTab({url:'${base}/r1'})`)).id; const rt2 = (await BR(`newTab({url:'${base}/r2'})`)).id; await sleep(1500);
   rec('open tab addresses are saved for restore', JSON.stringify(br.tabsStore.data.urls) === JSON.stringify([base + '/r1', base + '/r2']), JSON.stringify(br.tabsStore.data.urls));

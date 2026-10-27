@@ -156,12 +156,12 @@ const RESERVED = ['0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '127.0.0.0/8', '16
 const isReservedIp = (ip) => RESERVED.some((c) => inCidr(ip, c));
 
 // ---- result lines ----
-const TYPES = ['domain', 'ip', 'asn', 'cert', 'org', 'document', 'image', 'place', 'event', 'url', 'email'];
+const TYPES = ['domain', 'ip', 'asn', 'cert', 'org', 'person', 'document', 'image', 'place', 'event', 'url', 'email'];
 const EMAIL_ROLES = ['abuse-contact', 'registrar-contact', 'security-contact', 'mx', 'cert-subject', 'dmarc-report', 'soa-contact'];
 const clip = (s, n) => { s = String(s); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 
-// A person's name or personal contact detail never becomes a result. Lines that look like an email address are only allowed as an
-// infrastructure `email` with a permitted role (spec section 6); anything else containing '@' is withheld by the caller via looksPersonal().
+// A line that looks like an email address is only allowed as an infrastructure `email` with a permitted role (spec section 6);
+// anything else containing '@' is withheld by the caller via looksPersonal(). A `person` result is a name a source published (for example an RDAP contact).
 const looksPersonal = (s) => /[^\s@]+@[^\s@]+\.[^\s@]+/.test(String(s));
 
 // Builds the context a module's run() receives. onResult gets each finished result line.

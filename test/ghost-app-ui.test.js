@@ -44,7 +44,7 @@ test('copyright and wording: The Mayfair Organization only, no authorship claims
   const terms = require('../src/main/ghost/app/terms-text'); assert.equal(/\b(AI|Claude|Anthropic)\b/.test(JSON.stringify(terms.CLAUSES)), false);
 });
 test('each module screen exists and the not-installed state is labelled', () => {
-  const mod = read('module.js'); assert.ok(mod.includes('Connector not installed')); assert.ok(/NOT INSTALLED/.test(mod));
+  const mod = read('module.js'); assert.ok(mod.includes("'Not installed'")); for (const l of ['Needs your approval', 'Not tested', 'Test passed', 'Program missing']) assert.ok((mod + read('modules.js')).includes(l), l); assert.ok(mod.includes('Set up built-in lookups'));
   const places = read('places.js'); assert.ok(/BASEMAP NOT INSTALLED/.test(places) && /NOT CONNECTED/.test(places));
   const M = require('../src/ui/ghost/modules'); assert.deepEqual(M.MODULES.map((m) => m.id), ['domains', 'infra', 'companies', 'files', 'places', 'news', 'archive', 'threat', 'scan']);
   assert.equal(M.MODULES.filter((m) => m.scope === 'active').length, 1);

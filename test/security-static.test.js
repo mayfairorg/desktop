@@ -35,6 +35,9 @@ test('no telemetry: no analytics SDKs or hard-coded endpoints other than Mayfair
     // Mayfair Ghost passive modules (src/main/ghost/modules): public lookup services a person starts on purpose, each on that module's own host allowlist
     'data.iana.org', 'cloudflare-dns.com', 'dns.google', 'crt.sh', 'web.archive.org', 'archive.org', 'api.gdeltproject.org', 'www.wikidata.org', 'cmr.earthdata.nasa.gov', 'landsatlook.usgs.gov',
     // links in connector manifests (licence pages) and an XML namespace string: never requested
+    'api.gleif.org', 'data.sec.gov', 'www.sec.gov', 'nominatim.openstreetmap.org', 'overpass-api.de', 'gibs.earthdata.nasa.gov', 'earth-search.aws.element84.com', 'index.commoncrawl.org', 'www.cisa.gov', 'services.nvd.nist.gov',
+    // the keyless connectors' link-only addresses (shown as a source link, never requested)
+    'nvd.nist.gov', 'search.gleif.org', 'www.openstreetmap.org',
     'opensource.org', 'github.com', 'exiftool.org', 'mediaarea.net', 'gdal.org', 'www.qgis.org', 'ffmpeg.org', 'www.apache.org', 'ns.adobe.com'];
   for (const h of hosts) assert.ok(allowed.includes(h) || h.endsWith('.invalid'), 'unexpected host ' + h);
 });

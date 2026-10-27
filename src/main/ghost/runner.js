@@ -13,9 +13,9 @@ const TERMINAL = ['done', 'failed', 'cancelled', 'timed-out'];
 const LINE_MAX = 64 * 1024, STDERR_MAX = 16 * 1024, MAX_RESULTS = 5000, ERRORS_KEEP = 20, PERSIST_RESULTS = 200, GET_RESULTS = 1000;
 
 class JobRunner {
-  constructor({ manager, log = null, ghostDir, picks = null, utility = null, emit = () => {}, maxHistory = 100, globalMax = 4, queueMax = 20, now = Date.now, io = null }) {
+  constructor({ manager, log = null, ghostDir, picks = null, utility = null, vm = null, emit = () => {}, maxHistory = 100, globalMax = 4, queueMax = 20, now = Date.now, io = null }) {
     this.io = io;
-    this.manager = manager; this.utility = utility; this.log = log; this.picks = picks; this.emit = emit; this.now = now;
+    this.manager = manager; this.utility = utility; this.vm = vm; this.log = log; this.picks = picks; this.emit = emit; this.now = now;
     this.maxHistory = maxHistory; this.globalMax = globalMax; this.queueMax = queueMax;
     this.file = ghostDir ? path.join(ghostDir, 'jobs.json') : null;
     this.jobs = new Map();      // id -> job (history and live)
@@ -116,7 +116,10 @@ class JobRunner {
     if (this.log) this.log.info('job-start', { jobId: id, connector: spec.id, kind: job.kind }, spec.secrets);
     let child;
     try {
-      if (spec.runtime === 'utility') {
+      if (spec.runtime === 'vm') {
+        if (!this.vm) return this._finish(id, 'failed', 'the virtual computer is not available');
+        child = this.vm.start({ spec, jobId: id, env: { MF_CONNECTOR_ID: spec.id, MF_JOB_ID: id } });
+      } else if (spec.runtime === 'utility') {
         if (!this.utility) return this._finish(id, 'failed', 'the built-in Node runner is not available');
         child = this.utility.start({ script: spec.exe, args: spec.args, cwd: spec.dir, env: minimalEnv({ extra: { MF_CONNECTOR_ID: spec.id, MF_JOB_ID: id } }), execArgv: spec.execArgv });
       } else child = spawn(spec.exe, spec.args, { cwd: spec.dir, shell: false, env: minimalEnv({ node: spec.node, extra: { MF_CONNECTOR_ID: spec.id, MF_JOB_ID: id } }), stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32', windowsHide: true });

@@ -10,8 +10,12 @@ const crypto = require('node:crypto');
 const T = require('./terms-text');
 const { IdError, normalizeEntitlement } = require('./id-client');
 const { CaseStore, CaseError } = require('./cases');
+const { PrefStore } = require('./prefs');
 const { ScopeGuard, ScopeError } = require('./scopelog');
 const R = require('./report');
+const { registerBuiltins } = require('./builtins');
+const { NoteStore } = require('./notes');
+const NR = require('./notes-report');
 
 const CLOUD = 'https://cloud.mayfairmail.com';
 const ENT_RECHECK_MS = 6 * 60 * 60 * 1000;          // asked again at start and every 6 hours
@@ -40,8 +44,10 @@ class GhostApp {
     this.dir = path.join(userData, 'ghost'); this.installFile = path.join(this.dir, 'app-install.json'); this.termsFile = path.join(this.dir, 'app-terms.json');
     this.vault = ghost.vaultSvc ? ghost.vaultSvc.vault : null;
     this.cases = this.vault ? new CaseStore({ vault: this.vault, now }) : null;
+    this.notes = this.vault ? new NoteStore({ vault: this.vault, now }) : null;      // Quick notes: sealed in the same vault, one document per case
+    this.prefs = this.vault ? new PrefStore({ vault: this.vault }) : null;
     this.scope = ghost.vaultSvc ? new ScopeGuard({ io: ghost.vaultSvc.io.logs, now }) : null;
-    this.mem = { session: null, ent: null, entAt: 0, loaded: false, signin: null, refreshing: null, checking: false, lastError: null, hiddenConnectors: 0 };
+    this.mem = { session: null, ent: null, entAt: 0, loaded: false, signin: null, refreshing: null, checking: false, lastError: null, hiddenConnectors: 0, builtins: null };
     this.polling = null;
   }
 
@@ -106,9 +112,17 @@ class GhostApp {
       vault: vs ? { state: vs.state, protection: vs.protection || null } : null, error: this.mem.lastError && this.mem.lastError !== 'offline' ? this.mem.lastError : null,
     };
   }
-  _changed() { try { this.emit('status', this.status()); } catch { /* window gone */ } }
+  _changed() { try { this.emit('status', this.status()); } catch { /* window gone */ } this.ensureBuiltins(); }
+  // Once per run, as soon as access is granted (stage 'ready'): the connectors that ship with Mayfair are registered with the manager.
+  // Register only: no approval, no run, no network. Safe to call any number of times; an identical folder is not touched.
+  ensureBuiltins() {
+    if (this.mem.builtins || !this.ghost || !this.ghost.manager || !this.ready()) return this.mem.builtins;
+    try { this.mem.builtins = registerBuiltins(this.ghost.manager); }
+    catch (e) { this.mem.builtins = { modules: [], security: [], summary: { registered: 0, updated: 0, unchanged: 0, failed: 1 }, error: e.message }; }
+    return this.mem.builtins;
+  }
   ready() { return this.stage() === 'ready'; }
-  _need(what) { if (!this.ready()) throw new AppError('not-ready', 'Finish the start steps first.'); return what; }
+  _need(what) { if (!this.ready()) throw new AppError('not-ready', 'Finish the start steps first.'); this.ensureBuiltins(); return what; }
   canUse(module) { const e = this.entitlement(); return !!e && (e.operator || e.modules[module] === true); }
   _needModule(m) { this._need(); if (!this.canUse(m)) throw new AppError('module-off', 'This module is not switched on for your account.'); }
 
@@ -307,16 +321,21 @@ class GhostApp {
   caseGet(id) { this._need(); return this.cases.get(id); }
   casePut(id, json) { this._need(); return this.cases.put(id, json); }
   caseCreate(title) { this._need(); return this.cases.create(title); }
-  caseDelete(id) { this._need(); return this.cases.delete(id); }
+  caseDelete(id) { this._need(); const r = this.cases.delete(id); if (this.notes) { try { this.notes.deleteScope(id); } catch { /* none */ } } return r; }
   caseBackups(id) { this._need(); return this.cases.backups(id); }
   caseRestore(id, name) { this._need(); return this.cases.restore(id, name); }
 
+  // ---------- look and feel ----------
+  prefsGet() { this._need(); return this.prefs.get(); }
+  prefsSet(o) { this._need(); return this.prefs.set(o); }
+
   // ---------- reports ----------
-  async reportSave({ json, format, author, hide }) {
+  async reportSave({ json, format, author, hide, notesTabs }) {
     this._need();
     let c; try { c = JSON.parse(json); } catch { throw new AppError('bad-case', 'The case could not be read.'); }
     const M = require('../../../ui/ghost/case-model'); const p = M.validate(c); if (p.length) throw new AppError('invalid', p[0]);
     const opts = { author, hide: hide || [], version: this.version, now: this.now() };
+    if (Array.isArray(notesTabs) && notesTabs.length && this.notes) { const q = NR.build({ store: this.notes, caseId: c.id, tabs: notesTabs }); if (q) opts.quickNotes = q; }      // the Quick notes appendix: only the tabs the author chose
     const stamp = new Date(this.now()).toISOString().slice(0, 10), base = (String(c.title).replace(/[^A-Za-z0-9 _-]/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'ghost-case') + '-' + stamp;
     let data, ext, filters;
     if (format === 'html') { data = Buffer.from(R.reportHtml(c, opts), 'utf8'); ext = 'html'; filters = [{ name: 'Web page', extensions: ['html'] }]; }
@@ -333,8 +352,35 @@ class GhostApp {
     return { saved: true, name: path.basename(s.filePath), bytes: data.length };
   }
 
+  // ---------- case file (JSON): save the open case to a file, pick one to import or merge ----------
+  async caseExportJson(json) {
+    this._need();
+    let c; try { c = JSON.parse(json); } catch { throw new AppError('bad-case', 'The case could not be read.'); }
+    const M = require('../../../ui/ghost/case-model'); const p = M.validate(c); if (p.length) throw new AppError('invalid', p[0]);
+    if (!this.dialog) throw new AppError('unavailable', 'No file dialog is available.');
+    const stamp = new Date(this.now()).toISOString().slice(0, 10), base = (String(c.title).replace(/[^A-Za-z0-9 _-]/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'ghost-case') + '-' + stamp;
+    const win = this.getWindow(), o = { title: 'Save case file', defaultPath: base + '.ghost-case.json', filters: [{ name: 'Ghost case (JSON)', extensions: ['json'] }] };
+    const s = win && !win.isDestroyed() ? await this.dialog.showSaveDialog(win, o) : await this.dialog.showSaveDialog(o);
+    if (s.canceled || !s.filePath) return { saved: false };
+    const data = Buffer.from(M.exportJson(c), 'utf8');
+    fs.writeFileSync(s.filePath, data, { mode: 0o600 });
+    this.scope && this.scope.log({ action: 'export', format: 'case-json', caseId: c.id, bytes: data.length });
+    return { saved: true, name: path.basename(s.filePath), bytes: data.length };
+  }
+  // The person picks a case file; main reads it (size capped) and hands the text to the page, which checks and merges it with the same model code.
+  async caseImportPick() {
+    this._need();
+    if (!this.dialog) throw new AppError('unavailable', 'No file dialog is available.');
+    const win = this.getWindow(), o = { title: 'Choose a case file', properties: ['openFile'], filters: [{ name: 'Ghost case (JSON)', extensions: ['json'] }] };
+    const s = win && !win.isDestroyed() ? await this.dialog.showOpenDialog(win, o) : await this.dialog.showOpenDialog(o);
+    if (s.canceled || !s.filePaths || !s.filePaths[0]) return { picked: false };
+    const f = s.filePaths[0], st = fs.statSync(f);
+    if (!st.isFile() || st.size > require('./cases').MAX_BYTES) throw new AppError('too-large', 'That file is not a case file Ghost can read.');
+    return { picked: true, name: path.basename(f), text: fs.readFileSync(f, 'utf8') };
+  }
+
   // ---------- the rest ----------
-  async terminalOpen() { this._need(); return { ok: await this.openTerminal() }; }
+  async terminalOpen(o) { this._need(); return { ok: await this.openTerminal(o || {}) }; }
   async toolPage() { this._need(); return { ok: await this.openToolIntegrations() }; }
   async vaultUnlock(o) { const r = await this.ghost.api()['ghost.vault.unlock'](o); this.mem.loaded = false; this._changed(); return { ok: r.ok, error: r.error, status: this.status() }; }
   shutdown() { this.cancelSignin(); }

@@ -10,7 +10,7 @@
     { "_label": "IANA ASN bootstrap: 64496-64511 and 65000 served by the fixture RIR", "match": { "host": "data.iana.org", "path": "/rdap/asn.json" },
       "json": { "services": [ [["64496-64511", "65000"], ["https://rdap.rir-fixture.example/"]] ] } },
 
-    { "_label": "Registry answer for example.com: registrar org with nested abuse role, a REDACTED registrant, one natural-person technical contact (Jane Fixture-Person) that must never be reported, 3 events, 2 name servers, DNSSEC on",
+    { "_label": "Registry answer for example.com: registrar org with nested abuse role, a REDACTED registrant, one individual technical contact (Jane Fixture-Person) that is passed on as a person, 3 events, 2 name servers, DNSSEC on",
       "match": { "host": "rdap.registry-fixture.example", "path": "/domain/example.com" },
       "json": { "objectClassName": "domain", "handle": "FIX-123", "ldhName": "EXAMPLE.COM", "status": ["client transfer prohibited", "active"], "secureDNS": { "delegationSigned": true },
         "events": [ { "eventAction": "registration", "eventDate": "1995-08-14T04:00:00Z" }, { "eventAction": "expiration", "eventDate": "2027-08-13T04:00:00Z" }, { "eventAction": "last changed", "eventDate": "2026-08-14T07:01:44Z" } ],
@@ -24,7 +24,7 @@
     { "_label": "Registry has no such domain", "match": { "host": "rdap.registry-fixture.example", "path": "/domain/unregistered.com" }, "status": 404, "json": { "errorCode": 404 } },
     { "_label": "Registry for .org answers with something that is not a domain object", "match": { "host": "rdap.org-fixture.example", "pathPrefix": "/rdap/domain/" }, "json": { "objectClassName": "nameserver" } },
 
-    { "_label": "IP network record: 11.22.33.0/24, operator org (kind org) with abuse role, a person contact that must be dropped",
+    { "_label": "IP network record: 11.22.33.0/24, operator org (kind org) with abuse role, an individual technical contact that is passed on as a person",
       "match": { "host": "rdap.rir-fixture.example", "pathPrefix": "/ip/" },
       "json": { "objectClassName": "ip network", "handle": "NET-11-22-33-0-1", "startAddress": "11.22.33.0", "endAddress": "11.22.33.255", "ipVersion": "v4", "name": "FIXTURE-NET", "type": "ALLOCATION", "country": "GB",
         "cidr0_cidrs": [ { "v4prefix": "11.22.33.0", "length": 24 } ],
@@ -99,7 +99,7 @@
       "json": { "search": [ { "id": "Q1001", "label": "Fixture Corp", "description": "fictional company" }, { "id": "Q1002", "label": "Fixture Corp", "description": "a person with this name" }, { "id": "Q1003", "label": "Fixture Corp Holdings", "description": "fictional holding company" } ] } },
     { "_label": "Wikidata search for the self-test name 'Mozilla Foundation': answered with the same fixture items", "match": { "host": "www.wikidata.org", "path": "/w/api.php", "query": { "action": "wbsearchentities", "search": "Mozilla Foundation" } },
       "json": { "search": [ { "id": "Q1001", "label": "Fixture Corp", "description": "fictional company" } ] } },
-    { "_label": "Wikidata entities for the company search: Q1001 company with website and inception 1998; Q1002 is a human (P31 Q5, must be withheld); Q1003 company without website", "match": { "host": "www.wikidata.org", "path": "/w/api.php", "query": { "action": "wbgetentities", "ids": "Q1001|Q1002|Q1003" } },
+    { "_label": "Wikidata entities for the company search: Q1001 company with website and inception 1998; Q1002 is a human (P31 Q5, reported as a person); Q1003 company without website", "match": { "host": "www.wikidata.org", "path": "/w/api.php", "query": { "action": "wbgetentities", "ids": "Q1001|Q1002|Q1003" } },
       "json": { "entities": {
         "Q1001": { "id": "Q1001", "labels": { "en": { "value": "Fixture Corp" } }, "descriptions": { "en": { "value": "fictional company" } }, "claims": { "P31": [ { "mainsnak": { "datavalue": { "value": { "id": "Q4830453" } } } } ], "P856": [ { "mainsnak": { "datavalue": { "value": "https://www.fixture-corp.example/" } } } ], "P571": [ { "mainsnak": { "datavalue": { "value": { "time": "+1998-09-04T00:00:00Z", "precision": 11 } } } } ] } },
         "Q1002": { "id": "Q1002", "labels": { "en": { "value": "Fixture Corp" } }, "descriptions": { "en": { "value": "a person with this name" } }, "claims": { "P31": [ { "mainsnak": { "datavalue": { "value": { "id": "Q5" } } } } ] } },

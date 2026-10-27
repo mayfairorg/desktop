@@ -58,8 +58,9 @@ if (MAYFAIR.includes(location.origin)) {
     'ghost.connectors.list', 'ghost.connectors.get', 'ghost.connectors.validate', 'ghost.connectors.test', 'ghost.connectors.requestApproval', 'ghost.connectors.enable', 'ghost.connectors.disable', 'ghost.connectors.remove', 'ghost.connectors.installSample',
     'ghost.jobs.run', 'ghost.jobs.cancel', 'ghost.jobs.list', 'ghost.jobs.get', 'ghost.logs.tail', 'ghost.pickFile',
     'ghost.vault.status', 'ghost.vault.unlock', 'ghost.vault.lock', 'ghost.vault.backup.begin', 'ghost.vault.backup.confirm', 'ghost.vault.backup.cancel', 'ghost.vault.backup.disable', 'ghost.vault.backup.newPhrase', 'ghost.vault.changePassphrase', 'ghost.vault.resetPassphrase', 'ghost.vault.requirePassphrase', 'ghost.vault.rotateKeys', 'ghost.vault.syncNow', 'ghost.vault.wipe', 'ghost.vault.exportFile', 'ghost.vault.importFile',
-    'ghost.app.library', 'ghost.app.open', 'ghost.app.remove'];
-  const BR_EVENTS = ['ghost-job', 'state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus', 'windows', 'password-offer', 'password-offer-cancel', 'password-field', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'details-used'];
+    'ghost.toollib.list', 'ghost.toollib.import', 'ghost.toollib.importStatus', 'ghost.toollib.localOnly', 'ghost.toollib.setLocalOnly',
+    'ghost.app.library', 'ghost.app.open', 'ghost.app.remove', 'ghost.app.bounds', 'ghost.app.hide', 'ghost.app.occluded', 'ghost.app.capture', 'ghost.app.state'];
+  const BR_EVENTS = ['ghost-job', 'state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus', 'windows', 'password-offer', 'password-offer-cancel', 'password-field', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'details-used', 'ghost-app', 'ghost-toollib'];
   const BR_QUEUED = ['permission-request', 'new-window-request', 'open-url', 'menu', 'panel-request'];   // happened before anyone listened: replayed to the first listener
   const browser = {};
   for (const name of BR_NAMES) {

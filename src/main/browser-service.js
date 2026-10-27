@@ -465,7 +465,7 @@ class BrowserService {
     this.applyBounds();
     for (const ms of [50, 300, 1000]) { const t = setTimeout(() => { if (this.win && !this.win.isDestroyed()) this.applyBounds(); }, ms); if (t.unref) t.unref(); }
   }
-  hasFocusedTab() { for (const g of this.groups.values()) { const t = this.activeTab(g); if (t && t.shown && t.wc.isFocused()) return true; } return false; }
+  hasFocusedTab() { for (const g of this.groups.values()) { const t = this.activeTab(g); if (t && t.shown && t.wc.isFocused()) return true; } return !!(this.embedFocused && this.embedFocused()); }      // an app view in this window (Ghost) keeps the keyboard too
 
   createHome() {
     const view = new WebContentsView({
@@ -1415,7 +1415,7 @@ class BrowserService {
         const restore = this.settings.get().startup === 'restore';
         const out = {
           version: this.version, platform: process.platform, tor: this.tor.ready, torAvailable: !!this.tor.binary, devtools: this.devTools, fullscreen: g.fsTab != null,
-          features: ['tabs', 'windows', 'private', 'tor', 'webapps', 'find', 'zoom', 'print', 'savePage', 'bookmarks', 'history', 'downloads', 'permissions', 'adblock', 'secureDns', 'proxy', 'extensions', 'capture', 'fullscreen', ...(this.devTools ? ['devtools'] : [])],
+          features: ['tabs', 'windows', 'private', 'tor', 'webapps', 'find', 'zoom', 'print', 'savePage', 'bookmarks', 'history', 'downloads', 'permissions', 'adblock', 'secureDns', 'proxy', 'extensions', 'capture', 'fullscreen', 'ghost-view', ...(this.devTools ? ['devtools'] : [])],
           state: this.stateObj(g), groups: [...this.groups.keys()].sort((a, b) => a - b), focusedGid: this.focusedGid, apps: this.appGroups(),
           states: Object.fromEntries([...this.groups.values()].map((x) => [x.gid, this.stateObj(x)])),
           pending: [...this.perms.values()].map((p) => p.req), downloads: this.downloads.map((d) => this.dlView(d)),
@@ -1585,9 +1585,18 @@ class BrowserService {
       'br:ghost.vault.exportFile': (e, o) => this.ghost.api()['ghost.vault.exportFile'](o),
       'br:ghost.vault.importFile': (e, o) => this.ghost.api()['ghost.vault.importFile'](o),
       'br:ghost.pickFile': () => this.ghost.api()['ghost.pickFile'](),
+      // the tool library list and the Mayfair account (src/main/ghost/vm/toolsync.js): the page talks to the server, this is only the desktop half
+      'br:ghost.toollib.list': () => this.ghostToolLib.list(), 'br:ghost.toollib.import': (e, l) => this.ghostToolLib.import(l), 'br:ghost.toollib.importStatus': () => this.ghostToolLib.importStatus(),
+      'br:ghost.toollib.localOnly': () => this.ghostToolLib.localOnly(), 'br:ghost.toollib.setLocalOnly': (e, on) => this.ghostToolLib.setLocalOnly(on),
       'br:ghost.app.library': () => (this.ghostApp ? this.ghostApp.library() : null),
       'br:ghost.app.open': () => (this.ghostApp ? this.ghostApp.open() : { ok: false }),
       'br:ghost.app.remove': () => (this.ghostApp ? this.ghostApp.uninstall() : { ok: false }),
+      // Ghost inside this window: Mayfair Cloud's Ghost window reports its area, hides it (minimise, close), occludes it and takes a picture, like a Browser tab
+      'br:ghost.app.bounds': (e, b) => (this.ghostApp ? this.ghostApp.bounds(b) : { ok: false }),
+      'br:ghost.app.hide': () => (this.ghostApp ? this.ghostApp.hide() : { ok: false }),
+      'br:ghost.app.occluded': (e, on, o) => (this.ghostApp ? this.ghostApp.occluded(on, o) : { captured: false }),
+      'br:ghost.app.capture': () => (this.ghostApp ? this.ghostApp.capture() : ''),
+      'br:ghost.app.state': () => (this.ghostApp ? this.ghostApp.state() : { open: false }),
       'br:subscribe': (e, ev, on) => { if (!IPC.BR_EVENTS.includes(ev)) return false; if (on) { this.subs.add(ev); if (ev.startsWith('history-')) this.flushHistOutbox(); } else this.subs.delete(ev); return true; },
     };
     return {

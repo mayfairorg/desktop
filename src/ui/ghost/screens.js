@@ -18,7 +18,7 @@
     return h('a', { class: 'mod' + (m.active ? ' act' : ''), href: GH.href('m', m.id) },
       h('div', { class: 'mod-top' }, GH.icon(m.icon, 'ico-l'), h('span', { class: 'tag' + (m.active ? ' act' : '') }, m.active ? 'ACTIVE' : 'PASSIVE')),
       h('h3', {}, m.name), h('p', {}, m.blurb),
-      h('div', { class: 'mod-f mono mute' }, h('span', {}, c ? c.ready + ' of ' + c.total + ' connectors installed' : ''), h('span', {}, m.active ? 'scope guard' : 'no scope needed')));
+      h('div', { class: 'mod-f mono mute' }, h('span', {}, c ? c.ready + ' of ' + c.total + ' tested and ready' : ''), h('span', {}, m.active ? 'scope guard' : 'no scope needed')));
   }
   async function moduleCounts() {
     try {
@@ -28,18 +28,21 @@
     } catch { return null; }
   }
 
+  // What the lookup boxes do with what was typed: a plain reason when it is refused (people, ranges, anything that is not a domain, IP, ASN or web address), otherwise it opens Domains.
+  GH.submitLookup = (value) => {
+    const d = S.detectInput(value);
+    if (!String(value).trim()) return 'Type a domain, IP address, ASN or web address.';
+    if (d.refused) return d.reason;
+    if (d.kind === 'cidr') return 'A range is checked in Active scanning, which asks you to declare a target first.';
+    if (!d.kind) return d.reason || 'That is not a domain, IP address, ASN or web address. For an organisation, use Companies and public records.';
+    GH.go('m', 'domains', d.value); return null;
+  };
   GH.routes.home = async () => {
+    const Lx = GH.layout && GH.layout(); if (Lx && Lx.home) return Lx.home();
     const err = h('p', { class: 'cmd-err', role: 'alert', hidden: true }), input = h('input', { id: 'cmdq', class: 'mono', type: 'text', placeholder: 'domain, IP, ASN or URL', 'aria-label': 'What to look up: domain, IP, ASN or URL', spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off', 'data-autofocus': '' });
     const kind = h('span', { class: 'cmd-t mono', id: 'cmdt', 'aria-live': 'polite' }, 'auto');
     input.addEventListener('input', () => { const d = S.detectInput(input.value); kind.textContent = d.refused ? 'not looked up' : d.kind || 'auto'; err.hidden = true; });
-    const submit = (ev) => {
-      ev.preventDefault(); const d = S.detectInput(input.value); err.hidden = false;
-      if (!input.value.trim()) { err.textContent = 'Type a domain, IP address, ASN or web address.'; return; }
-      if (d.refused) { err.textContent = d.reason; return; }
-      if (d.kind === 'cidr') { err.textContent = 'A range is checked in Active scanning, which asks you to declare a target first.'; return; }
-      if (!d.kind) { err.textContent = d.reason || 'That is not a domain, IP address, ASN or web address. For an organisation, use Companies and public records.'; return; }
-      err.hidden = true; GH.go('m', 'domains', d.value);
-    };
+    const submit = (ev) => { ev.preventDefault(); const why = GH.submitLookup(input.value); err.hidden = !why; err.textContent = why || ''; };
     const rec = h('ul', { class: 'list', id: 'recent' }, h('li', { class: 'mute' }, 'Loading'));
     const modsHost = h('div', { class: 'grid mods' }, MODS.map((m) => moduleCard(m, null)));
     moduleCounts().then((c) => { if (c) { GH.clear(modsHost); modsHost.append(...MODS.map((m) => moduleCard(m, c))); } });
@@ -76,7 +79,8 @@
     return svg;
   }
 
-  GH.routes.modules = async () => h('section', { class: 'view' }, h('div', {}, h('p', { class: 'eyebrow mono' }, 'INVESTIGATE'), h('h1', {}, 'Modules'), h('p', { class: 'lead sm' }, 'Each module runs the connectors installed on this computer and shows the ones that are not.')),
+  GH.routes.modules = async () => h('section', { class: 'view' }, h('div', {}, h('p', { class: 'eyebrow mono' }, 'INVESTIGATE'), h('h1', {}, 'Modules'), h('p', { class: 'lead sm' }, 'Each module runs the connectors that are approved and tested on this computer, and shows the state of the rest.')),
+    GH.setupBuiltins(),
     (() => { const g = h('div', { class: 'grid mods' }, MODS.map((m) => moduleCard(m, null))); moduleCounts().then((c) => { if (c) { GH.clear(g); g.append(...MODS.map((m) => moduleCard(m, c))); } }); return g; })());
 
   // ---------- case list ----------

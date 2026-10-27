@@ -146,7 +146,17 @@ function createGhostBrowser({ electron, tor, vault, uiDir, isPackaged = true, ic
       });
     }
   }
-  return { service, showLauncher, register, handlers, senderRole, shutdown: () => service.kill(), isOpen: () => service.cases.size > 0, PAGES: { launcherPage, casePage } };
+  // For Ghost Quick notes: a picture of a case window's page (the one for `caseId`, else the first that is open), and what a window is showing. Read only.
+  const caseWc = (rec) => (rec && rec.handle && rec.handle.wc && !rec.handle.wc.isDestroyed() ? rec.handle.wc : null);
+  const notesBridge = {
+    async snapshot(caseId) {
+      const wc = caseWc((caseId && service.cases.get(caseId)) || [...service.cases.values()].find((r) => caseWc(r)));
+      if (!wc || !/^https?:/.test(wc.getURL())) return null;
+      return { image: await wc.capturePage(), url: wc.getURL(), title: wc.getTitle() };
+    },
+    describe(win) { for (const r of roles.values()) if (r.role === 'case' && r.win === win) { const wc = caseWc(service.cases.get(r.caseId)); return { url: wc ? wc.getURL() : '', title: wc ? wc.getTitle() : '' }; } return null; },
+  };
+  return { service, showLauncher, register, handlers, senderRole, shutdown: () => service.kill(), isOpen: () => service.cases.size > 0, notesBridge, PAGES: { launcherPage, casePage } };
 }
 
 module.exports = { createGhostBrowser, CHROME_PARTITION, BAR_H, EVENTS };

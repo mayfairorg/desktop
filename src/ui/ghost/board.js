@@ -15,9 +15,12 @@
     try { const t = sessionStorage.getItem('ghost-tab'); if (TABS.some((x) => x[0] === t)) ui.tab = t; } catch { /* no storage */ }
     const c = () => GH.cs.current();
     const root = h('section', { class: 'view board', 'aria-label': 'Case board' });
-    const head = h('div', { class: 'bd-head' }), tabsEl = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Case views' }), toolbar = h('div', { class: 'bd-tools' }), body = h('div', { class: 'bd-body' });
+    const head = h('div', { class: 'bd-head' }), strip = h('div', { class: 'bd-strip', hidden: true }), tabsEl = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Case views' }), toolbar = h('div', { class: 'bd-tools' }), body = h('div', { class: 'bd-body' });
     const graphPane = h('div', { class: 'gpane' }), inspector = h('aside', { class: 'insp', 'aria-label': 'Inspector' }), other = h('div', { class: 'opane' });
-    root.append(head, tabsEl, toolbar, body);
+    root.append(head, strip, tabsEl, toolbar, body);
+    { const g = GH.sel.get(); if (g) ui.sel = [g]; }
+    // The skin's own summary of the case above the board (counts and bars from the open case). Mayfair has none.
+    function drawStrip() { const Lx = GH.layout && GH.layout(); GH.clear(strip); const n = Lx && Lx.boardStrip ? Lx.boardStrip(c(), ui) : null; if (n) strip.append(n); strip.hidden = !n; }
     let graph = null;
 
     // ---------- header ----------
@@ -29,7 +32,7 @@
         h('div', { class: 'bd-t' }, h('a', { class: 'back', href: '#case' }, GH.icon('back'), h('span', {}, 'Cases')), title,
           h('p', { class: 'mute sm mono' }, [GH.plural(st.entities, 'entity', 'entities'), GH.plural(st.edges, 'link'), GH.plural(st.sources, 'source'), GH.plural(st.notes, 'note')].join(' · ') + ' · ', h('span', { id: 'bd-save', class: S.state === 'error' ? 'err' : '' }, ({ saved: 'Saved ' + GH.fmtClock(S.at) + ', encrypted in your vault', pending: 'Changes not saved yet', saving: 'Saving', error: 'Not saved: ' + S.error, idle: '' })[S.state] || ''))),
         h('div', { class: 'bd-a' }, GH.btn('Undo', { icon: 'undo', disabled: !hist || !hist.canUndo(), title: 'Undo (Ctrl Z)', onclick: () => GH.cs.undo() }), GH.btn('Redo', { icon: 'redo', disabled: !hist || !hist.canRedo(), title: 'Redo (Ctrl Shift Z)', onclick: () => GH.cs.redo() }),
-          GH.btn('Add entity', { icon: 'plus', onclick: addEntityDialog }), GH.btn('Export report', { icon: 'report', primary: true, onclick: reportDialog })));
+          GH.btn('Add entity', { icon: 'plus', onclick: addEntityDialog }), GH.btn('Export case file', { ghost: true, title: 'Save this case as a JSON file', onclick: () => GH.entityUI.exportCase() }), GH.btn('Import case file', { ghost: true, title: 'Merge a case JSON file into this case', onclick: () => GH.entityUI.importCase() }), GH.btn('Export report', { icon: 'report', primary: true, onclick: reportDialog })));
     }
     function drawTabs() {
       GH.clear(tabsEl).append(...TABS.map(([k, l]) => h('button', { class: 'tab', type: 'button', role: 'tab', id: 'tab-' + k, 'aria-selected': String(ui.tab === k), 'aria-controls': 'bd-panel', tabindex: ui.tab === k ? '0' : '-1', onclick: () => { ui.tab = k; try { sessionStorage.setItem('ghost-tab', k); } catch { /* ok */ } drawAll(); }, onkeydown: (e) => { const i = TABS.findIndex((x) => x[0] === ui.tab); const n = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : null; if (n === null) return; e.preventDefault(); ui.tab = TABS[(n + TABS.length) % TABS.length][0]; drawAll(); document.getElementById('tab-' + ui.tab).focus(); } }, l)));
@@ -73,7 +76,7 @@
       graphPane.append(host, bar, h('p', { class: 'sr' }, 'The graph has ' + GH.plural(Object.keys(cs.entities).length, 'entity', 'entities') + '. The Sources tab and the inspector give the same information as text.'));
       graph = GH.Graph(host, {
         getCase: c,
-        onSelect: (ids) => { ui.sel = ids; drawInspector(); },
+        onSelect: (ids) => { ui.sel = ids; GH.sel.set(ids.length === 1 ? ids[0] : null, 'board'); drawInspector(); },
         onOpen: (id) => { ui.sel = [id]; drawInspector(true); },
         onMoveStart: () => { GH.cs.mutate('Move entities', () => {}, { group: 'move', windowMs: 1500, silent: true }); },
         onMove: () => {},
@@ -109,10 +112,11 @@
         srcs.length ? h('ul', { class: 'prov' }, srcs.map((s) => h('li', {}, h('b', { class: 'mono' }, s.connector + (s.connectorVersion ? ' v' + s.connectorVersion : '')), h('span', { class: 'mute sm' }, [s.query ? 'looked up "' + s.query.value + '"' : '', 'fetched ' + GH.fmtTime(s.fetchedAt), s.origin ? s.origin : '', s.licence ? 'licence ' + s.licence : '', s.rawSha256 ? 'raw output sha256 ' + s.rawSha256.slice(0, 12) + '…' : ''].filter(Boolean).join(' · '))))) : h('p', { class: 'mute sm' }, 'None.'),
         h('p', { class: 'mute sm mono' }, 'First seen ' + GH.fmtDate(e.firstSeen) + ', last seen ' + GH.fmtDate(e.lastSeen)),
         Object.keys(e.attrs || {}).length ? [h('h3', {}, 'Details'), h('dl', { class: 'kv' }, Object.entries(e.attrs).slice(0, 40).map(([k, v]) => [h('dt', {}, k), h('dd', { class: 'mono' }, typeof v === 'object' ? JSON.stringify(v) : String(v))]))] : null,
+        GH.entityUI.fieldsSection(e),
         coords ? h('p', { class: 'mono sm' }, GH.icon('pin'), ' ' + coords.lat.toFixed(5) + ', ' + coords.lon.toFixed(5)) : null,
         h('h3', {}, 'Tags'), h('div', { class: 'chips' }, e.tags.map((t) => h('button', { class: 'chip', type: 'button', title: 'Remove tag ' + t, 'aria-label': 'Remove tag ' + t, onclick: () => GH.cs.mutate('Remove tag', (x) => M.removeTag(x, e.id, t)) }, t + ' ×')), GH.btn('Add tag', { icon: 'tag', onclick: () => tagDialog([e.id]) })),
         h('h3', {}, 'Connections ' + nb.length),
-        nb.length ? h('ul', { class: 'plain conn' }, nb.slice(0, 80).map((n) => { const o = cs.entities[n.other]; return o && h('li', {}, h('button', { class: 'linkish', type: 'button', onclick: () => select(o.id) }, GH.TYPE_LABEL[o.type] + ' ' + o.label), h('span', { class: 'mute mono sm' }, ' ' + (n.dir === 'out' ? '→ ' : '← ') + n.edge.rel), h('button', { class: 'btn ghost icon sm', type: 'button', title: 'Remove this link', 'aria-label': 'Remove link to ' + o.label, onclick: () => GH.cs.mutate('Remove link', (x) => M.removeEdge(x, n.edge.id)) }, GH.icon('x'))); })) : h('p', { class: 'mute sm' }, 'No links yet.'),
+        nb.length ? h('ul', { class: 'plain conn' }, nb.slice(0, 80).map((n) => { const o = cs.entities[n.other]; return o && h('li', {}, h('button', { class: 'linkish', type: 'button', onclick: () => select(o.id) }, GH.TYPE_LABEL[o.type] + ' ' + o.label), h('span', { class: 'mute mono sm' }, ' ' + (n.dir === 'out' ? '→ ' : '← ') + GH.relText(n.edge) + (n.edge.sourceNote ? ' (' + n.edge.sourceNote + ')' : '')), h('button', { class: 'btn ghost sm', type: 'button', title: 'Edit this link', 'aria-label': 'Edit link to ' + o.label, onclick: () => GH.entityUI.editLinkDialog(n.edge) }, 'Edit'), h('button', { class: 'btn ghost icon sm', type: 'button', title: 'Remove this link', 'aria-label': 'Remove link to ' + o.label, onclick: () => GH.cs.mutate('Remove link', (x) => M.removeEdge(x, n.edge.id)) }, GH.icon('x'))); })) : h('p', { class: 'mute sm' }, 'No links yet.'),
         h('div', { class: 'row-a wrap' }, GH.btn('Link to…', { icon: 'link', onclick: () => linkDialog(e.id) }), GH.btn(e.pinned ? 'Unpin position' : 'Pin position', { icon: 'pinned', onclick: () => togglePin(e.id) }),
           GH.btn(hidden ? 'Include in report' : 'Hide from report', { icon: 'eye-off', onclick: () => GH.cs.mutate(hidden ? 'Include in report' : 'Hide from report', (x) => { const l = x.settings.hideFromReport; x.settings.hideFromReport = hidden ? l.filter((i) => i !== e.id) : [...l, e.id]; }) }),
           lookable(e) ? GH.btn('Look up', { icon: 'search', onclick: () => GH.go('m', lookable(e), e.label) }) : null, GH.btn('Remove', { icon: 'trash', onclick: () => removeEntities([e.id]) })));
@@ -132,20 +136,8 @@
       const r = await GH.dialog({ title: 'Add a tag', body: h('div', {}, GH.field('Tag', t), dl), actions: [{ label: 'Cancel', value: false }, { label: 'Add', primary: true, value: true }] });
       if (r === true && t.value.trim()) GH.cs.mutate('Add tag', (x) => { for (const i of ids) M.addTag(x, i, t.value); });
     }
-    async function linkDialog(from) {
-      const cs = c(), ents = Object.values(cs.entities).filter((e) => e.id !== from).sort((a, b) => a.label.localeCompare(b.label)); if (!ents.length) { GH.toast('There is nothing else to link to.'); return; }
-      const to = h('select', { id: 'lk-to' }, ents.map((e) => h('option', { value: e.id }, GH.TYPE_LABEL[e.type] + ': ' + e.label.slice(0, 60)))), rel = h('select', { id: 'lk-rel' }, M.REL.map((x) => h('option', { value: x, selected: x === 'linked-to' }, x)));
-      const r = await GH.dialog({ title: 'Link entities', sub: 'A link you make yourself is marked as added by hand.', body: h('div', { class: 'stack' }, GH.field('To', to), GH.field('Relation', rel)), actions: [{ label: 'Cancel', value: false }, { label: 'Add link', primary: true, value: true }] });
-      if (r === true) GH.cs.mutate('Add link', (x) => M.addEdge(x, { from, to: to.value, rel: rel.value, manual: true }));
-    }
-    async function addEntityDialog() {
-      const type = h('select', { id: 'ae-type' }, M.ENTITY_TYPES.filter((t) => t !== 'email').map((t) => h('option', { value: t, selected: t === 'domain' }, GH.TYPE_LABEL[t]))), val = h('input', { id: 'ae-val', type: 'text', maxlength: '500', 'data-autofocus': '', spellcheck: 'false' }), note = h('input', { id: 'ae-note', type: 'text', maxlength: '300' });
-      const r = await GH.dialog({ title: 'Add an entity', sub: 'Added by hand and marked that way. For anything a connector can find, use a module so the source is kept.', body: h('div', { class: 'stack' }, GH.field('Type', type), GH.field('Value', val), GH.field('Note (optional)', note)), actions: [{ label: 'Cancel', value: false }, { label: 'Add', primary: true, value: true }] });
-      if (r !== true || !val.value.trim()) return;
-      const pr = window.GhostScope.refusePersonQuery(val.value); if (pr.refused) { GH.toast(pr.reason); return; }
-      let res; GH.cs.mutate('Add entity', (x) => { res = M.addEntity(x, { type: type.value, value: val.value.trim(), manual: true, attrs: note.value.trim() ? { note: note.value.trim() } : {} }); M.layout(x); });
-      if (res && res.error) GH.toast(res.error); else if (res && res.id) { ui.sel = [res.id]; GH.say('Entity added.'); }
-    }
+    function linkDialog(from) { return GH.entityUI.linkDialog(from); }
+    async function addEntityDialog() { const id = await GH.entityUI.addEntity(); if (id) { ui.sel = [id]; GH.say('Entity added.'); } }
 
     // ---------- timeline ----------
     function drawTimeline() {
@@ -181,11 +173,12 @@
       const cs = c(); await GH.cs.flush();
       const author = h('input', { id: 'rp-author', type: 'text', maxlength: '120', value: cs.settings.reportAuthor || '' }), fmt = h('select', { id: 'rp-fmt' }, [['html', 'Web page (HTML)'], ['pdf', 'PDF'], ['json', 'JSON with a hash']].map(([v, l]) => h('option', { value: v }, l)));
       const hidden = cs.settings.hideFromReport || [];
+      const qnField = GH.qn ? await GH.qn.reportField(cs.id).catch(() => null) : null;      // Quick notes: which tabs go in the appendix
       const r = await GH.dialog({ title: 'Export report', sub: 'Every item lists its sources. The footer credits Mayfair Ghost.', icon: 'report', body: h('div', { class: 'stack' }, GH.field('Format', fmt), GH.field('Author (optional)', author, 'Printed on the report and remembered with the case.'),
-        h('p', { class: 'mute sm' }, hidden.length ? GH.plural(hidden.length, 'entity', 'entities') + ' hidden from this report. Change that in the inspector.' : 'Nothing is hidden. Use "Hide from report" in the inspector to leave an entity out.'), h('p', { class: 'mute sm' }, 'The report is a file on this computer. Nothing is uploaded.')), actions: [{ label: 'Cancel', value: false }, { label: 'Choose where to save', primary: true, value: true }] });
+        h('p', { class: 'mute sm' }, hidden.length ? GH.plural(hidden.length, 'entity', 'entities') + ' hidden from this report. Change that in the inspector.' : 'Nothing is hidden. Use "Hide from report" in the inspector to leave an entity out.'), qnField, h('p', { class: 'mute sm' }, 'The report is a file on this computer. Nothing is uploaded.')), actions: [{ label: 'Cancel', value: false }, { label: 'Choose where to save', primary: true, value: true }] });
       if (r !== true) return;
       if (author.value.trim() !== (cs.settings.reportAuthor || '')) GH.cs.mutate('Set report author', (x) => { x.settings.reportAuthor = author.value.trim().slice(0, 120); }, { silent: true });
-      try { const res = await GH.call(GH.api.report.save, { json: JSON.stringify(c()), format: fmt.value, author: author.value.trim() }); if (res && res.saved === false) GH.toast('Not saved.'); else GH.toast('Report saved.'); } catch (x) { GH.toast(GH.errText(x), 'err'); }
+      try { const notesTabs = qnField ? await GH.qn.reportTabs() : []; const res = await GH.call(GH.api.report.save, { json: JSON.stringify(c()), format: fmt.value, author: author.value.trim(), ...(notesTabs.length ? { notesTabs } : {}) }); if (res && res.saved === false) GH.toast('Not saved.'); else GH.toast('Report saved.'); } catch (x) { GH.toast(GH.errText(x), 'err'); }
     }
 
     // ---------- assembly ----------
@@ -194,14 +187,16 @@
       toolbar.hidden = ui.tab !== 'graph';
       if (ui.tab === 'graph') { body.append(graphPane, inspector); drawGraph(); } else { graph = null; body.append(other); ({ timeline: drawTimeline, notes: drawNotes, sources: drawSources })[ui.tab](); }
     }
-    function drawAll() { drawHead(); drawTabs(); drawTools(); drawBody(); GH.updateBars && GH.updateBars(); }
+    function drawAll() { drawHead(); drawStrip(); drawTabs(); drawTools(); drawBody(); GH.updateBars && GH.updateBars(); }
     drawAll();
 
+    // A selection made elsewhere (the case tree, the map, a table) selects the same entity here.
+    const offSel = GH.sel.on((id, from) => { if (from === 'board' || !root.isConnected || !id || ui.tab !== 'graph') return; select(id); });
     // Redraw on change, except while the person is typing in a field that the change came from.
     const off = GH.cs.on((why) => {
-      if (!root.isConnected) { off(); document.removeEventListener('keydown', keys, true); return; }
+      if (!root.isConnected) { off(); offSel(); document.removeEventListener('keydown', keys, true); return; }
       if (why === 'save') { drawHead(); return; }
-      if (why === 'change') { const f = document.activeElement; const keep = f && f.id && /^(bd-q|bd-title)$/.test(f.id) ? f.id : null; drawHead(); drawTools(); if (ui.tab === 'graph') { const v = graph; drawGraph(); void v; } else drawBody(); if (keep) { const x = document.getElementById(keep); if (x) x.focus(); } }
+      if (why === 'change') { const f = document.activeElement; const keep = f && f.id && /^(bd-q|bd-title)$/.test(f.id) ? f.id : null; drawHead(); drawStrip(); drawTools(); if (ui.tab === 'graph') { const v = graph; drawGraph(); void v; } else drawBody(); if (keep) { const x = document.getElementById(keep); if (x) x.focus(); } }
     });
     function keys(e) {
       if (!root.isConnected) return;

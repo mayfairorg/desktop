@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" data-skin="mayfair">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; font-src 'self'">
@@ -7,7 +7,11 @@
 <meta name="color-scheme" content="dark light">
 <title>Mayfair Ghost</title>
 <link rel="stylesheet" href="mf-tokens.css">
+<link rel="stylesheet" href="skins.css">
 <link rel="stylesheet" href="ghost.css">
+<link rel="stylesheet" href="quicknotes.css">
+<link rel="stylesheet" href="layouts.css">
+<link rel="stylesheet" href="fields.css">
 </head>
 <body>
 <!-- plain stroke glyphs, drawn here. no chips: an icon is only ever a glyph in the text colour -->
@@ -64,6 +68,8 @@
     <symbol id="i-street" viewBox="0 0 24 24"><path d="M4 20 9 6h6l5 14M12 6v3M12 12v3M12 18v2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-threat" viewBox="0 0 24 24"><path d="M12 3.5 20.5 19h-17zM12 10v4M12 16.4v.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8.5" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 12h8M17 12v3M20 12v2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="15" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="17" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-.9 2-1.8 0-1.4-1.2-1.4-1.2-2.6 0-1 .8-1.6 1.8-1.6h2.2a3.7 3.7 0 0 0 3.7-3.7C20.5 6.7 16.7 3.5 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8" cy="11" r="1" fill="currentColor"/><circle cx="11" cy="7.8" r="1" fill="currentColor"/><circle cx="15.2" cy="8.6" r="1" fill="currentColor"/></symbol>
     <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
   </defs>
 </svg>
@@ -73,15 +79,30 @@
 <script src="scope-parse.js"></script>
 <script src="case-model.js"></script>
 <script src="modules.js"></script>
+<script src="lay-core.js"></script>
+<script src="skins.js"></script>
 <script src="util.js"></script>
 <script src="graph.js"></script>
 <script src="casesvc.js"></script>
+<script src="data.js"></script>
 <script src="flow.js"></script>
 <script src="shell.js"></script>
 <script src="screens.js"></script>
+<script src="settings.js"></script>
 <script src="module.js"></script>
 <script src="places.js"></script>
+<script src="entity-ui.js"></script>
 <script src="board.js"></script>
+<script src="viz.js"></script>
+<script src="map.js"></script>
+<script src="layouts.js"></script>
+<script src="layout-ops.js"></script>
+<script src="layout-terminal.js"></script>
+<script src="layout-hud.js"></script>
+<script src="layout-mono.js"></script>
+<script src="qn-model.js"></script>
+<script src="quicknotes.js"></script>
+<script src="../ghost-vm/tools-vm.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

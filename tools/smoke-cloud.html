@@ -46,7 +46,7 @@ function render() {
 }
 if (B) {
   B.on('state', (s) => { T.states[s.gid] = s; if (s.gid === (T.g1 || 1)) { T.state = s; render(); } else if (s.gid === T.g2) { const st = document.getElementById('strip2'); st.textContent = ''; for (const t of s.tabs) { const d = document.createElement('div'); d.className = 'tab' + (t.id === s.activeId ? ' on' : ''); d.textContent = t.title || t.url || 'New tab'; st.append(d); } } });
-  for (const e of ['windows', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'password-offer', 'password-offer-cancel', 'password-field', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus']) B.on(e, (p) => T.events.push([e, p]));
+  for (const e of ['windows', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'password-offer', 'password-offer-cancel', 'password-field', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus', 'ghost-app']) B.on(e, (p) => T.events.push([e, p]));
   new ResizeObserver(send).observe(content); new ResizeObserver(send2).observe(content2); window.addEventListener('resize', () => { send(); send2(); }); send();
 }
 if (window.mayfairDesktop) { window.mayfairDesktop.onDownload((p) => T.events.push(['legacy-download', p])); window.mayfairDesktop.onDeepLink((p) => T.events.push(['legacy-deeplink', p])); }

@@ -16,10 +16,13 @@ test('ingest adds entities with a source, merges duplicates, strips URL queries'
   assert.deepEqual(M.validate(c), []);
   for (const e of Object.values(c.entities)) assert.equal(M.isUnsourced(e), false);
 });
-test('person-type results are withheld and counted, never stored', () => {
+test('a person result becomes a Person; account-style kinds (username, phone) are withheld and counted', () => {
   const c = M.newCase('t');
-  const r = M.ingest(c, { connector: conn, query: null, results: [res('person', 'Jane Doe'), res('username', 'jdoe'), res('phone', '+4400000'), res('domain', 'example.org')], rawSha256: '' });
-  assert.equal(r.withheld, 3); assert.equal(JSON.stringify(c).includes('Jane Doe'), false); assert.equal(Object.keys(c.entities).length >= 1, true);
+  const r = M.ingest(c, { connector: conn, query: null, results: [res('person', 'Jane Doe', { raw: { roles: ['technical'], emails: ['jane@example.org'], of: 'example.org' } }), res('username', 'jdoe'), res('phone', '+4400000'), res('domain', 'example.org')], rawSha256: '' });
+  assert.equal(r.withheld, 2); assert.equal(JSON.stringify(c).includes('jdoe'), false);
+  const jane = Object.values(c.entities).find((e) => e.type === 'person'); assert.equal(jane.label, 'Jane Doe'); assert.equal(M.isUnsourced(jane), false);
+  assert.deepEqual(jane.fields.map((f) => f.title), ['Role', 'Associated with', 'Email (as published)']); assert.ok(jane.fields.every((f) => f.source.startsWith('dns-doh') && f.t));
+  assert.deepEqual(M.validate(c), []);
 });
 test('email is kept only with an infrastructure role', () => {
   const c = M.newCase('t');

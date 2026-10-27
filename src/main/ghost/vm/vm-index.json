@@ -1,0 +1,5 @@
+{
+  "schema": 1,
+  "published": false,
+  "note": "No virtual computer image has been published yet. The workflow .github/workflows/ghost-vm-image.yml builds the assets and writes the real index (addresses, sizes and SHA-256 values); copy it over this file when a release is made."
+}

@@ -58,7 +58,7 @@ test('fuse off: jobs return normalised results, honest failures keep their reaso
   assert.match(dns.stderr, /network: keyless-external \(1 request\)/);
   const rdap = await go(c, 'rdap-domain', { domain: 'example.com' });
   assert.equal(rdap.status, 'done', rdap.error); assert.ok(rdap.results.some((x) => x.entity.type === 'org' && x.entity.value === 'Fixture Registrar Inc.'));
-  assert.ok(!/Jane/.test(JSON.stringify(rdap.results)));
+  assert.ok(rdap.results.some((x) => x.entity.type === 'person' && x.entity.value === 'Jane Fixture-Person'), 'the registry contact is passed on');
   const lim = await go(c, 'ct-crtsh', { domain: 'limited.example.com' });
   assert.equal(lim.status, 'failed'); assert.equal(lim.exitCode, 75); assert.match(lim.error, /rate-limited: crt\.sh asked us to slow down \(retry after 30 s\)/);
   assert.match(lim.stderr, /network: rate-limited/);
@@ -92,7 +92,7 @@ test('plain process runner: the same module gives the same results as the utilit
   const strip = (j) => j.results.map((r) => ({ ...r, observedAt: 'x' }));
   const ja = await go(a, 'wikidata', { kind: 'organisation', query: 'Fixture Corp' }), jb = await go(b, 'wikidata', { kind: 'organisation', query: 'Fixture Corp' });
   assert.equal(ja.status, 'done'); assert.equal(jb.status, 'done');
-  assert.deepEqual(strip(ja), strip(jb)); assert.equal(ja.resultCount, 4);
+  assert.deepEqual(strip(ja), strip(jb)); assert.equal(ja.resultCount, 5);
 });
 
 test('changing a module file withdraws its approval (the library files are part of the hash)', async () => {

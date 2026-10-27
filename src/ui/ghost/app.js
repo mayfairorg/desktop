@@ -11,6 +11,7 @@
       GH.mounted = true; lastStage = 'ready'; GH.mount(); return;
     }
     GH.mounted = false; lastStage = st.stage; GH.cs.close();
+    if (GH.appearance) GH.appearance.apply(null);      // the start screens always use the default skin; a saved choice is read again once the vault is open
     GH.clear(root); root.append(GH.flow.view(st));
     const f = root.querySelector('[data-autofocus]') || root.querySelector('h1'); if (f) { if (!f.hasAttribute('tabindex') && f.tagName === 'H1') f.setAttribute('tabindex', '-1'); try { f.focus({ preventScroll: true }); } catch { /* ok */ } }
   }

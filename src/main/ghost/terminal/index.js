@@ -5,10 +5,13 @@ const { TerminalService } = require('./service');
 const { TermsStore } = require('./terms');
 const { createTerminalWindow } = require('./window');
 const { ToolHost } = require('./addtool');
+const { TerminalRouter } = require('../vm/router');
 
-function createTerminal({ electron, userData, isPackaged = true, icon, baseEnv, mode = null }) {
+// vm: {service, bridge} from src/main/ghost/vm (optional). With it the window opens the virtual computer by default; the local terminal is the advanced fallback.
+function createTerminal({ electron, userData, isPackaged = true, icon, baseEnv, mode = null, vm = null }) {
   const terms = new TermsStore(path.join(userData, 'ghost', 'terminal.json'));
-  const service = new TerminalService({ root: userData, terms, ...(baseEnv ? { baseEnv } : {}), mode: mode || process.env.MF_GHOST_TERM_MODE || null });
+  const local = new TerminalService({ root: userData, terms, ...(baseEnv ? { baseEnv } : {}), mode: mode || process.env.MF_GHOST_TERM_MODE || null });
+  const service = vm ? new TerminalRouter({ local, vm: vm.service }) : local;
   const uiDir = path.join(__dirname, '..', '..', '..', 'ui', 'ghost-terminal');
   const { dialog } = electron;
   let w = null;
@@ -27,9 +30,10 @@ function createTerminal({ electron, userData, isPackaged = true, icon, baseEnv, 
     const r = p ? await dialog.showOpenDialog(p, o) : await dialog.showOpenDialog(o);
     return r.canceled || !r.filePaths[0] ? null : r.filePaths[0];
   };
-  const tools = new ToolHost({ userData, toolsDir: service.toolsDir, confirm, pick, isPackaged, emit: (n, p) => { if (w) w.sendJob(n, p); } });
-  w = createTerminalWindow({ electron, service, tools, terms, uiDir, isPackaged, icon });
-  return { ...w, service, terms, tools };
+  const tools = new ToolHost({ userData, toolsDir: local.toolsDir, confirm, pick, isPackaged, emit: (n, p) => { if (w) w.sendJob(n, p); } });
+  w = createTerminalWindow({ electron, service, tools, terms, uiDir, isPackaged, icon, vm: vm ? vm.service : null, vmBridge: vm ? vm.terminalBridge : null });
+  if (vm && vm.onStatus) vm.onStatus((st) => w.sendVm(st));
+  return { ...w, service, local, terms, tools };
 }
 
 module.exports = { createTerminal };

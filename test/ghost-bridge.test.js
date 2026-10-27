@@ -16,12 +16,14 @@ const VAULT_CALLS = ['status', 'unlock', 'lock', 'backup.begin', 'backup.confirm
 const ok = (n, ...a) => check('web', 'br:' + n, a).ok;
 
 // The App Library side of the Ghost app (src/main/ghost/app): list, open, remove. They go to the app service, never to the connector core.
-const APP_CALLS = ['ghost.app.library', 'ghost.app.open', 'ghost.app.remove'];
+const APP_CALLS = ['ghost.app.library', 'ghost.app.open', 'ghost.app.remove', 'ghost.app.bounds', 'ghost.app.hide', 'ghost.app.occluded', 'ghost.app.capture', 'ghost.app.state'];   // the last five place Ghost's view inside the Mayfair window
+// The tool library list and the Mayfair account (src/main/ghost/vm/toolsync.js, tested in ghost-toollib-sync.test.js)
+const TOOLLIB_CALLS = ['ghost.toollib.list', 'ghost.toollib.import', 'ghost.toollib.importStatus', 'ghost.toollib.localOnly', 'ghost.toollib.setLocalOnly'];
 test('the ghost bridge group is exactly the documented calls, Mayfair view only', () => {
   const have = Object.keys(BR).filter((k) => k.startsWith('ghost.')).sort();
-  assert.deepEqual(have, [...GHOST_CALLS, ...VAULT_CALLS, ...APP_CALLS].sort());
-  for (const n of [...GHOST_CALLS, ...VAULT_CALLS, ...APP_CALLS]) { assert.deepEqual(CH['br:' + n].roles, ['web'], n); for (const role of ['page', 'start']) assert.equal(check(role, 'br:' + n, []).ok, false, role + ' ' + n); }
-  assert.ok(BR_EVENTS.includes('ghost-job'));
+  assert.deepEqual(have, [...GHOST_CALLS, ...VAULT_CALLS, ...APP_CALLS, ...TOOLLIB_CALLS].sort());
+  for (const n of [...GHOST_CALLS, ...VAULT_CALLS, ...APP_CALLS, ...TOOLLIB_CALLS]) { assert.deepEqual(CH['br:' + n].roles, ['web'], n); for (const role of ['page', 'start']) assert.equal(check(role, 'br:' + n, []).ok, false, role + ' ' + n); }
+  assert.ok(BR_EVENTS.includes('ghost-job')); assert.ok(BR_EVENTS.includes('ghost-app'));
   assert.ok(channelsFor('web').includes('br:ghost.jobs.run'));
   assert.ok(!channelsFor('page').some((c) => c.includes('ghost')) && !channelsFor('start').some((c) => c.includes('ghost')));
 });
@@ -92,10 +94,10 @@ test('preload and contract carry the ghost group and event', () => {
 });
 test('every ghost handler is wired in the main process and goes through the service only', () => {
   const src = read('src/main/browser-service.js');
-  for (const n of [...GHOST_CALLS, ...VAULT_CALLS, ...APP_CALLS]) assert.ok(src.includes(`'br:${n}': `), n);
+  for (const n of [...GHOST_CALLS, ...VAULT_CALLS, ...APP_CALLS, ...TOOLLIB_CALLS]) assert.ok(src.includes(`'br:${n}': `), n);
   const lines = src.split('\n').filter((l) => l.includes("'br:ghost."));
-  assert.equal(lines.length, GHOST_CALLS.length + VAULT_CALLS.length + APP_CALLS.length);
-  for (const l of lines) assert.match(l, l.includes("'br:ghost.app.") ? /this\.ghostApp/ : /this\.ghost\.api\(\)\['ghost\./);
+  assert.equal(lines.length, GHOST_CALLS.length + VAULT_CALLS.length + APP_CALLS.length + 2);    // the five toollib handlers share two lines
+  for (const l of lines) assert.match(l, l.includes("'br:ghost.app.") ? /this\.ghostApp/ : l.includes("'br:ghost.toollib.") ? /this\.ghostToolLib/ : /this\.ghost\.api\(\)\['ghost\./);
   const api = Object.keys(new GhostService({ root: tmp(), dialog: {} }).api()).sort();
   assert.deepEqual(api, [...GHOST_CALLS].sort(), 'the service exposes exactly the allowlisted calls');
 });
@@ -319,4 +321,14 @@ test('an installed build (RunAsNode fuse off) refuses @node connectors instead o
   api['ghost.connectors.enable']('sample-textstats');
   assert.equal(api['ghost.jobs.run']({ connector: 'sample-textstats', input: { text: 'x' } }).error, 'runtime-unavailable');
   assert.equal(api['ghost.connectors.list']()[0].install.installed, false);
+});
+
+test('ghost.app view calls: only a plain area, flags and nothing else', () => {
+  assert.equal(ok('ghost.app.bounds', { x: 0, y: 40, w: 800, h: 500 }), true);
+  assert.equal(ok('ghost.app.bounds', { x: 0, y: 40, w: 800, h: 500, visible: false }), true);
+  for (const bad of [{}, { x: 0, y: 0, w: 1 }, { x: 'a', y: 0, w: 1, h: 1 }, { x: 0, y: 0, w: 1, h: 1, gid: 1 }, { x: 0, y: 0, w: 1, h: 1, url: 'https://x' }, { x: NaN, y: 0, w: 1, h: 1 }, null, 'x']) assert.equal(ok('ghost.app.bounds', bad), false, JSON.stringify(bad));
+  assert.equal(ok('ghost.app.bounds'), false);
+  assert.equal(ok('ghost.app.occluded', true), true); assert.equal(ok('ghost.app.occluded', true, { focus: true, capture: false }), true);
+  assert.equal(ok('ghost.app.occluded', 'yes'), false); assert.equal(ok('ghost.app.occluded', true, { gid: 1 }), false);
+  for (const n of ['ghost.app.hide', 'ghost.app.capture', 'ghost.app.state']) { assert.equal(ok(n), true, n); assert.equal(ok(n, 1), false, n); }
 });

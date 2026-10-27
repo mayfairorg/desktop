@@ -3,7 +3,7 @@
 //  - One partition per case, named at random, never "persist:": nothing reaches disk and nothing touches the normal browser profile.
 //  - Route: Tor by default (Ghost's own Tor process). Direct with DNS over HTTPS only when the person says so in a native dialog.
 //  - Egress: policy.js decides every request; blocks are kept and shown.
-//  - Kill switch: close every case window, wipe every case partition, stop Tor (drops circuits), lock the vault.
+//  - Kill switch: close every case window, wipe every case partition, stop Tor (drops circuits), stop the virtual computer (killHooks), lock the vault.
 const crypto = require('node:crypto');
 const { EgressPolicy, CASE_ID } = require('./policy');
 const route = require('./route');
@@ -19,6 +19,8 @@ class GhostBrowserService {
     this.electron = electron; this.tor = tor; this.vault = vault; this.makeWindow = makeWindow; this.confirm = confirm; this.restoreResolver = restoreResolver;
     this.chromeVersion = chromeVersion; this.emit = emit; this.now = now; this.provider = provider;
     this.cases = new Map();
+    this.torHolds = [];             // () => true while something else (the virtual computer) still uses Ghost's Tor program: closing a case window then leaves it running
+    this.killHooks = [];            // other parts of Ghost that the kill switch also stops (the virtual computer), each () => Promise|any
     this.policy = new EgressPolicy({ now, onBlock: (caseId, e) => this._pushState(caseId, { block: e }) });
     this.policy.declare(OPEN_WEB);
     this.resolverChanged = false;
@@ -139,7 +141,7 @@ class GhostBrowserService {
     await this._maybeRelease();
   }
   async _maybeRelease() {
-    if (![...this.cases.values()].some((r) => r.plan.mode === 'tor') && this.tor) { try { this.tor.stop(); } catch { /* stopped */ } }
+    if (![...this.cases.values()].some((r) => r.plan.mode === 'tor') && !this.torHolds.some((f) => f()) && this.tor) { try { this.tor.stop(); } catch { /* stopped */ } }
     if (this.resolverChanged && ![...this.cases.values()].some((r) => r.plan.mode === 'direct-doh')) { this.resolverChanged = false; try { await this.restoreResolver(); } catch { /* ignore */ } }
   }
   async close(caseId) { const rec = this.cases.get(caseId); if (!rec) return { ok: false, code: 'no-case', error: 'No such case window.' }; rec.closing = true; rec.handle.close(); await this._closed(caseId); return { ok: true }; }
@@ -152,6 +154,7 @@ class GhostBrowserService {
     for (const r of recs) { await this._wipe(r.session); report.wiped++; this.cases.delete(r.id); this.policy.forget(r.id); }
     if (this.tor) { try { this.tor.stop(); report.tor = true; } catch { /* stopped */ } }
     if (this.resolverChanged) { this.resolverChanged = false; try { await this.restoreResolver(); report.resolverRestored = true; } catch { /* ignore */ } }
+    for (const hook of this.killHooks) { try { await hook(); report.hooks = (report.hooks || 0) + 1; } catch { /* best effort: the others still stop */ } }
     const v = this.vault(); if (v) { try { v.lock(); report.vaultLocked = !v.unlocked; } catch { /* locked already */ } }
     this.emit('killed', report);
     return { ok: true, report };

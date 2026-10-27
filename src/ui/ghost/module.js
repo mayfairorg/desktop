@@ -1,12 +1,13 @@
 'use strict';
 // Ghost module screens and connector cards. A module runs the connectors that are installed (through the Ghost connector core) and shows each one it expected but
-// cannot find as "Connector not installed". There is no sample data anywhere: a result on screen came from a connector run on this computer.
+// cannot find as "Not installed". Every card shows one honest state (Needs your approval, Not tested, Test passed, Test failed, Program missing, Not installed). There is no sample data anywhere: a result on screen came from a connector run on this computer.
 (function () {
   const GH = window.GH, h = GH.h, S = window.GhostScope, M = window.GhostCase, MODS = window.GhostModules;
   const TERMINAL = ['done', 'failed', 'cancelled', 'timed-out'];
   const NET = { local: ['Works on this computer only', 'Sends nothing anywhere.'], 'keyless-external': ['Uses outside services', 'No account key needed.'], 'rate-limited': ['Uses outside services with limits', 'Ghost keeps to each service\'s fair-use rule.'], unavailable: ['Not available now', 'The service it needs cannot be used right now.'] };
   const STATE = { 'not-approved': 'Not approved', approved: 'Approved, switched off', enabled: 'Switched on', disabled: 'Switched off' };
   const SCOPE_TAG = { local: 'LOCAL', passive: 'PASSIVE', active: 'ACTIVE' };
+  const stTag = (st) => h('span', { class: 'tag st st-' + st.key, title: st.detail || null }, st.label);
 
   const reqLine = (r) => h('li', { class: 'req ' + r.status }, h('span', { class: 'mono' }, r.status === 'ok' ? 'Ready' : r.status === 'untested' ? 'Not checked' : 'Missing'), h('span', {}, r.name), r.detail && r.status !== 'ok' && r.status !== 'untested' ? h('span', { class: 'mute' }, ' ' + String(r.detail).slice(0, 120)) : null);
   const fieldsOf = (g) => (g && g.input && g.input.fields) || [];
@@ -14,19 +15,22 @@
   // o: { entry|null, label, id, onChange(), runnable, input() -> {kind,value}, needScope() -> scopeId|null, module }
   GH.connectorCard = function connectorCard(o) {
     const e = o.entry, host = h('article', { class: 'ccard' + (e ? '' : ' missing') + (e && e.scope === 'active' ? ' active' : ''), 'aria-label': (e ? e.name : o.label) });
-    const head = h('div', { class: 'cc-h' }, h('div', { class: 'cc-t' }, h('h3', {}, e ? e.name : o.label), h('span', { class: 'mono mute' }, (e ? e.id : o.id) + (e && e.version ? '  v' + e.version : ''))), e ? h('span', { class: 'tag' + (e.scope === 'active' ? ' act' : '') }, SCOPE_TAG[e.scope] || 'ACTIVE') : h('span', { class: 'tag' }, 'NOT INSTALLED'));
+    const st = MODS.statusOf(e, o.id);
+    const head = h('div', { class: 'cc-h' }, h('div', { class: 'cc-t' }, h('h3', {}, e ? e.name : o.label), h('span', { class: 'mono mute' }, (e ? e.id : o.id) + (e && e.version ? '  v' + e.version : ''))), h('div', { class: 'cc-tags' }, e ? h('span', { class: 'tag' + (e.scope === 'active' ? ' act' : '') }, SCOPE_TAG[e.scope] || 'ACTIVE') : null, stTag(st)));
     host.append(head);
     if (!e) {
-      host.append(h('p', { class: 'cc-state' }, GH.icon('alert'), h('b', {}, 'Connector not installed')), h('p', { class: 'mute sm' }, 'Ghost has no "' + o.id + '" connector on this computer. It is shown so you know it is expected here. No results are made up in its place.'));
+      host.append(h('p', { class: 'cc-state' }, GH.icon('alert'), h('b', {}, 'Not installed')), h('p', { class: 'mute sm' }, st.planned ? 'This lookup is planned and has not been built yet. It is shown so you know it is expected here. No results are made up in its place.' : 'Ghost has not set up "' + o.id + '" on this computer yet. Use "Set up built-in lookups" for Mayfair\'s own lookups. No results are made up in its place.'));
       return host;
     }
+    host.append(h('p', { class: 'cc-state st-line st-' + st.key, role: 'status' }, GH.icon(st.key === 'passed' ? 'check' : st.key === 'needs-approval' ? 'lock' : 'alert'), h('span', {}, h('b', {}, st.label), st.detail ? '. ' + st.detail : '')));
+    if (st.key === 'needs-approval' && e.licence && e.licence.mode === 'separate-program') host.append(h('p', { class: 'mute sm' }, 'It also needs a separate program (' + e.licence.spdx + '). It stays "not installed" until the program is on this computer and its own test has passed.'));
     const net = NET[e.network] || NET.unavailable;
     const gated = e.gated === 'scanning';
     host.append(h('p', { class: 'cc-d' }, e.description));
     const facts = h('dl', { class: 'kv' },
       h('dt', {}, 'State'), h('dd', {}, STATE[e.state] || 'Not approved'),
       h('dt', {}, 'Network'), h('dd', {}, net[0] + '. ' + net[1]),
-      h('dt', {}, 'Installed'), h('dd', {}, e.install.installed ? 'Yes: it passed its own test on this computer' : 'Not yet: ' + (e.install.requirements.some((r) => r.status !== 'ok' && r.status !== 'untested') ? 'something it needs is missing' : 'its self-test has not passed')),
+      h('dt', {}, 'Installed'), h('dd', {}, e.install.installed ? 'Yes: it passed its own test on this computer' : 'Not yet: ' + (st.key === 'program-missing' ? 'a program it needs is missing' : st.key === 'needs-approval' ? 'you have not approved it' : 'its self-test has not passed')),
       h('dt', {}, 'Tested'), h('dd', {}, e.install.verified === 'tested' ? 'Passed on ' + GH.fmtTime(e.install.lastTest && e.install.lastTest.t) : e.install.verified === 'failed' ? 'Failed: ' + String(e.install.lastTest && e.install.lastTest.detail || '').slice(0, 160) : 'Not tested'),
       h('dt', {}, 'Licence'), h('dd', {}, (e.licence ? e.licence.spdx + ', ' + (e.licence.mode === 'bundled' ? 'ships with the connector' : 'separate program') : 'unknown')));
     host.append(facts);
@@ -39,11 +43,12 @@
 
     const act = h('div', { class: 'row-a' }), msg = h('p', { class: 'hint', role: 'status' });
     const doit = (label, fn, extra) => GH.btn(label, { ...extra, onclick: async (ev) => { const b = ev.currentTarget; b.disabled = true; msg.textContent = ''; try { const r = await fn(); if (r && r.passed === false) msg.textContent = 'The self-test failed: ' + (r.detail || 'see the details above.'); else if (r && r.declined) msg.textContent = 'Not approved.'; } catch (x) { msg.textContent = GH.errText(x); } GH.conn.bust(); if (o.onChange) o.onChange(); } });
-    if (e.state === 'not-approved') act.append(doit('Approve…', () => GH.call(GH.api.connectors.requestApproval, e.id), { primary: true }));
+    if (e.state === 'not-approved') act.append(doit('Review and approve…', () => GH.call(GH.api.connectors.requestApproval, e.id), { primary: true }));
     if (e.state === 'approved' || e.state === 'enabled' || e.state === 'disabled') { if (e.scope !== 'active') act.append(doit('Run self-test', () => GH.call(GH.api.connectors.test, e.id))); }
     if (e.state === 'approved' || e.state === 'disabled') act.append(doit('Switch on', () => GH.call(GH.api.connectors.enable, e.id), { primary: e.install.installed }));
     if (e.state === 'enabled') act.append(doit('Switch off', () => GH.call(GH.api.connectors.disable, e.id)));
-    if (e.state === 'not-approved' && e.scope === 'active') act.append(h('span', { class: 'mute sm' }, 'You approve a tool in a native dialog.'));
+    if (e.state === 'not-approved') act.append(h('span', { class: 'mute sm' }, 'A native window lists what it can reach and its licence.'));
+    if (st.key === 'program-missing') act.append(h('span', { class: 'mute sm' }, 'Install the program, then run the self-test again.'));
     host.append(act, msg);
     if (o.runnable && e.state === 'enabled' && e.health === 'ok') host.append(runPanel(e, o));
     else if (o.runnable && e.state === 'enabled') host.append(h('p', { class: 'mute sm' }, 'Not ready to run.'));
@@ -101,19 +106,21 @@
       for (const f of fields) { if (f.type === 'file') { if (pickers[f.name]) input[f.name] = pickers[f.name].token; continue; } const v = String(values[f.name]()).trim(); if (v === '' && f.required === false) continue; input[f.name] = f.type === 'integer' ? Number(v) : v; }
       for (const f of fields) if (f.type === 'string' || f.type === 'url-host') { const pr = S.refusePersonQuery(input[f.name] || ''); if (pr.refused) { status.textContent = pr.reason; return; } }
       GH.clear(out); status.textContent = 'Starting'; submit.disabled = true; cancel.hidden = false;
+      const rec = GH.jobs.start(e.id, Object.values(input).find((v) => typeof v === 'string' && v) || '');
       let r;
       try { r = e.scope === 'active' ? await GH.call(GH.api.scope.run, { connector: e.id, scopeId: o.needScope(), input: Object.fromEntries(Object.entries(input).filter(([k]) => !(fields.find((f) => f.name === k) || {}).type || (fields.find((f) => f.name === k) || {}).type !== 'url-host')) }) : await GH.call(GH.api.jobs.run, { connector: e.id, input }); }
-      catch (x) { status.textContent = GH.errText(x); cancel.hidden = true; refresh(); return; }
+      catch (x) { status.textContent = GH.errText(x); cancel.hidden = true; GH.jobs.update(rec, { status: 'failed', finishedAt: Date.now(), results: 0 }); refresh(); return; }
       live = r.jobId; let job = null;
       while (true) {
         try { job = await GH.call(GH.api.jobs.get, live); } catch (x) { status.textContent = GH.errText(x); break; }
-        if (!job) { status.textContent = 'The job was not found.'; break; }
+        if (!job) { status.textContent = 'The job was not found.'; GH.jobs.update(rec, { status: 'failed', finishedAt: Date.now(), results: 0 }); break; }
+        GH.jobs.update(rec, { status: job.status, progress: job.progress || 0 });
         status.textContent = ({ queued: 'Waiting in line', running: 'Running' + (job.progress ? ' ' + Math.round(job.progress * 100) + '%' : '') + (job.message ? ': ' + job.message : '') })[job.status] || '';
         if (TERMINAL.includes(job.status)) break;
         await new Promise((res) => setTimeout(res, 700));
       }
       live = null; cancel.hidden = true;
-      if (job) finish(job);
+      if (job) { GH.jobs.update(rec, { status: job.status, finishedAt: Date.now(), results: job.resultCount || (job.results || []).length || 0 }); finish(job); } else GH.jobs.update(rec, { status: 'failed', finishedAt: Date.now(), results: 0 });
       refresh();
     }
     function finish(job) {
@@ -132,17 +139,17 @@
   // The list of what a run returned: grouped by type, each with its source, and "Add to case".
   function resultsView(entry, query, job) {
     const results = job.results || []; const wrap = h('div', { class: 'results' });
-    const person = results.filter((r) => r && r.entity && M.isPersonType(r.entity.type)).length;
-    const shown = results.filter((r) => r && r.entity && !M.isPersonType(r.entity.type));
+    const person = results.filter((r) => r && r.entity && M.isAccountKind(r.entity.type)).length;
+    const shown = results.filter((r) => r && r.entity && !M.isAccountKind(r.entity.type));
     const qk = query && query.kind; const q = query && query.value ? { kind: ({ 'org-name': 'org', lei: 'org', 'place-text': 'place' })[qk] || qk, value: query.value } : null;
     const q2 = q && ['domain', 'ip', 'asn', 'url', 'cert-hash', 'org', 'place'].includes(q.kind) ? q : null;
     const addAll = GH.btn('Add all to case', { primary: true, icon: 'plus', disabled: !shown.length, onclick: async () => { await GH.cs.addResults({ connector: entry, query: q2, results: shown }); } });
     wrap.append(h('div', { class: 'res-h' }, h('h4', {}, GH.plural(shown.length, 'result')), job.resultsTruncated ? h('span', { class: 'mute sm' }, 'Showing the first ' + shown.length) : null, addAll));
-    if (person) wrap.append(h('p', { class: 'flow-note' }, GH.icon('lock'), h('span', {}, GH.plural(person, 'result') + ' withheld: Ghost does not show or store details about private people.')));
+    if (person) wrap.append(h('p', { class: 'flow-note' }, GH.icon('lock'), h('span', {}, GH.plural(person, 'result') + ' withheld: Ghost does not show or store usernames, phone numbers, accounts or face data.')));
     if (!shown.length) { wrap.append(h('div', { class: 'state sm' }, GH.icon('search'), h('p', {}, 'No public records found. That does not prove nothing is there.'))); return wrap; }
     const groups = {}; for (const r of shown) { const t = M.mapType(r.entity.type).type; (groups[t] = groups[t] || []).push(r); }
     for (const [t, rows] of Object.entries(groups)) {
-      wrap.append(h('div', { class: 'eg mono' }, GH.icon(({ domain: 'globe', ip: 'ip', asn: 'asn', cert: 'cert', org: 'org', document: 'doc', image: 'image', place: 'pin', event: 'event', url: 'link', email: 'mail' })[t] || 'board'), GH.TYPE_PLURAL[t] + ' ' + rows.length));
+      wrap.append(h('div', { class: 'eg mono' }, GH.icon(({ domain: 'globe', ip: 'ip', asn: 'asn', cert: 'cert', org: 'org', person: 'user', document: 'doc', image: 'image', place: 'pin', event: 'event', url: 'link', email: 'mail' })[t] || 'board'), GH.TYPE_PLURAL[t] + ' ' + rows.length));
       wrap.append(h('ul', { class: 'elist' }, rows.slice(0, 300).map((r) => h('li', { class: 'er' }, h('div', { class: 'er-m' }, h('span', { class: 'v' }, r.entity.value), h('span', { class: 'a' }, [r.entity.type !== t ? r.entity.type + ', ' : '', ({ confirmed: 'Confirmed', likely: 'Likely', uncertain: 'Uncertain' })[r.confidence] || '', r.uncertaintyNote ? ': ' + r.uncertaintyNote : '', ' · ' + (r.source && r.source.tool || entry.id) + ' ' + (r.source && r.source.version || ''), r.source && r.source.url ? ' · ' + r.source.url : ''].join(''))),
         GH.btn('', { icon: 'plus', ghost: true, title: 'Add ' + r.entity.value + ' to case', onclick: async () => { await GH.cs.addResults({ connector: entry, query: q2, results: [r] }); } })))));
     }
@@ -161,6 +168,51 @@
     const d = S.detectInput(t); return { ok: true, kind: d.kind || 'keyword', value: d.kind ? d.value : t };
   }
   GH.checkInput = checkInput;
+
+  // ---------- "Set up built-in lookups" ----------
+  // One button. For each built-in lookup in turn: the native approval window (one per connector, with the outside addresses and the licence), then its own
+  // self-test, then switching it on if the test passed. Nothing is approved without that window, and a failed or declined one is reported as it is.
+  GH.setupBuiltins = function setupBuiltins(o = {}) {
+    const ids = MODS.BUILTIN, host = h('section', { class: 'panel setup-panel', 'aria-labelledby': 'h-setup' });
+    const list = h('ul', { class: 'setup-list mono sm', 'aria-label': 'Progress' }), bar = h('p', { class: 'hint', role: 'status', 'aria-live': 'polite' }, '');
+    let running = false, stop = false;
+    const rows = {}, names = {};
+    const say = (id, text, cls) => { if (!rows[id]) { rows[id] = h('li', {}, h('span', {}, names[id] || id), h('span', { class: 'mute' }, '')); list.append(rows[id]); } rows[id].className = cls || ''; rows[id].lastChild.textContent = text; };
+    const run = async () => {
+      if (running) return; running = true; stop = false; GH.clear(list); btn.disabled = true; cancel.hidden = false;
+      let passed = 0, declined = 0, problems = 0, n = 0;
+      for (const id of ids) {
+        if (stop) break; n++; bar.textContent = 'Lookup ' + n + ' of ' + ids.length;
+        let e = null; try { e = await GH.call(GH.api.connectors.get, id); } catch { /* shown below */ }
+        if (!e) { say(id, 'Not installed', 'bad'); problems++; continue; }
+        names[id] = e.name; say(id, 'Waiting', '');
+        try {
+          if (e.state === 'not-approved') {
+            say(id, 'Needs your approval: answer the window that opened');
+            const r = await GH.call(GH.api.connectors.requestApproval, id);
+            if (!r || r.ok === false) { say(id, 'Not approved', 'bad'); declined++; continue; }
+          }
+          say(id, 'Testing');
+          const t = await GH.call(GH.api.connectors.test, id);
+          if (!t || t.passed !== true) {
+            const g = await GH.call(GH.api.connectors.get, id).catch(() => null), s2 = MODS.statusOf(g, id);
+            say(id, s2.label + (s2.detail ? ': ' + s2.detail.slice(0, 120) : ''), 'bad'); problems++; continue;
+          }
+          await GH.call(GH.api.connectors.enable, id);
+          say(id, 'Test passed', 'ok'); passed++;
+        } catch (x) { say(id, 'Not done: ' + GH.errText(x), 'bad'); problems++; }
+      }
+      running = false; btn.disabled = false; cancel.hidden = true; GH.conn.bust();
+      bar.textContent = (stop ? 'Stopped. ' : 'Finished. ') + passed + ' passed, ' + declined + ' not approved, ' + problems + ' with a problem.';
+      if (o.onDone) o.onDone();
+    };
+    const btn = GH.btn('Set up built-in lookups', { primary: true, icon: 'check', onclick: run });
+    const cancel = GH.btn('Stop after this one', { ghost: true, onclick: () => { stop = true; } }); cancel.hidden = true;
+    host.append(h('div', { class: 'panel-h' }, h('h2', { id: 'h-setup' }, 'Built-in lookups'), h('span', { class: 'mute mono' }, ids.length + ' lookups')),
+      h('p', { class: 'mute' }, 'Ghost asks you about each lookup in turn, in a native window that lists the outside addresses it contacts and its licence. After you approve one, Ghost tests it and switches it on only if the test passes. Nothing is contacted before you approve.'),
+      h('div', { class: 'row-a' }, btn, cancel), bar, list);
+    return host;
+  };
 
   // ---------- the screen ----------
   GH.routes.m = async (id, value) => {
@@ -194,11 +246,13 @@
     draw(false);
     const top = [];
     top.push(h('div', {}, h('p', { class: 'eyebrow mono' }, (m.active ? 'ACTIVE' : 'PASSIVE') + ' MODULE'), h('h1', {}, m.name), h('p', { class: 'lead sm' }, m.blurb)));
+    const Lx = GH.layout && GH.layout(); if (Lx && Lx.moduleSummary) top.push(Lx.moduleSummary(m));
     if (m.active) top.push(scopePanel(m, state, entitled, draw));
+    else if (m.wants.some((w) => MODS.BUILTIN.includes(w[0]))) top.push(GH.setupBuiltins({ onDone: () => draw(true) }));
     if (!m.fileInput && m.local !== 'pivots' && entitled) top.push(h('form', { class: 'cmd mod-cmd', onsubmit: go, autocomplete: 'off' }, h('label', { class: 'cmd-l mono', for: 'm-in', 'aria-hidden': 'true' }, '›'), input, kindEl, GH.btn(m.active ? 'Run ready tools' : 'Look up', { primary: true, type: 'submit' })), err);
     if (m.local === 'pivots') top.push(GH.pivotsPanel());
     if (m.places) top.push(GH.placesPanels());
-    return h('section', { class: 'view mod-view' }, ...top, h('div', { class: 'sec-h' }, h('h2', {}, 'Connectors'), h('span', { class: 'mute' }, m.fileInput ? 'Each tool asks for the file it should read. Files never leave this computer.' : 'Only connectors installed on this computer can run. The rest show as not installed.')), cardsHost);
+    return h('section', { class: 'view mod-view', dataset: { mod: m.id } }, ...top, h('div', { class: 'sec-h' }, h('h2', {}, 'Connectors'), h('span', { class: 'mute' }, m.fileInput ? 'Each tool asks for the file it should read. Files never leave this computer.' : 'Only connectors that are approved, tested and switched on can run. Each card shows its real state.')), cardsHost);
   };
 
   // ---------- infrastructure pivots (local: computed from the open case) ----------

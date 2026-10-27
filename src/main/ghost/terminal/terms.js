@@ -24,12 +24,14 @@ class TermsStore {
   clear() { try { fs.rmSync(this.file, { force: true }); } catch { /* nothing to clear */ } }
 }
 
-function noticeOptions(toolsDir) {
+// advanced: the person is leaving the Ghost virtual computer (the default terminal) for a shell on this computer.
+function noticeOptions(toolsDir, { advanced = false } = {}) {
   return {
     type: 'warning',
-    title: 'Ghost terminal',
-    message: 'This terminal runs real commands on this computer.',
+    title: advanced ? 'Local terminal (advanced)' : 'Ghost terminal',
+    message: advanced ? 'This opens a terminal on THIS computer, outside the Ghost virtual computer.' : 'This terminal runs real commands on this computer.',
     detail: [
+      ...(advanced ? ['The virtual computer keeps tools away from your files, accounts and network. A local terminal does not: it has none of that protection and none of its network route.'] : []),
       'Whatever you type or paste runs as you, with access to your files, accounts and network, exactly like a terminal you open yourself. Mayfair does not check commands and cannot undo them.',
       'Nothing runs until you type it. A web page, including Mayfair Cloud, cannot send anything to this window.',
       'Programs you download for Ghost go in this folder, which is added to your PATH here:\n' + toolsDir,
@@ -50,4 +52,13 @@ async function ensureAccepted({ store, dialog, parent, toolsDir, now }) {
   return true;
 }
 
-module.exports = { TermsStore, ensureAccepted, noticeOptions, VERSION };
+// The advanced fallback asks EVERY time it is opened (native dialog), and records the acceptance the local service needs.
+async function confirmLocal({ store, dialog, parent, toolsDir, now }) {
+  const o = noticeOptions(toolsDir, { advanced: true });
+  const r = parent && !parent.isDestroyed() ? await dialog.showMessageBox(parent, o) : await dialog.showMessageBox(o);
+  if (r.response !== 0) return false;
+  store.record(now);
+  return true;
+}
+
+module.exports = { TermsStore, ensureAccepted, confirmLocal, noticeOptions, VERSION };

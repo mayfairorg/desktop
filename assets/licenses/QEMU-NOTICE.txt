@@ -1,0 +1,21 @@
+QEMU
+====
+Mayfair Desktop can run a small Linux "virtual computer" for Ghost (terminal and tools). It uses
+the open-source QEMU emulator, which is NOT part of the installer. The first time you use the
+virtual computer, Ghost downloads QEMU, a Linux kernel and a system image from this project's
+GitHub releases and checks each file against a SHA-256 value that is pinned inside the app.
+Mayfair Desktop is not made, endorsed or supported by the QEMU project. "QEMU" is a trademark
+of Fabrice Bellard and the QEMU project.
+
+QEMU is a separate program, started with its own command line; it is not linked into Mayfair
+Desktop. It is licensed under the GNU General Public License, version 2 (GPL-2.0), with some
+parts under other licences (see the QEMU source). The system image contains Alpine Linux and
+packages under their own licences (GPL, MIT, BSD, Apache-2.0 and others).
+
+Source code: the exact QEMU source that each downloaded build was made from is published as a
+release asset next to the build, together with the scripts used to build it
+(tools/ghost-vm in this project's repository), so that you can rebuild it yourself.
+Upstream: https://www.qemu.org/  and  https://gitlab.com/qemu-project/qemu
+
+The programs inside the virtual computer run only inside it. Ghost shares one folder per case
+with it and nothing else from your computer.

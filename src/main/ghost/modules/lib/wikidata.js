@@ -1,5 +1,5 @@
 'use strict';
-// Wikidata: organisations and places by name. Entries for people (instance of human) are never reported.
+// Wikidata: organisations and places by name. An item that is a person (instance of human) is reported as a `person` result, like any other match.
 const { ModuleError, isoDate, clip } = require('./core');
 
 const meta = {
@@ -7,7 +7,7 @@ const meta = {
   description: 'Looks up an organisation or a place by name in Wikidata and reports the matching items with their identifier, description, website, founding date and coordinates.',
   capabilities: ['organisations', 'places', 'wikidata', 'passive'], scope: 'passive', network: 'rate-limited',
   hosts: ['www.wikidata.org'], client: { rps: 1, maxRequests: 4, timeoutMs: 20000, maxBytes: 4194304 },
-  restrictions: 'Wikimedia asks API users to identify themselves and keep to modest request rates: at most one request per second, two per search. Wikidata content is CC0. Items about people are withheld; this module is for organisations and places only.',
+  restrictions: 'Wikimedia asks API users to identify themselves and keep to modest request rates: at most one request per second, two per search. Wikidata content is CC0. Items about people that match the name are reported as people, with their Wikidata identifier and description.',
   licence: { spdx: 'MIT', url: 'https://opensource.org/license/mit' }, dataTerms: 'Wikidata is CC0 1.0',
   inputs: [
     { name: 'kind', type: 'enum', label: 'Looking for', values: ['organisation', 'place'] },
@@ -34,11 +34,9 @@ async function run(ctx, input) {
   const g = await ctx.client.get(api({ action: 'wbgetentities', ids: hits.map((h) => h.id).join('|'), props: 'labels|descriptions|claims', languages: 'en' }), { purpose: 'wikidata-entities' });
   const gdoc = g.json();
   const ents = gdoc && gdoc.entities && typeof gdoc.entities === 'object' ? gdoc.entities : {};
-  let humans = 0;
   for (const h of hits) {
     const e = ents[h.id];
     if (!e || typeof e !== 'object') continue;
-    if (claimIds(e, 'P31').includes('Q5')) { humans++; continue; }
     const label = (e.labels && e.labels.en && e.labels.en.value) || h.label || h.id;
     const desc = (e.descriptions && e.descriptions.en && e.descriptions.en.value) || h.description || undefined;
     const itemUrl = `https://www.wikidata.org/wiki/${h.id}`;
@@ -46,6 +44,7 @@ async function run(ctx, input) {
     const lat = coord && Number.isFinite(coord.latitude) ? +coord.latitude.toFixed(6) : undefined, lon = coord && Number.isFinite(coord.longitude) ? +coord.longitude.toFixed(6) : undefined;
     const exact = String(label).toLowerCase() === query.toLowerCase();
     const note = `matched by name${exact ? '' : ' (not an exact label match)'}; check the description before relying on it`;
+    if (claimIds(e, 'P31').includes('Q5')) { ctx.emit({ type: 'person', value: String(label), confidence: 'likely', url: itemUrl, raw: { qid: h.id, description: desc, matchNote: note } }); continue; }
     if (input.kind === 'place') {
       ctx.emit({ type: 'place', value: String(label), confidence: lat !== undefined ? 'likely' : 'uncertain', ...(lat === undefined ? { uncertaintyNote: 'Wikidata gives no coordinates for this item; the match is by name only' } : {}), url: itemUrl, raw: { qid: h.id, description: desc, lat, lon, instanceOf: claimIds(e, 'P31').slice(0, 5), matchNote: note } });
     } else {
@@ -57,7 +56,6 @@ async function run(ctx, input) {
       if (t) ctx.emit({ type: 'event', value: `inception of ${clip(label, 120)}: ${inc.precision >= 11 ? t.slice(0, 10) : t.slice(0, 4)}`, confidence: 'likely', url: itemUrl, raw: { kind: 'inception', t, precision: inc.precision, of: String(label), qid: h.id } });
     }
   }
-  if (humans) ctx.note(`${humans} item(s) about people were withheld`);
   ctx.progress(1);
 }
 module.exports = { meta, run };

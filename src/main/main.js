@@ -39,15 +39,47 @@ function boot() {
   let tray = null;
   // Ghost terminal: its own window, created on first use. No Cloud-page bridge reaches it (src/main/ghost/terminal/).
   let term = null;
-  const ghostTerminal = () => (term || (term = require('./ghost/terminal').createTerminal({ electron, userData: app.getPath('userData'), isPackaged: app.isPackaged, icon: path.join(__dirname, '..', '..', 'assets', 'icon.png') })));
+  // Ghost's own Tor program, shared by the Ghost browser and the Ghost virtual computer (each decides its own route; the kill switch stops it).
+  let gtor = null;
+  const ghostTor = () => (gtor || (gtor = (() => { const T = require('./lib/tor'); return new T.TorManager({ binary: T.binaryPath({ resourcesPath: process.resourcesPath, root: path.join(__dirname, '..', '..') }) }); })()));
+  // Ghost virtual computer (src/main/ghost/vm/): a small Linux machine run by QEMU, downloaded on first use. It is the terminal Ghost opens by default and where tools added in Ghost live.
+  let gvm = null;
+  const ghostVm = () => (gvm || (gvm = wireToolSync(require('./ghost/vm').createGhostVm({
+    electron, userData: app.getPath('userData'), getGhost: () => br.ghost, getVault: () => (br && br.ghost && br.ghost.vaultSvc ? br.ghost.vaultSvc.vault : null), tor: ghostTor(),
+    releaseTor: () => { if (!gbr || !gbr.service || ![...gbr.service.cases.values()].some((r) => r.plan.mode === 'tor')) ghostTor().stop(); },     // the Ghost browser may still use it
+  }))));
+  // The tool library list and the Mayfair account (src/main/ghost/vm/toolsync.js). The Cloud page holds the session and talks to the server; this reads and restores the list.
+  // The list file is read directly while the virtual computer object does not exist yet (nothing is created just to look), and a change to it tells the Cloud page.
+  let tsync = null;
+  const wireToolSync = (v) => { v.library.onChange(() => { try { if (br && br.subs.has('ghost-toollib') && !toolSync().isLocalOnly()) br.emit('ghost-toollib', { at: Date.now() }); } catch { /* page gone */ } }); return v; };
+  const toolSync = () => (tsync || (tsync = new (require('./ghost/vm/toolsync').ToolSync)({
+    dir: path.join(app.getPath('userData'), 'ghost'),
+    getLibrary: () => (gvm ? gvm.library : new (require('./ghost/vm/toollib').ToolLibrary)({ file: path.join(app.getPath('userData'), 'ghost', 'toollib.json') })),
+    getInstaller: () => ghostVm().installer,
+  })));
+  const ghostTerminal = () => (term || (term = require('./ghost/terminal').createTerminal({ electron, userData: app.getPath('userData'), isPackaged: app.isPackaged, icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'), vm: ghostVm() })));
   // Ghost investigation browser: its own windows (control window plus one per case), created on first use. No Cloud-page bridge reaches it (src/main/ghost/browser/).
   let gbr = null;
-  const ghostBrowser = () => (gbr || (gbr = require('./ghost/browser').createGhostBrowserApp({ electron, isPackaged: app.isPackaged, icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'), getVault: () => (br && br.ghost && br.ghost.vaultSvc ? br.ghost.vaultSvc.vault : null), restoreResolver: () => (br ? br.applyNetwork() : null) })));
-  // Mayfair Ghost app: its own window (src/main/ghost/app/). Installed from the App Library, not preinstalled; the window runs the start flow.
+  const ghostBrowser = () => (gbr || (gbr = (() => {
+    const b = require('./ghost/browser').createGhostBrowserApp({ electron, isPackaged: app.isPackaged, icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'), getVault: () => (br && br.ghost && br.ghost.vaultSvc ? br.ghost.vaultSvc.vault : null), restoreResolver: () => (br ? br.applyNetwork() : null), tor: ghostTor() });
+    // the kill switch also stops the virtual computer, and closing a case window does not stop Tor while the virtual computer still routes through it
+    if (b.service) { b.service.killHooks.push(() => (gvm ? gvm.kill() : null)); b.service.torHolds.push(() => !!(gvm && gvm.service.state === 'running' && gvm.service.mode === 'tor')); }
+    return b;
+  })()));
+  // Mayfair Ghost app (src/main/ghost/app/): a view inside the Mayfair Desktop window, like the other apps. Installed from the App Library, not preinstalled; the page runs the start flow.
+  // Only when the main window does not exist yet (--ghost at start-up) does it use its own window.
   let gapp = null;
   const ghostApp = () => (gapp || (gapp = require('./ghost/app').createGhostApp({
     electron, userData: app.getPath('userData'), ghost: br.ghost, isPackaged: app.isPackaged, icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'), version: pkg.version,
-    openTerminal: async () => ghostTerminal().show(),
+    openTerminal: async (o) => {
+      if (o && o.caseId) { const r = await ghostVm().service.useCase(o.caseId); if (!r.ok && r.code === 'declined') return false; }       // a terminal opened from a case belongs to that case
+      return ghostTerminal().show();
+    },
+    vm: ghostVm(),
+    browserBridge: () => (gbr && gbr.notesBridge) || null,      // Quick notes' Capture asks the Ghost browser for a picture of its page (only when that browser is already open)
+    getMainWindow: () => (br && br.win && !br.win.isDestroyed() ? br.win : null), getZoom: () => (br ? br.zf() : 1),
+    hasHost: () => !!br && br.subs.has('ghost-app'),            // Mayfair Cloud listens for 'ghost-app': it draws the app window and reports the area
+    onViewChange: (st) => { if (br) br.emit('ghost-app', st); },
     // Tool Integrations is an existing page in Mayfair Cloud (Settings): bring the Mayfair window forward and ask it to open that page.
     openToolIntegrations: async () => { br.showWindow(); br.emit('panel-request', { panel: 'settings', page: 'cl-ghost', gid: null }); return true; },
     onInstallChange: () => { buildMenu(); if (tray) { buildTray(false); buildTray(true); } },
@@ -185,7 +217,17 @@ function boot() {
     br = new BrowserService({ dataDir: path.join(app.getPath('userData'), 'mayfair-desktop'), version: pkg.version, tampered: integ.ok ? null : integ });
     fs.mkdirSync(br.dir, { recursive: true });
     // App Library side of Ghost (browser.ghost.app.*): the listing, open, remove. Job events are also passed to the Ghost window when it exists.
-    br.ghostApp = { library: () => ghostApp().libraryEntry(), open: () => { ghostApp().show(); return { ok: true }; }, uninstall: () => ghostApp().app.uninstall() };
+    // The view calls (bounds, hide, occluded, capture, state) never create Ghost: with no Ghost open they answer "closed".
+    const gw = () => (gapp ? gapp.win : null);
+    br.ghostToolLib = toolSync();
+    br.ghostApp = {
+      library: () => ghostApp().libraryEntry(), open: () => { ghostApp().show(); return { ok: true }; }, uninstall: () => ghostApp().app.uninstall(),
+      bounds: (b) => ({ ok: !!(gw() && gw().setBounds(b)) }), hide: () => ({ ok: !!(gw() && gw().hide()) }),
+      occluded: async (on, o) => (gw() ? gw().setOccluded(on, o) : { captured: false }), capture: async () => (gw() ? gw().capture() : ''),
+      state: () => (gw() ? gw().state() : { open: false, shown: false, fullscreen: false, placed: false, embedded: false, fallback: false, main: !!br.win, title: 'Mayfair Ghost' }),
+      view: () => gw(),
+    };
+    br.embedFocused = () => !!(gw() && gw().isFocused());
     { const run = br.ghost.runner, prev = run.emit; run.emit = (n, p) => { prev(n, p); if (gapp) gapp.sendJob(n, p); }; }
     br.onSettingsChanged = (keys) => {
       const s = br.settings.get();
@@ -220,7 +262,7 @@ function boot() {
   });
 
   app.on('activate', () => { if (br) br.showWindow(); });
-  app.on('will-quit', () => { if (br) br.flushAppSessions(); if (term) term.shutdown(); if (gbr) gbr.shutdown(); if (gapp) gapp.shutdown(); });
+  app.on('will-quit', () => { if (br) br.flushAppSessions(); if (term) term.shutdown(); if (gvm) gvm.shutdown(); if (gbr) gbr.shutdown(); if (gapp) gapp.shutdown(); });
   app.on('before-quit', () => { if (br) { br.quitting = true; br.icons.stop(); br.flushAll(); } });
   app.on('window-all-closed', () => { if (br && br.quitting) app.quit(); else if (!br || !br.settings.get().tray) app.quit(); });
   // Any web contents the app did not create itself (webview, stray windows) is refused.

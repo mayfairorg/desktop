@@ -26,9 +26,12 @@ eapp.whenReady().then(async () => {
   const ghost = new GhostService({ root: userData, dialog: electron.dialog, getWindow: () => gapp && gapp.win.getWindow(), emit: (n, p) => gapp && gapp.sendJob(n, p), isPackaged: false, safeStorage: fakeOS, useVault: true, vaultOptions: { kdfParams: { m: 64, t: 1, p: 1 }, allowWeakKdf: true } });
   const { createGhostApp } = require('../src/main/ghost/app');
   process.env.MF_GHOST_ID_BASE = mock.base; process.env.MF_GHOST_CLOUD_BASE = mock.base; process.env.MF_GHOST_POLL_MS = '200'; process.env.MF_GHOST_NO_MAXIMIZE = '1';
-  gapp = createGhostApp({ electron: { ...electron, shell: { openExternal: () => {} } }, userData, ghost, isPackaged: false, version: '1.0.0', openTerminal: async () => true, openToolIntegrations: async () => true });
+  // Ghost runs as a view inside a stand-in for the Mayfair Desktop main window (a BaseWindow), as it does in the app.
+  const mainWin = new electron.BaseWindow({ width: W, height: H, useContentSize: true, show: true, backgroundColor: '#0a0a0a', autoHideMenuBar: true });
+  gapp = createGhostApp({ electron: { ...electron, shell: { openExternal: () => {} } }, userData, ghost, isPackaged: false, version: '1.0.0', openTerminal: async () => true, openToolIntegrations: async () => true, getMainWindow: () => mainWin });
   gapp.show();
-  const win = gapp.win.getWindow(); win.setContentSize(W, H); const wc = win.webContents;
+  mainWin.setContentSize(W, H); gapp.win.relayout();
+  const wc = gapp.win.getWebContents();
   const consoleErr = []; wc.on('console-message', (_e, level, msg) => { if (level >= 2) { consoleErr.push(msg); console.log('PAGE-CONSOLE ' + msg); } });
   await new Promise((r) => wc.once('did-finish-load', r)); await sleep(500);
   const js = (c) => wc.executeJavaScript(c, true);
@@ -40,6 +43,8 @@ eapp.whenReady().then(async () => {
   const A = gapp.app;
 
   try {
+    rec('ghost is a view inside the main window, not a window of its own', gapp.win.isEmbedded() && mainWin.contentView.children.includes(gapp.win.getView()) && electron.BrowserWindow.getAllWindows().length === 0);
+    rec('view fills the main window content area', JSON.stringify(gapp.win.getView().getBounds()) === JSON.stringify({ x: 0, y: 0, width: mainWin.getContentBounds().width, height: mainWin.getContentBounds().height }), JSON.stringify(gapp.win.getView().getBounds()));
     rec('window loads the local file only', wc.getURL().startsWith('file://'), wc.getURL());
     rec('bridge present, frozen', await js("typeof window.ghostApp==='object' && Object.isFrozen(window.ghostApp)"));
     rec('start: download screen', /Install|Download|Get Ghost/i.test(await text()));
@@ -105,6 +110,17 @@ eapp.whenReady().then(async () => {
     await sleep(1200); const files = []; const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else files.push(p); } }; walk(userData);
     rec('case is sealed at rest (no plain marker on disk)', !files.some((f) => fs.readFileSync(f).includes(Buffer.from('Example Holdings'))), files.length + ' files');
     rec('no console errors', consoleErr.length === 0, consoleErr.slice(0, 3).join(' | '));
+    // Settings > Appearance, then one shot of the Domains screen and the Case board in every skin (each choice goes through the real save into the vault)
+    await js(`location.hash='#settings/appearance'`); await sleep(500); await shot('13-settings-appearance'); await noOverflow('settings'); await small('settings');
+    const Sk = require('../src/ui/ghost/skins');
+    for (const sk of Sk.SKINS) {
+      await js(`GH.appearance.set({skin:'${sk.id}'})`); await sleep(400);
+      rec('skin ' + sk.id + ': applied to the page and saved in the vault', (await js('document.documentElement.dataset.skin')) === sk.id && A.prefsGet().skin === sk.id, JSON.stringify(A.prefsGet()));
+      await js(`location.hash='#m/domains'`); await sleep(600); await shot('skin-' + sk.id + '-domains'); await noOverflow('domains in ' + sk.id); await small('domains in ' + sk.id);
+      await js(`location.hash='#case/${c.id}'`); await waitFor("!!document.getElementById('tab-graph')"); await js("document.getElementById('tab-graph').click()"); await waitFor("document.querySelectorAll('.graph .node').length>=9"); await sleep(500); await shot('skin-' + sk.id + '-board'); await noOverflow('board in ' + sk.id);
+      await js(`location.hash='#settings/appearance'`); await sleep(400); if (sk.id !== 'mayfair') await shot('skin-' + sk.id + '-settings');
+    }
+    await js(`GH.appearance.set({skin:'mayfair'})`); await sleep(300);
     // light theme shot
     await js("document.getElementById('theme').click()"); await sleep(300); await js("location.hash='#home'"); await sleep(400); await shot('11-home-light');
     await js("location.hash='#case/" + c.id + "'"); await sleep(700); await shot('12-board-light');

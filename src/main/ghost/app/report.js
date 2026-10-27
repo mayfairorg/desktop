@@ -7,12 +7,13 @@ const M = require('../../../ui/ghost/case-model');
 
 const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/[&<>"'`]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
 const sha = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex');
-const TYPE_NAME = { domain: 'Domains', ip: 'IP addresses', asn: 'Networks (ASN)', cert: 'Certificates', org: 'Organisations', document: 'Documents', image: 'Images', place: 'Places', event: 'Events', url: 'Web addresses', email: 'Infrastructure contacts', service: 'Services', finding: 'Other findings' };
+const TYPE_NAME = { domain: 'Domains', ip: 'IP addresses', asn: 'Networks (ASN)', cert: 'Certificates', org: 'Organisations', person: 'People', document: 'Documents', image: 'Images', place: 'Places', event: 'Events', url: 'Web addresses', email: 'Infrastructure contacts', service: 'Services', finding: 'Other findings' };
+const REL_TEXT = { 'ceo-of': 'CEO of', 'director-of': 'director of', 'owner-of': 'owner of', 'works-with': 'works with', custom: 'linked' };
 const FOOTER = 'Made with Mayfair Ghost. Copyright The Mayfair Organization.';
-const METHOD = 'This report was made from public sources and from files the author supplied. It may be incomplete or out of date. Check anything important against the original source before relying on it. A result that shows nothing does not prove nothing is there. Personal details found in public records are withheld.';
+const METHOD = 'This report was made from public sources and from files the author supplied. It may be incomplete or out of date. Check anything important against the original source before relying on it. A result that shows nothing does not prove nothing is there. Any personal data in this report was recorded by its author, who is responsible for handling it lawfully.';
 
 // What a report contains, after the author's "hide from report" choices. Pure data, hashed as given.
-function reportData(c, { author, now = Date.now(), hide = [], version = '' } = {}) {
+function reportData(c, { author, now = Date.now(), hide = [], version = '', quickNotes = null } = {}) {
   const hidden = new Set([...(c.settings && c.settings.hideFromReport || []), ...hide]);
   const entities = Object.values(c.entities).filter((e) => !hidden.has(e.id)).sort((a, b) => (a.type < b.type ? -1 : a.type > b.type ? 1 : a.label < b.label ? -1 : 1));
   const keep = new Set(entities.map((e) => e.id));
@@ -22,7 +23,9 @@ function reportData(c, { author, now = Date.now(), hide = [], version = '' } = {
   const num = new Map(sources.map((s, i) => [s.id, i + 1]));
   const timeline = M.buildTimeline(c).filter((t) => !t.entity || keep.has(t.entity));
   const notes = c.notes.map((n) => ({ ...n, refs: (n.refs || []).filter((r) => keep.has(r)) }));
-  return { format: 'mayfair-ghost-report/1', title: c.title, author: String(author || (c.settings && c.settings.reportAuthor) || '').slice(0, 120), generated: new Date(now).toISOString(), ghostVersion: version, caseId: c.id, hiddenCount: hidden.size, entities, edges, sources, timeline, notes, num };
+  const d = { format: 'mayfair-ghost-report/1', title: c.title, author: String(author || (c.settings && c.settings.reportAuthor) || '').slice(0, 120), generated: new Date(now).toISOString(), ghostVersion: version, caseId: c.id, hiddenCount: hidden.size, entities, edges, sources, timeline, notes, num };
+  if (quickNotes) d.quickNotes = quickNotes.data;      // the chosen Quick notes tabs (clips, provenance, hashes); part of what the report hash covers
+  return d;
 }
 
 function reportHtml(c, opts = {}) {
@@ -37,11 +40,12 @@ function reportHtml(c, opts = {}) {
   const places = d.entities.filter((e) => e.type === 'place' && M.placeCoords(e));
   const entityHtml = Object.keys(groups).map((t) => `<section><h2>${esc(TYPE_NAME[t] || t)} <span class="n">${groups[t].length}</span></h2><table><thead><tr><th>Value</th><th>Details</th><th>First seen</th><th>Sources</th></tr></thead><tbody>${groups[t].map((e) => {
     const attrs = Object.entries(e.attrs || {}).map(([k, v]) => esc(k) + ': ' + esc(typeof v === 'object' ? JSON.stringify(v) : v)).join('; ');
+    const flds = M.fieldsOf(e).map((f) => '<div class="fld"><b>' + esc(f.title) + '</b>: ' + esc(f.value) + ' <span class="m">' + esc([f.source ? 'source: ' + f.source : '', 'recorded ' + String(f.t || '').slice(0, 10)].filter(Boolean).join('; ')) + '</span></div>').join('');
     const tags = e.tags.length ? ' <span class="tags">' + e.tags.map((x) => esc(x)).join(', ') + '</span>' : '';
     const how = M.isUnsourced(e) ? '<em>no source on record</em>' : e.manual && !e.sources.length ? '<em>added by hand</em>' : esc(refs(e.sources));
-    return `<tr><td class="v">${esc(e.label)}${tags}</td><td>${attrs}</td><td class="m">${esc(e.firstSeen.slice(0, 10))}</td><td class="m">${how}</td></tr>`;
+    return `<tr><td class="v">${esc(e.label)}${tags}</td><td>${attrs}${attrs && flds ? '<br>' : ''}${flds}</td><td class="m">${esc(e.firstSeen.slice(0, 10))}</td><td class="m">${how}</td></tr>`;
   }).join('')}</tbody></table></section>`).join('');
-  const rel = d.edges.length ? `<section><h2>Relations <span class="n">${d.edges.length}</span></h2><table><thead><tr><th>From</th><th>Relation</th><th>To</th><th>Sources</th></tr></thead><tbody>${d.edges.map((e) => `<tr><td class="v">${esc(byId[e.from].label)}</td><td>${esc(e.rel)}</td><td class="v">${esc(byId[e.to].label)}</td><td class="m">${e.manual && !e.sources.length ? '<em>added by hand</em>' : esc(refs(e.sources))}</td></tr>`).join('')}</tbody></table></section>` : '';
+  const rel = d.edges.length ? `<section><h2>Relations <span class="n">${d.edges.length}</span></h2><table><thead><tr><th>From</th><th>Relation</th><th>To</th><th>Sources</th></tr></thead><tbody>${d.edges.map((e) => `<tr><td class="v">${esc(byId[e.from].label)}</td><td>${esc(e.label || REL_TEXT[e.rel] || e.rel)}</td><td class="v">${esc(byId[e.to].label)}</td><td class="m">${e.manual && !e.sources.length ? '<em>added by hand</em>' : esc(refs(e.sources))}${e.sourceNote ? ' ' + esc(e.sourceNote) : ''}</td></tr>`).join('')}</tbody></table></section>` : '';
   const pins = places.length ? `<section><h2>Places</h2><table><thead><tr><th>Place</th><th>Latitude</th><th>Longitude</th><th>Basis</th></tr></thead><tbody>${places.map((e) => { const p = M.placeCoords(e); return `<tr><td class="v">${esc(e.label)}</td><td class="m">${p.lat.toFixed(5)}</td><td class="m">${p.lon.toFixed(5)}</td><td class="m">${esc(e.attrs.basis || '')}${e.attrs.accuracy ? ', ' + esc(e.attrs.accuracy) : ''}</td></tr>`; }).join('')}</tbody></table></section>` : '';
   const tl = d.timeline.length ? `<section><h2>Timeline</h2><table><thead><tr><th>Date (UTC)</th><th>Event</th><th>Sources</th></tr></thead><tbody>${d.timeline.map((t) => `<tr><td class="m">${esc(t.t.replace('T', ' ').slice(0, 16))}</td><td>${esc(t.title)}${t.manual ? ' <em>(added by hand)</em>' : ''}</td><td class="m">${esc(refs(t.sources || []))}</td></tr>`).join('')}</tbody></table></section>` : '';
   const nt = d.notes.length ? `<section><h2>Notes</h2>${d.notes.map((n) => `<div class="note"><div class="m">${esc(n.t.replace('T', ' ').slice(0, 16))} UTC${n.refs.length ? ' about ' + esc(n.refs.map((r) => byId[r].label).join(', ')) : ''}</div><p>${esc(n.text).replace(/\n/g, '<br>')}</p></div>`).join('')}</section>` : '';
@@ -58,7 +62,7 @@ h1{font-size:28px;margin:0 0 4px;letter-spacing:-.01em}h2{font-size:17px;margin:
 <p class="eyebrow">MAYFAIR GHOST REPORT</p><h1>${esc(d.title)}</h1>
 <p class="meta">${d.author ? 'Prepared by ' + esc(d.author) + '. ' : ''}Generated ${esc(d.generated.replace('T', ' ').slice(0, 16))} UTC (${esc(local.toString().replace(/ GMT.*/, ''))} local). ${esc(summary)}</p>
 <div class="box"><strong>Method and limits.</strong> ${esc(METHOD)}</div>
-${entityHtml || '<p><em>This case has no entities.</em></p>'}${pins}${rel}${tl}${nt}${src}${attrib}
+${entityHtml || '<p><em>This case has no entities.</em></p>'}${pins}${rel}${tl}${nt}${src}${attrib}${opts.quickNotes ? opts.quickNotes.html : ''}
 <footer><p>Report data SHA-256: <span class="m">${hash}</span></p><p>${esc(FOOTER)}</p></footer></main></body></html>`;
 }
 
@@ -74,7 +78,7 @@ async function htmlToPdf(electron, html) {
   const part = 'mf-ghost-report-' + crypto.randomBytes(4).toString('hex');
   const ses = session.fromPartition(part);
   ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*', 'ftp://*/*', 'file://*/*'] }, (_d, cb) => cb({ cancel: true }));
-  const w = new BrowserWindow({ show: false, width: 900, height: 1200, webPreferences: { partition: part, javascript: false, sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, images: false, spellcheck: false } });
+  const w = new BrowserWindow({ show: false, width: 900, height: 1200, webPreferences: { partition: part, javascript: false, sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, images: true, spellcheck: false } });
   try {
     w.webContents.on('will-navigate', (e) => e.preventDefault()); w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     await w.loadURL('data:text/html;charset=utf-8;base64,' + Buffer.from(html, 'utf8').toString('base64'));

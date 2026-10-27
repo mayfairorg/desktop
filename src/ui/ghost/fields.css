@@ -1,0 +1,4 @@
+/* Custom fields and link labels in the inspector. Additive only: tokens from mf-tokens.css, no skin rules. */
+.fields .fld-row{display:flex;flex-direction:column;gap:var(--mf-s1);border-left:2px solid var(--mf-line);padding-left:var(--mf-s3);overflow-wrap:anywhere}
+.fields .fld-row .row-a{margin-top:var(--mf-s1)}
+.fld-long{display:block;margin-top:var(--mf-s1)}

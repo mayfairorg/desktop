@@ -35,7 +35,8 @@ const CALLS = {
   'gterm:tools.job': [jobId],
   'gterm:tools.cancelJob': [jobId],
   'gterm:info': [],
-  'gterm:open': [(v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).every((k) => k === 'cols' || k === 'rows') && int(10, 500)(v.cols) && int(2, 200)(v.rows)],
+  'gterm:open': [(v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).every((k) => k === 'cols' || k === 'rows' || k === 'local') && int(10, 500)(v.cols) && int(2, 200)(v.rows) && (v.local === undefined || typeof v.local === 'boolean')],
+  'gterm:localInfo': [],
   'gterm:input': [id, (v) => typeof v === 'string' && v.length > 0 && v.length <= 64 * 1024],
   'gterm:resize': [id, int(10, 500), int(2, 200)],
   'gterm:interrupt': [id],
@@ -43,7 +44,10 @@ const CALLS = {
   'gterm:ack': [id, int(0, 1 << 30)],
   'gterm:openTools': [],
 };
-const EVENTS = ['gterm:data', 'gterm:exit', 'gterm:job'];
+// the virtual computer's calls (src/main/ghost/vm/ipc.js): the same table the Ghost window uses, with this window's own list
+const VMIPC = require('../vm/ipc');
+for (const n of VMIPC.TERMINAL_OPS) CALLS['gterm:vm.' + n] = VMIPC.CALLS[n];
+const EVENTS = ['gterm:data', 'gterm:exit', 'gterm:job', 'gterm:vm'];
 
 function check(channel, args) {
   const spec = Object.prototype.hasOwnProperty.call(CALLS, channel) ? CALLS[channel] : null;

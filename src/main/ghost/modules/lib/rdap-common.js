@@ -1,7 +1,7 @@
 'use strict';
 // RDAP helpers shared by rdap-domain and rdap-ip-asn: the IANA bootstrap files tell which registry answers for a TLD, address block or
-// AS number; the registry's own server then answers the query. Natural persons are never emitted (spec section 11): contacts that are
-// not organisations are dropped and the parent result is marked redacted.
+// AS number; the registry's own server then answers the query. Contacts are passed on as the registry publishes them: organisations as `org`,
+// individuals as `person`, abuse mailboxes as `email`.
 const { ModuleError, inCidr, isoDate, clip, isDnsName } = require('./core');
 
 const BOOTSTRAP = { dns: 'https://data.iana.org/rdap/dns.json', ipv4: 'https://data.iana.org/rdap/ipv4.json', ipv6: 'https://data.iana.org/rdap/ipv6.json', asn: 'https://data.iana.org/rdap/asn.json' };
@@ -52,30 +52,28 @@ function vcard(entity) {
   }
   return out;
 }
-const ORG_ROLES = ['registrar', 'registry', 'reseller', 'sponsor', 'abuse', 'noc', 'technical'];
 const REDACTED_RE = /redacted|privacy|not disclosed|withheld/i;
 
-// Walks an RDAP entity tree. Calls cb.org({name, roles, handle}), cb.abuse(email). Returns the number of natural-person contacts withheld.
+// Walks an RDAP entity tree and passes on what the registry published. Calls cb.org({name, roles, handle}), cb.abuse(email) and cb.person({name, roles, handle, emails}).
+// Returns the number of entries the registry itself marked as redacted (a placeholder such as "REDACTED FOR PRIVACY" is not data, so it is counted, not reported).
 const ROLE_NAME_RE = /abuse|noc|hostmaster|security|support|desk|team|department|operations|registrar|network/i;
 function walkEntities(entities, cb, depth = 0, parentOrg = false) {
-  let withheld = 0;
+  let redacted = 0;
   for (const e of Array.isArray(entities) ? entities : []) {
     if (!e || typeof e !== 'object' || depth > 3) continue;
     const roles = (Array.isArray(e.roles) ? e.roles : []).map((r) => String(r).toLowerCase());
     const v = vcard(e);
     const name = v.org || v.fn;
     const isOrg = v.kind === 'org' || !!v.org || (v.kind !== 'individual' && name && roles.some((r) => ['registrar', 'registry', 'reseller', 'sponsor'].includes(r)));
-    let counted = false, roleAccount = false;
-    // an abuse mailbox is a role account of an organisation, not a person
-    if (roles.includes('abuse') && v.kind !== 'individual') {
-      if (isOrg || !name || parentOrg || ROLE_NAME_RE.test(name)) { for (const m of v.emails) cb.abuse(m); roleAccount = true; }
-      else if (v.emails.length) { withheld++; counted = true; }
-    }
-    if (isOrg && name && !REDACTED_RE.test(name)) cb.org({ name: clip(name, 200), roles, handle: typeof e.handle === 'string' ? clip(e.handle, 100) : undefined });
-    else if (name && !REDACTED_RE.test(name) && !roleAccount && !counted) withheld++;
-    withheld += walkEntities(e.entities, cb, depth + 1, parentOrg || (isOrg && !!name));
+    const abuse = roles.includes('abuse');
+    if (abuse) for (const m of v.emails) cb.abuse(m);
+    const roleAccount = abuse && v.kind !== 'individual' && (isOrg || !name || parentOrg || ROLE_NAME_RE.test(name));
+    if (name && REDACTED_RE.test(name)) redacted++;
+    else if (isOrg && name) cb.org({ name: clip(name, 200), roles, handle: typeof e.handle === 'string' ? clip(e.handle, 100) : undefined });
+    else if (name && !roleAccount) cb.person({ name: clip(name, 200), roles, handle: typeof e.handle === 'string' ? clip(e.handle, 100) : undefined, emails: abuse ? [] : v.emails.slice(0, 5) });
+    redacted += walkEntities(e.entities, cb, depth + 1, parentOrg || (isOrg && !!name));
   }
-  return withheld;
+  return redacted;
 }
 
 function events(doc) {

@@ -14,7 +14,7 @@ const bip = require('./bip39');
 const kdf = require('./kdf');
 const { DeviceKeyStore } = require('./keystore');
 
-const NAMESPACES = ['cases', 'scanlogs', 'connectors'];      // what callers may use; '_vault' is internal
+const NAMESPACES = ['cases', 'scanlogs', 'connectors', 'prefs'];      // what callers may use; '_vault' is internal
 const ID_RE = /^[A-Za-z0-9._-]{1,80}$/;
 const SYNC_NAME = 'ghost/vault-backup.mfvb';
 const EXPORT_MAGIC = 'MFVB1\n';

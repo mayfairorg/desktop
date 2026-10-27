@@ -1,0 +1,1131 @@
+{
+ "_label": "Hand-labelled fixtures for the keyless connectors. Every name, identifier, address and coordinate is invented; none is real data.",
+ "routes": [
+  {
+   "_label": "GLEIF full-text search: two organisations and one sole proprietor (must be withheld)",
+   "match": {
+    "host": "api.gleif.org",
+    "path": "/api/v1/lei-records",
+    "query": {
+     "filter[fulltext]": "Fixture Holdings"
+    }
+   },
+   "json": {
+    "data": [
+     {
+      "type": "lei-records",
+      "id": "FIXLEI0000000000AB01",
+      "attributes": {
+       "lei": "FIXLEI0000000000AB01",
+       "entity": {
+        "legalName": {
+         "name": "Fixture Holdings Ltd",
+         "language": "en"
+        },
+        "legalAddress": {
+         "addressLines": [
+          "1 Invented Row"
+         ],
+         "city": "Fixtureville",
+         "region": "GB-FXT",
+         "country": "GB",
+         "postalCode": "FX1 1AA"
+        },
+        "headquartersAddress": {
+         "city": "Fixtureville",
+         "country": "GB"
+        },
+        "registeredAt": {
+         "id": "RA999999"
+        },
+        "registeredAs": "00000001",
+        "jurisdiction": "GB",
+        "category": "GENERAL",
+        "legalForm": {
+         "id": "ABCD"
+        },
+        "status": "ACTIVE"
+       },
+       "registration": {
+        "initialRegistrationDate": "2014-01-02T00:00:00Z",
+        "lastUpdateDate": "2025-11-03T10:00:00Z",
+        "status": "ISSUED",
+        "nextRenewalDate": "2026-11-03T00:00:00Z",
+        "managingLou": "FIXLOU0000000000LOU1",
+        "corroborationLevel": "FULLY_CORROBORATED"
+       }
+      }
+     },
+     {
+      "type": "lei-records",
+      "id": "FIXLEI0000000000CD02",
+      "attributes": {
+       "lei": "FIXLEI0000000000CD02",
+       "entity": {
+        "legalName": {
+         "name": "Fixture Sole Trader",
+         "language": "en"
+        },
+        "legalAddress": {
+         "addressLines": [
+          "1 Invented Row"
+         ],
+         "city": "Fixtureville",
+         "region": "GB-FXT",
+         "country": "GB",
+         "postalCode": "FX1 1AA"
+        },
+        "headquartersAddress": {
+         "city": "Fixtureville",
+         "country": "GB"
+        },
+        "registeredAt": {
+         "id": "RA999999"
+        },
+        "registeredAs": "00000001",
+        "jurisdiction": "GB",
+        "category": "SOLE_PROPRIETOR",
+        "legalForm": {
+         "id": "ABCD"
+        },
+        "status": "ACTIVE"
+       },
+       "registration": {
+        "initialRegistrationDate": "2014-01-02T00:00:00Z",
+        "lastUpdateDate": "2025-11-03T10:00:00Z",
+        "status": "ISSUED",
+        "nextRenewalDate": "2026-11-03T00:00:00Z",
+        "managingLou": "FIXLOU0000000000LOU1",
+        "corroborationLevel": "FULLY_CORROBORATED"
+       }
+      }
+     },
+     {
+      "type": "lei-records",
+      "id": "FIXLEI0000000000EF03",
+      "attributes": {
+       "lei": "FIXLEI0000000000EF03",
+       "entity": {
+        "legalName": {
+         "name": "Fixture Holdings (Overseas) SA",
+         "language": "en"
+        },
+        "legalAddress": {
+         "addressLines": [
+          "1 Invented Row"
+         ],
+         "city": "Fixtureville",
+         "region": "GB-FXT",
+         "country": "LU",
+         "postalCode": "FX1 1AA"
+        },
+        "headquartersAddress": {
+         "city": "Fixtureville",
+         "country": "LU"
+        },
+        "registeredAt": {
+         "id": "RA999999"
+        },
+        "registeredAs": "00000001",
+        "jurisdiction": "LU",
+        "category": "GENERAL",
+        "legalForm": {
+         "id": "ABCD"
+        },
+        "status": "INACTIVE"
+       },
+       "registration": {
+        "initialRegistrationDate": "2014-01-02T00:00:00Z",
+        "lastUpdateDate": "2025-11-03T10:00:00Z",
+        "status": "LAPSED",
+        "nextRenewalDate": "2026-11-03T00:00:00Z",
+        "managingLou": "FIXLOU0000000000LOU1",
+        "corroborationLevel": "FULLY_CORROBORATED"
+       }
+      }
+     }
+    ],
+    "meta": {
+     "pagination": {
+      "total": 3
+     }
+    }
+   }
+  },
+  {
+   "_label": "GLEIF no match",
+   "match": {
+    "host": "api.gleif.org",
+    "path": "/api/v1/lei-records",
+    "query": {
+     "filter[fulltext]": "Nothing Matches Fixture"
+    }
+   },
+   "json": {
+    "data": []
+   }
+  },
+  {
+   "_label": "GLEIF single record by LEI",
+   "match": {
+    "host": "api.gleif.org",
+    "path": "/api/v1/lei-records/FIXLEI0000000000AB01"
+   },
+   "json": {
+    "data": {
+     "type": "lei-records",
+     "id": "FIXLEI0000000000AB01",
+     "attributes": {
+      "lei": "FIXLEI0000000000AB01",
+      "entity": {
+       "legalName": {
+        "name": "Fixture Holdings Ltd",
+        "language": "en"
+       },
+       "legalAddress": {
+        "addressLines": [
+         "1 Invented Row"
+        ],
+        "city": "Fixtureville",
+        "region": "GB-FXT",
+        "country": "GB",
+        "postalCode": "FX1 1AA"
+       },
+       "headquartersAddress": {
+        "city": "Fixtureville",
+        "country": "GB"
+       },
+       "registeredAt": {
+        "id": "RA999999"
+       },
+       "registeredAs": "00000001",
+       "jurisdiction": "GB",
+       "category": "GENERAL",
+       "legalForm": {
+        "id": "ABCD"
+       },
+       "status": "ACTIVE"
+      },
+      "registration": {
+       "initialRegistrationDate": "2014-01-02T00:00:00Z",
+       "lastUpdateDate": "2025-11-03T10:00:00Z",
+       "status": "ISSUED",
+       "nextRenewalDate": "2026-11-03T00:00:00Z",
+       "managingLou": "FIXLOU0000000000LOU1",
+       "corroborationLevel": "FULLY_CORROBORATED"
+      }
+     }
+    }
+   }
+  },
+  {
+   "_label": "GLEIF unknown LEI",
+   "match": {
+    "host": "api.gleif.org",
+    "path": "/api/v1/lei-records/FIXLEI0000000000ZZ99"
+   },
+   "json": {
+    "errors": [
+     {
+      "status": "404"
+     }
+    ]
+   },
+   "status": 404
+  },
+  {
+   "_label": "SEC company list (invented companies; the third is a near-duplicate name)",
+   "match": {
+    "host": "www.sec.gov",
+    "path": "/files/company_tickers.json"
+   },
+   "json": {
+    "0": {
+     "cik_str": 1234567,
+     "ticker": "FXTR",
+     "title": "Fixture Rail Holdings Inc."
+    },
+    "1": {
+     "cik_str": 7654321,
+     "ticker": "FXAR",
+     "title": "Fixture Air Holdings Corp"
+    },
+    "2": {
+     "cik_str": 1111111,
+     "ticker": "ZZZ",
+     "title": "Fixture Rail Holdings Group plc"
+    }
+   }
+  },
+  {
+   "_label": "SEC submissions for CIK 1234567: forms 4 and 4/A must be left out by default",
+   "match": {
+    "host": "data.sec.gov",
+    "path": "/submissions/CIK0001234567.json"
+   },
+   "json": {
+    "cik": "1234567",
+    "name": "Fixture Rail Holdings Inc.",
+    "tickers": [
+     "FXTR"
+    ],
+    "exchanges": [
+     "Fixture Exchange"
+    ],
+    "sic": "4011",
+    "entityType": "operating",
+    "insiderTransactionForIssuerExists": 1,
+    "insiderTransactionForOwnerExists": 0,
+    "filings": {
+     "recent": {
+      "accessionNumber": [
+       "0001234567-26-000010",
+       "0001234567-26-000009",
+       "0001234567-26-000008",
+       "0001234567-26-000007",
+       "0001234567-26-000006",
+       "bad-accession"
+      ],
+      "filingDate": [
+       "2026-03-01",
+       "2026-02-20",
+       "2026-02-10",
+       "2026-01-15",
+       "2025-11-05",
+       "2025-01-01"
+      ],
+      "reportDate": [
+       "2025-12-31",
+       "",
+       "",
+       "",
+       "2025-09-30",
+       ""
+      ],
+      "form": [
+       "10-K",
+       "4",
+       "8-K",
+       "4/A",
+       "10-Q",
+       "8-K"
+      ],
+      "primaryDocument": [
+       "fxtr-10k.htm",
+       "form4.xml",
+       "fxtr-8k.htm",
+       "form4a.xml",
+       "fxtr-10q.htm",
+       "x.htm"
+      ],
+      "primaryDocDescription": [
+       "ANNUAL REPORT",
+       "FORM 4",
+       "CURRENT REPORT",
+       "FORM 4/A",
+       "QUARTERLY REPORT",
+       ""
+      ]
+     },
+     "files": []
+    }
+   }
+  },
+  {
+   "_label": "SEC submissions of an individual filer: must be withheld",
+   "match": {
+    "host": "data.sec.gov",
+    "path": "/submissions/CIK0000999999.json"
+   },
+   "json": {
+    "cik": "999999",
+    "name": "Invented, Person",
+    "tickers": [],
+    "entityType": "other",
+    "insiderTransactionForIssuerExists": 0,
+    "insiderTransactionForOwnerExists": 1,
+    "filings": {
+     "recent": {
+      "accessionNumber": [
+       "0000999999-26-000001"
+      ],
+      "filingDate": [
+       "2026-01-01"
+      ],
+      "form": [
+       "4"
+      ],
+      "primaryDocument": [
+       "f.xml"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "_label": "SEC unknown CIK",
+   "match": {
+    "host": "data.sec.gov",
+    "path": "/submissions/CIK0000000404.json"
+   },
+   "json": {},
+   "status": 404
+  },
+  {
+   "_label": "SEC refuses (HTTP 403, as it does for over-limit or missing User-Agent)",
+   "match": {
+    "host": "data.sec.gov",
+    "path": "/submissions/CIK0000000403.json"
+   },
+   "json": {},
+   "status": 403
+  },
+  {
+   "_label": "Nominatim search: a cathedral (feature), a residential house without a name and one whose name is only the house number",
+   "match": {
+    "host": "nominatim.openstreetmap.org",
+    "path": "/search",
+    "query": {
+     "q": "Fixture Cathedral, Fixtureville"
+    }
+   },
+   "json": [
+    {
+     "place_id": 1,
+     "osm_type": "way",
+     "osm_id": 1001,
+     "lat": "51.5001",
+     "lon": "-0.1002",
+     "category": "amenity",
+     "type": "place_of_worship",
+     "importance": 0.62,
+     "addresstype": "amenity",
+     "name": "Fixture Cathedral",
+     "display_name": "Fixture Cathedral, 1, Cathedral Close, FX1 1AA, Fixtureville, Fixtureland",
+     "boundingbox": [
+      "51.4999",
+      "51.5003",
+      "-0.1004",
+      "-0.1000"
+     ],
+     "address": {
+      "amenity": "Fixture Cathedral",
+      "house_number": "1",
+      "road": "Cathedral Close",
+      "city": "Fixtureville",
+      "postcode": "FX1 1AA",
+      "country": "Fixtureland"
+     }
+    },
+    {
+     "place_id": 2,
+     "osm_type": "way",
+     "osm_id": 1002,
+     "lat": "51.5002",
+     "lon": "-0.1003",
+     "category": "building",
+     "type": "house",
+     "importance": 0.1,
+     "addresstype": "building",
+     "name": "",
+     "display_name": "12, Cathedral Close, FX1 1AA",
+     "address": {
+      "house_number": "12",
+      "road": "Cathedral Close",
+      "city": "Fixtureville",
+      "postcode": "FX1 1AA",
+      "country": "Fixtureland"
+     }
+    },
+    {
+     "place_id": 3,
+     "osm_type": "node",
+     "osm_id": 1003,
+     "lat": "51.5003",
+     "lon": "-0.1004",
+     "category": "place",
+     "type": "house",
+     "importance": 0.1,
+     "addresstype": "house",
+     "name": "14",
+     "display_name": "14, Cathedral Close",
+     "address": {
+      "house_number": "14",
+      "road": "Cathedral Close",
+      "city": "Fixtureville",
+      "country": "Fixtureland"
+     }
+    }
+   ]
+  },
+  {
+   "_label": "Nominatim search with no match",
+   "match": {
+    "host": "nominatim.openstreetmap.org",
+    "path": "/search",
+    "query": {
+     "q": "Nowhere Fixture Landmark"
+    }
+   },
+   "json": []
+  },
+  {
+   "_label": "Nominatim reverse: suburb-level answer that also carries house number, road and postcode",
+   "match": {
+    "host": "nominatim.openstreetmap.org",
+    "path": "/reverse",
+    "query": {
+     "lat": "51.5",
+     "lon": "-0.12"
+    }
+   },
+   "json": {
+    "place_id": 9,
+    "osm_type": "relation",
+    "osm_id": 2001,
+    "lat": "51.5",
+    "lon": "-0.12",
+    "category": "boundary",
+    "type": "suburb",
+    "addresstype": "suburb",
+    "name": "Fixture Quarter",
+    "display_name": "Fixture Quarter, Fixtureville, Fixtureland",
+    "address": {
+     "suburb": "Fixture Quarter",
+     "city": "Fixtureville",
+     "country": "Fixtureland",
+     "country_code": "fl",
+     "house_number": "5",
+     "road": "Some Road",
+     "postcode": "FX1 2BB"
+    }
+   }
+  },
+  {
+   "_label": "Nominatim reverse that lands on a house: number, road and postcode are reported",
+   "match": {
+    "host": "nominatim.openstreetmap.org",
+    "path": "/reverse",
+    "query": {
+     "lat": "51.6",
+     "lon": "-0.2"
+    }
+   },
+   "json": {
+    "place_id": 10,
+    "osm_type": "way",
+    "osm_id": 2002,
+    "lat": "51.6",
+    "lon": "-0.2",
+    "category": "building",
+    "type": "house",
+    "addresstype": "building",
+    "name": "",
+    "display_name": "7, Quiet Road, Fixture Quarter",
+    "address": {
+     "house_number": "7",
+     "road": "Quiet Road",
+     "suburb": "Fixture Quarter",
+     "city": "Fixtureville",
+     "country": "Fixtureland",
+     "postcode": "FX1 3CC"
+    }
+   }
+  },
+  {
+   "_label": "Nominatim reverse in the sea",
+   "match": {
+    "host": "nominatim.openstreetmap.org",
+    "path": "/reverse",
+    "query": {
+     "lat": "0",
+     "lon": "0"
+    }
+   },
+   "json": {
+    "error": "Unable to geocode"
+   }
+  },
+  {
+   "_label": "Overpass: two named features, one unnamed, tags that must not be reported (address, phone)",
+   "match": {
+    "host": "overpass-api.de",
+    "path": "/api/interpreter"
+   },
+   "json": {
+    "version": 0.6,
+    "elements": [
+     {
+      "type": "node",
+      "id": 501,
+      "lat": 48.8584,
+      "lon": 2.2945,
+      "tags": {
+       "name": "Fixture Cafe",
+       "amenity": "cafe",
+       "addr:housenumber": "3",
+       "addr:street": "Invented Street",
+       "phone": "+00 000 0000",
+       "opening_hours": "Mo-Su 08:00-18:00"
+      }
+     },
+     {
+      "type": "way",
+      "id": 502,
+      "center": {
+       "lat": 48.859,
+       "lon": 2.295
+      },
+      "tags": {
+       "name": "Fixture Bistro",
+       "amenity": "cafe",
+       "building": "commercial"
+      }
+     },
+     {
+      "type": "node",
+      "id": 503,
+      "lat": 48.8591,
+      "lon": 2.2951,
+      "tags": {
+       "amenity": "cafe"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "_label": "GIBS tile exists for 2024-06-15 (world overview tile)",
+   "match": {
+    "host": "gibs.earthdata.nasa.gov",
+    "path": "/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2024-06-15/GoogleMapsCompatible_Level9/0/0/0.jpg"
+   },
+   "text": "tile-bytes"
+  },
+  {
+   "_label": "GIBS no tile for 2024-06-16",
+   "match": {
+    "host": "gibs.earthdata.nasa.gov",
+    "path": "/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2024-06-16/GoogleMapsCompatible_Level9/0/0/0.jpg"
+   },
+   "json": {},
+   "status": 404
+  },
+  {
+   "_label": "Earth Search STAC: two scenes (one cloudy) and one with a bad id",
+   "match": {
+    "host": "earth-search.aws.element84.com",
+    "path": "/v1/search"
+   },
+   "json": {
+    "type": "FeatureCollection",
+    "features": [
+     {
+      "id": "S2A_30UXC_20240615_0_L2A",
+      "collection": "sentinel-2-l2a",
+      "bbox": [
+       -1,
+       51,
+       0,
+       52
+      ],
+      "properties": {
+       "datetime": "2024-06-15T11:05:00Z",
+       "eo:cloud_cover": 8.2,
+       "platform": "sentinel-2a"
+      },
+      "assets": {
+       "thumbnail": {
+        "href": "https://thumbs.example.org/S2A_30UXC_20240615.jpg"
+       }
+      }
+     },
+     {
+      "id": "S2B_30UXC_20240610_0_L2A",
+      "collection": "sentinel-2-l2a",
+      "properties": {
+       "datetime": "2024-06-10T11:05:00Z",
+       "eo:cloud_cover": 91,
+       "platform": "sentinel-2b"
+      },
+      "assets": {
+       "thumbnail": {
+        "href": "http://insecure.example.org/t.jpg"
+       }
+      }
+     },
+     {
+      "id": "../x"
+     }
+    ]
+   }
+  },
+  {
+   "_label": "GDELT GEO GeoJSON: three places with article counts, one without coordinates",
+   "match": {
+    "host": "api.gdeltproject.org",
+    "path": "/api/v2/geo/geo",
+    "query": {
+     "query": "\"Fixture Org\""
+    }
+   },
+   "json": {
+    "type": "FeatureCollection",
+    "features": [
+     {
+      "type": "Feature",
+      "properties": {
+       "name": "Fixtureville, Fixtureland",
+       "count": 14,
+       "html": "<a href=\"https://news.example.org/a\">story</a>"
+      },
+      "geometry": {
+       "type": "Point",
+       "coordinates": [
+        -0.12,
+        51.5
+       ]
+      }
+     },
+     {
+      "type": "Feature",
+      "properties": {
+       "name": "Testburg, Exampleland",
+       "count": 40
+      },
+      "geometry": {
+       "type": "Point",
+       "coordinates": [
+        13.4,
+        52.5
+       ]
+      }
+     },
+     {
+      "type": "Feature",
+      "properties": {
+       "name": "Nowhere"
+      },
+      "geometry": null
+     },
+     {
+      "type": "Feature",
+      "properties": {
+       "name": "Trial City",
+       "count": 3
+      },
+      "geometry": {
+       "type": "Point",
+       "coordinates": [
+        2.35,
+        48.85
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "_label": "GDELT GEO throttle text sent with HTTP 200",
+   "match": {
+    "host": "api.gdeltproject.org",
+    "path": "/api/v2/geo/geo",
+    "query": {
+     "query": "\"Throttle Fixture\""
+    }
+   },
+   "text": "Please limit requests to one every 5 seconds or support@gdeltproject.org for bulk."
+  },
+  {
+   "_label": "GDELT GEO no data",
+   "match": {
+    "host": "api.gdeltproject.org",
+    "path": "/api/v2/geo/geo",
+    "query": {
+     "query": "\"Silence Fixture\""
+    }
+   },
+   "text": ""
+  },
+  {
+   "_label": "Common Crawl crawl list: unsorted, one bad id",
+   "match": {
+    "host": "index.commoncrawl.org",
+    "path": "/collinfo.json"
+   },
+   "json": [
+    {
+     "id": "CC-MAIN-2024-33",
+     "name": "August 2024"
+    },
+    {
+     "id": "CC-MAIN-2024-10",
+     "name": "March 2024"
+    },
+    {
+     "id": "not-a-crawl"
+    }
+   ]
+  },
+  {
+   "_label": "Common Crawl index lines for fixture-site.example (one non-http line, one garbage line)",
+   "match": {
+    "host": "index.commoncrawl.org",
+    "path": "/CC-MAIN-2024-33-index",
+    "query": {
+     "url": "fixture-site.example"
+    }
+   },
+   "text": "{\"url\": \"https://fixture-site.example/\", \"timestamp\": \"20240810101010\", \"status\": \"200\", \"mime\": \"text/html\", \"digest\": \"FIXDIGEST1010\", \"languages\": \"eng\"}\n{\"url\": \"https://www.fixture-site.example/about\", \"timestamp\": \"20240810111111\", \"status\": \"301\", \"mime\": \"text/html\", \"digest\": \"FIXDIGEST1111\", \"languages\": \"eng\"}\n{\"url\": \"ftp://fixture-site.example/x\", \"timestamp\": \"20240810121212\", \"status\": \"200\", \"mime\": \"text/html\", \"digest\": \"FIXDIGEST1212\", \"languages\": \"eng\"}\nnot json at all"
+  },
+  {
+   "_label": "Common Crawl: no capture",
+   "match": {
+    "host": "index.commoncrawl.org",
+    "path": "/CC-MAIN-2024-33-index",
+    "query": {
+     "url": "nothing-here.example"
+    }
+   },
+   "json": {
+    "message": "No Captures found for: nothing-here.example"
+   },
+   "status": 404
+  },
+  {
+   "_label": "PTR for 8.8.8.8: one confirmed name, one spoofed name",
+   "match": {
+    "host": "cloudflare-dns.com",
+    "path": "/dns-query",
+    "query": {
+     "name": "8.8.8.8.in-addr.arpa",
+     "type": "PTR"
+    }
+   },
+   "json": {
+    "Status": 0,
+    "Answer": [
+     {
+      "name": "8.8.8.8.in-addr.arpa",
+      "type": 12,
+      "TTL": 300,
+      "data": "resolver-fixture.example.net."
+     },
+     {
+      "name": "8.8.8.8.in-addr.arpa",
+      "type": 12,
+      "TTL": 300,
+      "data": "spoof.example.org."
+     }
+    ]
+   }
+  },
+  {
+   "_label": "forward A of the confirmed name",
+   "match": {
+    "host": "cloudflare-dns.com",
+    "path": "/dns-query",
+    "query": {
+     "name": "resolver-fixture.example.net",
+     "type": "A"
+    }
+   },
+   "json": {
+    "Status": 0,
+    "Answer": [
+     {
+      "name": "resolver-fixture.example.net",
+      "type": 1,
+      "TTL": 60,
+      "data": "8.8.8.8"
+     }
+    ]
+   }
+  },
+  {
+   "_label": "forward A of the spoofed name points elsewhere",
+   "match": {
+    "host": "cloudflare-dns.com",
+    "path": "/dns-query",
+    "query": {
+     "name": "spoof.example.org",
+     "type": "A"
+    }
+   },
+   "json": {
+    "Status": 0,
+    "Answer": [
+     {
+      "name": "spoof.example.org",
+      "type": 1,
+      "TTL": 60,
+      "data": "9.9.9.9"
+     }
+    ]
+   }
+  },
+  {
+   "_label": "PTR for 1.1.1.1: NXDOMAIN",
+   "match": {
+    "host": "cloudflare-dns.com",
+    "path": "/dns-query",
+    "query": {
+     "name": "1.1.1.1.in-addr.arpa",
+     "type": "PTR"
+    }
+   },
+   "json": {
+    "Status": 3
+   }
+  },
+  {
+   "_label": "CISA KEV catalogue (invented entries)",
+   "match": {
+    "host": "www.cisa.gov",
+    "path": "/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+   },
+   "json": {
+    "title": "Fixture KEV",
+    "catalogVersion": "2026.10.20",
+    "dateReleased": "2026-10-20T14:00:00.000Z",
+    "count": 3,
+    "vulnerabilities": [
+     {
+      "cveID": "CVE-2099-0001",
+      "vendorProject": "Fixture Vendor",
+      "product": "Fixture Gateway",
+      "vulnerabilityName": "Fixture Gateway Remote Code Execution",
+      "dateAdded": "2026-10-19",
+      "shortDescription": "Invented.",
+      "requiredAction": "Apply updates per vendor instructions.",
+      "dueDate": "2026-11-09",
+      "knownRansomwareCampaignUse": "Known",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     {
+      "cveID": "CVE-2099-0002",
+      "vendorProject": "Fixture Vendor",
+      "product": "Fixture Mail",
+      "vulnerabilityName": "Fixture Mail Auth Bypass",
+      "dateAdded": "2026-09-01",
+      "requiredAction": "Apply updates.",
+      "dueDate": "2026-09-22",
+      "knownRansomwareCampaignUse": "Unknown",
+      "cwes": []
+     },
+     {
+      "cveID": "CVE-2098-1234",
+      "vendorProject": "Other Corp",
+      "product": "Other Suite",
+      "vulnerabilityName": "Other Suite Path Traversal",
+      "dateAdded": "2025-01-05",
+      "requiredAction": "Apply updates.",
+      "dueDate": "2025-01-26",
+      "knownRansomwareCampaignUse": "Unknown",
+      "cwes": [
+       "CWE-22"
+      ]
+     },
+     {
+      "cveID": "not-a-cve",
+      "vendorProject": "x"
+     }
+    ]
+   }
+  },
+  {
+   "_label": "NVD one CVE",
+   "match": {
+    "host": "services.nvd.nist.gov",
+    "path": "/rest/json/cves/2.0",
+    "query": {
+     "cveId": "CVE-2099-0001"
+    }
+   },
+   "json": {
+    "resultsPerPage": 1,
+    "startIndex": 0,
+    "totalResults": 1,
+    "vulnerabilities": [
+     {
+      "cve": {
+       "id": "CVE-2099-0001",
+       "sourceIdentifier": "psirt@fixture.example",
+       "published": "2026-10-01T12:00:00.000",
+       "lastModified": "2026-10-18T09:30:00.000",
+       "vulnStatus": "Analyzed",
+       "descriptions": [
+        {
+         "lang": "es",
+         "value": "invented"
+        },
+        {
+         "lang": "en",
+         "value": "An invented flaw in Fixture Gateway allows invented attackers to run invented code."
+        }
+       ],
+       "metrics": {
+        "cvssMetricV31": [
+         {
+          "source": "nvd@nist.gov",
+          "type": "Primary",
+          "cvssData": {
+           "version": "3.1",
+           "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+           "baseScore": 9.8,
+           "baseSeverity": "CRITICAL"
+          }
+         }
+        ]
+       },
+       "weaknesses": [
+        {
+         "source": "nvd@nist.gov",
+         "type": "Primary",
+         "description": [
+          {
+           "lang": "en",
+           "value": "CWE-78"
+          }
+         ]
+        }
+       ],
+       "references": [
+        {
+         "url": "https://vendor.example.org/advisory/1",
+         "source": "psirt@fixture.example"
+        },
+        {
+         "url": "http://insecure.example.org/x",
+         "source": "x"
+        }
+       ],
+       "cisaExploitAdd": "2026-10-19",
+       "cisaActionDue": "2026-11-09"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "_label": "NVD keyword search: 2 of 7 shown",
+   "match": {
+    "host": "services.nvd.nist.gov",
+    "path": "/rest/json/cves/2.0",
+    "query": {
+     "keywordSearch": "fixture gateway"
+    }
+   },
+   "json": {
+    "resultsPerPage": 2,
+    "startIndex": 0,
+    "totalResults": 7,
+    "vulnerabilities": [
+     {
+      "cve": {
+       "id": "CVE-2099-0001",
+       "sourceIdentifier": "psirt@fixture.example",
+       "published": "2026-10-01T12:00:00.000",
+       "lastModified": "2026-10-18T09:30:00.000",
+       "vulnStatus": "Analyzed",
+       "descriptions": [
+        {
+         "lang": "es",
+         "value": "invented"
+        },
+        {
+         "lang": "en",
+         "value": "An invented flaw in Fixture Gateway allows invented attackers to run invented code."
+        }
+       ],
+       "metrics": {
+        "cvssMetricV31": [
+         {
+          "source": "nvd@nist.gov",
+          "type": "Primary",
+          "cvssData": {
+           "version": "3.1",
+           "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+           "baseScore": 9.8,
+           "baseSeverity": "CRITICAL"
+          }
+         }
+        ]
+       },
+       "weaknesses": [
+        {
+         "source": "nvd@nist.gov",
+         "type": "Primary",
+         "description": [
+          {
+           "lang": "en",
+           "value": "CWE-78"
+          }
+         ]
+        }
+       ],
+       "references": [
+        {
+         "url": "https://vendor.example.org/advisory/1",
+         "source": "psirt@fixture.example"
+        },
+        {
+         "url": "http://insecure.example.org/x",
+         "source": "x"
+        }
+       ],
+       "cisaExploitAdd": "2026-10-19",
+       "cisaActionDue": "2026-11-09"
+      }
+     },
+     {
+      "cve": {
+       "id": "CVE-2099-0002",
+       "published": "2026-09-01T00:00:00.000",
+       "lastModified": "2026-09-02T00:00:00.000",
+       "vulnStatus": "Awaiting Analysis",
+       "descriptions": [
+        {
+         "lang": "en",
+         "value": "Not yet scored."
+        }
+       ],
+       "metrics": {},
+       "weaknesses": [],
+       "references": []
+      }
+     }
+    ]
+   }
+  },
+  {
+   "_label": "NVD unknown CVE",
+   "match": {
+    "host": "services.nvd.nist.gov",
+    "path": "/rest/json/cves/2.0",
+    "query": {
+     "cveId": "CVE-2099-9999"
+    }
+   },
+   "json": {
+    "resultsPerPage": 0,
+    "totalResults": 0,
+    "vulnerabilities": []
+   }
+  },
+  {
+   "_label": "NVD over its keyless limit answers HTTP 403",
+   "match": {
+    "host": "services.nvd.nist.gov",
+    "path": "/rest/json/cves/2.0",
+    "query": {
+     "cveId": "CVE-2099-0403"
+    }
+   },
+   "json": {},
+   "status": 403
+  }
+ ]
+}

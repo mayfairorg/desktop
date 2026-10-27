@@ -6,10 +6,10 @@ const { bootstrapFor, walkEntities, events } = require('./rdap-common');
 
 const meta = {
   id: 'rdap-ip-asn', tool: 'rdap', name: 'IP and ASN registration (RDAP)', version: '1.0.0',
-  description: 'Who the regional internet registry lists for a public IP address block or an AS number: network name, country, organisation, abuse role mailbox, key dates.',
+  description: 'Who the regional internet registry lists for a public IP address block or an AS number: network name, country, organisation, contacts as published, abuse mailbox, key dates.',
   capabilities: ['ip-registration', 'asn', 'rdap', 'passive'], scope: 'passive', network: 'rate-limited',
   hosts: ['data.iana.org'], dynamicHosts: true, client: { rps: 1, maxRequests: 6, timeoutMs: 15000, maxBytes: 1048576 },
-  restrictions: 'Registries apply their own rate limits and terms; at most one request per second. Only public addresses are accepted. The result describes the network operator, not a person; natural-person contacts are dropped. Do not use it to locate or profile a private individual.',
+  restrictions: 'Registries apply their own rate limits and terms; at most one request per second. Only public addresses are accepted. Contacts are reported as the registry publishes them (organisations, individuals and abuse mailboxes); an entry the registry itself redacted is counted and the result is marked redacted. The registry\'s terms govern what you may do with the data.',
   licence: { spdx: 'MIT', url: 'https://opensource.org/license/mit' }, dataTerms: 'IANA RDAP bootstrap and regional registry data, free to use under each registry\'s terms',
   inputs: [
     { name: 'kind', type: 'enum', label: 'Kind', values: ['ip', 'asn'] },
@@ -34,13 +34,14 @@ async function run(ctx, input) {
     if (!doc || doc.objectClassName !== 'ip network') throw new ModuleError('bad-response', 'the registry answer is not an IP network record');
     const cidr = Array.isArray(doc.cidr0_cidrs) && doc.cidr0_cidrs[0] ? (doc.cidr0_cidrs[0].v4prefix || doc.cidr0_cidrs[0].v6prefix) + '/' + doc.cidr0_cidrs[0].length : null;
     const label = cidr || `${doc.startAddress}-${doc.endAddress}`;
-    const orgs = [], abuse = [];
-    const withheld = walkEntities(doc.entities, { org: (o) => orgs.push(o), abuse: (m) => abuse.push(m) });
-    ctx.emit({ type: 'ip', value: label, url: res.url, raw: { queried: value, name: doc.name, handle: doc.handle, country: doc.country, netType: doc.type, parentHandle: doc.parentHandle, start: doc.startAddress, end: doc.endAddress, redacted: withheld > 0 || undefined } });
+    const orgs = [], abuse = [], people = [];
+    const redacted = walkEntities(doc.entities, { org: (o) => orgs.push(o), abuse: (m) => abuse.push(m), person: (p) => people.push(p) });
+    ctx.emit({ type: 'ip', value: label, url: res.url, raw: { queried: value, name: doc.name, handle: doc.handle, country: doc.country, netType: doc.type, parentHandle: doc.parentHandle, start: doc.startAddress, end: doc.endAddress, redacted: redacted > 0 || undefined } });
     for (const ev of events(doc)) ctx.emit({ type: 'event', value: `${ev.action} of ${label}: ${ev.t.slice(0, 10)}`, url: res.url, raw: { kind: ev.action, t: ev.t, of: label } });
     for (const o of orgs) ctx.emit({ type: 'org', value: o.name, url: res.url, raw: { roles: o.roles, handle: o.handle, of: label } });
     for (const m of abuse) ctx.emit({ type: 'email', value: m, url: res.url, raw: { role: 'abuse-contact', of: label } });
-    if (withheld) ctx.note(`${withheld} contact(s) that may be natural persons were withheld`);
+    for (const p of people) ctx.emit({ type: 'person', value: p.name, url: res.url, raw: { roles: p.roles, handle: p.handle, emails: p.emails.length ? p.emails : undefined, of: label } });
+    if (redacted) ctx.note(`${redacted} contact(s) were redacted by the registry itself`);
   } else if (kind === 'asn') {
     const m = /^(?:as)?(\d{1,10})$/i.exec(value);
     const n = m ? Number(m[1]) : NaN;
@@ -53,13 +54,14 @@ async function run(ctx, input) {
     const doc = res.json();
     if (!doc || doc.objectClassName !== 'autnum') throw new ModuleError('bad-response', 'the registry answer is not an AS number record');
     const label = `AS${n}`;
-    const orgs = [], abuse = [];
-    const withheld = walkEntities(doc.entities, { org: (o) => orgs.push(o), abuse: (x) => abuse.push(x) });
-    ctx.emit({ type: 'asn', value: label, url: res.url, raw: { name: doc.name, handle: doc.handle, country: doc.country, asnType: doc.type, start: doc.startAutnum, end: doc.endAutnum, redacted: withheld > 0 || undefined } });
+    const orgs = [], abuse = [], people = [];
+    const redacted = walkEntities(doc.entities, { org: (o) => orgs.push(o), abuse: (x) => abuse.push(x), person: (p) => people.push(p) });
+    ctx.emit({ type: 'asn', value: label, url: res.url, raw: { name: doc.name, handle: doc.handle, country: doc.country, asnType: doc.type, start: doc.startAutnum, end: doc.endAutnum, redacted: redacted > 0 || undefined } });
     for (const ev of events(doc)) ctx.emit({ type: 'event', value: `${ev.action} of ${label}: ${ev.t.slice(0, 10)}`, url: res.url, raw: { kind: ev.action, t: ev.t, of: label } });
     for (const o of orgs) ctx.emit({ type: 'org', value: o.name, url: res.url, raw: { roles: o.roles, handle: o.handle, of: label } });
     for (const x of abuse) ctx.emit({ type: 'email', value: x, url: res.url, raw: { role: 'abuse-contact', of: label } });
-    if (withheld) ctx.note(`${withheld} contact(s) that may be natural persons were withheld`);
+    for (const p of people) ctx.emit({ type: 'person', value: p.name, url: res.url, raw: { roles: p.roles, handle: p.handle, emails: p.emails.length ? p.emails : undefined, of: label } });
+    if (redacted) ctx.note(`${redacted} contact(s) were redacted by the registry itself`);
   } else throw new ModuleError('bad-input', 'kind must be ip or asn');
   ctx.progress(1);
 }

@@ -8,7 +8,8 @@ const core = require('./lib/core');
 
 const LIB = path.join(__dirname, 'lib');
 const MODULES = ['dns-doh', 'rdap-domain', 'rdap-ip-asn', 'ct-crtsh', 'wayback-cdx', 'exif-meta', 'gdelt-doc', 'wikidata',
-  'nasa-cmr', 'usgs-landsat', 'archivebox', 'exiftool', 'mediainfo', 'tesseract', 'ocrmypdf', 'tika', 'ffmpeg-frames', 'gdal-info', 'qgis-open'].map((id) => require('./lib/' + id));
+  'nasa-cmr', 'usgs-landsat', 'archivebox', 'exiftool', 'mediainfo', 'tesseract', 'ocrmypdf', 'tika', 'ffmpeg-frames', 'gdal-info', 'qgis-open',
+  'gleif', 'sec-edgar', 'nominatim', 'overpass-query', 'nasa-gibs', 'earth-search-stac', 'gdelt-geo', 'common-crawl-index', 'rdns', 'cisa-kev', 'nvd', 'hash-file', 'stix-import', 'local-snapshot'].map((id) => require('./lib/' + id));
 const byId = (id) => MODULES.find((m) => m.meta.id === id) || null;
 
 function toManifest(meta) {
@@ -26,7 +27,7 @@ function toManifest(meta) {
     output: { format: 'jsonl' },
     limits: { timeoutMs, maxOutputBytes: 4 * 1024 * 1024, maxMemoryMb: 256, maxConcurrent: meta.heavy ? 1 : 2 },
     permissions: [...(external ? ['network'] : []), ...(fields.some((f) => f.type === 'file') ? ['read-picked-file'] : []), ...(meta.separateProgram ? ['temp-files'] : [])],
-    externalRestrictions: meta.restrictions + (meta.dataTerms ? ' Data terms: ' + meta.dataTerms + '.' : ''),
+    externalRestrictions: (external && (meta.hosts || []).length ? 'Contacts: ' + meta.hosts.join(', ') + '. ' : '') + meta.restrictions + (meta.dataTerms ? ' Data terms: ' + meta.dataTerms + '.' : ''),
     selfTest: meta.selfTest,
   };
 }

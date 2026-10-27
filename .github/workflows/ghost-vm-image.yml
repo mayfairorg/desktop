@@ -1,0 +1,115 @@
+name: Ghost virtual computer image
+# Builds what the Ghost virtual computer downloads on first use and publishes it as release assets:
+#   qemu-<system>-<cpu>.zip  the QEMU program for each supported computer (a separate program; it is not bundled with the app)
+#   kernel-<cpu>, initrd-<cpu>, base-<cpu>.qcow2   the Alpine Linux system image
+#   qemu-<version>-source.tar.xz   the QEMU source these programs were built from (QEMU is GPL-2.0-or-later)
+#   vm-index.json   addresses, sizes and SHA-256 values of all of the above. Copy it over src/main/ghost/vm/vm-index.json and ship that app
+#                   build: the app only downloads files that match this index.
+# Run it from the Actions tab. Before the first run, set the repository variable QEMU_SHA256 to the SHA-256 of the QEMU source archive
+# named below (take it from https://download.qemu.org); the build stops when the downloaded archive does not match it.
+on:
+  workflow_dispatch:
+    inputs:
+      tag: { description: 'Release tag to create, for example ghost-vm-1', required: true }
+      qemu_version: { description: 'QEMU version', default: '9.1.0', required: true }
+      with_rust: { description: 'Put Rust (rustc and cargo) in the image', type: boolean, default: false }
+
+permissions:
+  contents: write
+
+env:
+  QEMU_VERSION: ${{ inputs.qemu_version }}
+  QEMU_SHA256: ${{ vars.QEMU_SHA256 }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node --test test/ghost-vm-*.test.js
+
+  image:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04,     arch: x86_64 }
+          - { runner: ubuntu-24.04-arm, arch: aarch64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image in an Alpine container
+        run: |
+          docker run --rm --privileged -v "$PWD:/src" -e WITH_RUST=${{ inputs.with_rust && '1' || '0' }} alpine:3.20 \
+            sh -c "apk add --no-cache bash >/dev/null && sh /src/tools/ghost-vm/image/build.sh ${{ matrix.arch }} /src/out"
+      - uses: actions/upload-artifact@v4
+        with: { name: 'image-${{ matrix.arch }}', path: out/*, if-no-files-found: error }
+
+  qemu-linux:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04,     arch: x64 }
+          - { runner: ubuntu-24.04-arm, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build a static QEMU in an Alpine container
+        run: |
+          mkdir -p out
+          docker run --rm -v "$PWD:/src" -e QEMU_VERSION -e QEMU_SHA256 alpine:3.20 \
+            sh -c "apk add --no-cache bash zip >/dev/null && bash /src/tools/ghost-vm/image/pack-qemu.sh linux ${{ matrix.arch }} /src/out/qemu-linux-${{ matrix.arch }}.zip"
+      - uses: actions/upload-artifact@v4
+        with: { name: 'qemu-linux-${{ matrix.arch }}', path: out/*.zip, if-no-files-found: error }
+
+  qemu-macos:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-13, arch: x64 }
+          - { runner: macos-14, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tools/ghost-vm/image/pack-qemu.sh darwin ${{ matrix.arch }} out/qemu-darwin-${{ matrix.arch }}.zip
+      - uses: actions/upload-artifact@v4
+        with: { name: 'qemu-darwin-${{ matrix.arch }}', path: out/*.zip, if-no-files-found: error }
+
+  qemu-windows:
+    needs: test
+    runs-on: windows-latest
+    defaults: { run: { shell: 'msys2 {0}' } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with: { msystem: MINGW64, update: true, install: 'mingw-w64-x86_64-qemu zip curl' }
+      - run: bash tools/ghost-vm/image/pack-qemu.sh win32 x64 out/qemu-win32-x64.zip
+      - uses: actions/upload-artifact@v4
+        with: { name: qemu-win32-x64, path: out/*.zip, if-no-files-found: error }
+
+  release:
+    needs: [image, qemu-linux, qemu-macos, qemu-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/download-artifact@v4
+        with: { path: assets, merge-multiple: true }
+      - name: QEMU source archive, published next to the programs built from it (GPL)
+        run: |
+          curl -fsSL "https://download.qemu.org/qemu-$QEMU_VERSION.tar.xz" -o "assets/qemu-$QEMU_VERSION-source.tar.xz"
+          echo "$QEMU_SHA256  assets/qemu-$QEMU_VERSION-source.tar.xz" | sha256sum -c -
+      - name: Write the index
+        run: node tools/ghost-vm/image/make-index.js assets "${{ github.repository }}" "${{ inputs.tag }}"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ inputs.tag }}" assets/* --title "Ghost virtual computer ${{ inputs.tag }}" --notes "System image and QEMU packages for the Ghost virtual computer. vm-index.json lists every file with its SHA-256."
