@@ -56,7 +56,7 @@ eapp.whenReady().then(async () => {
       const isSvg=el instanceof SVGElement;let fg=parse(isSvg?cs.fill:cs.color);if(!fg)continue;let bg=bgOf(isSvg?el.closest('svg').parentElement:el);if(isSvg){const svgBg=bgOf(el.closest('svg').parentElement);bg=svgBg}
       fg=over(fg,bg);const px=parseFloat(cs.fontSize),bold=parseInt(cs.fontWeight)>=700,large=px>=24||(px>=18.66&&bold);const need=large?3:4.5;n++;const rr=ratio(fg,bg);if(rr<need-0.001)bad.push({t:t.nodeValue.trim().slice(0,28),cls:(el.getAttribute('class')||el.tagName).slice(0,30),r:Math.round(rr*100)/100,need});}
     return {n,bad:bad.slice(0,8),nbad:bad.length}})()`;
-  const contrast = async (label) => { const c = await js(CONTRAST); rec(`contrast AA ${label}`, c.nbad === 0, c.nbad ? c.nbad + ' of ' + c.n + ': ' + JSON.stringify(c.bad) : c.n + ' text runs checked'); };
+  const contrast = async (label) => { await js('document.getAnimations().forEach((a) => { try { a.finish(); } catch (e) {} })'); await sleep(250); const c = await js(CONTRAST); rec(`contrast AA ${label}`, c.nbad === 0, c.nbad ? c.nbad + ' of ' + c.n + ': ' + JSON.stringify(c.bad) : c.n + ' text runs checked'); };
   const set = async (skin) => { await js(`GH.appearance.set({skin:'${skin}'})`); await sleep(350); };
   const go = async (hash, sel) => { await js(`location.hash=${JSON.stringify(hash)}`); await sleep(350); if (sel) await waitFor(`!!document.querySelector(${JSON.stringify(sel)})`, 6000); await sleep(250); };
 
