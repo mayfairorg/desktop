@@ -1,5 +1,5 @@
 'use strict';
-// Preload for the pinned Mayfair tab. Exposes window.mayfairDesktop ONLY on the Mayfair origins.
+// Preload for the Mayfair view. Exposes window.mayfairDesktop (and window.mayfairDesktop.browser, the Browser bridge) ONLY on the Mayfair origins.
 const { contextBridge, ipcRenderer } = require('electron');
 
 const MAYFAIR = ['https://cloud.mayfairmail.com', 'https://mayfairmail.com'];
@@ -42,8 +42,51 @@ if (MAYFAIR.includes(location.origin)) {
       ipcRenderer.invoke('web:pwRespond', d.payload.id, d.payload.credentials.slice(0, 20).map((c) => ({ username: String(c && c.username || ''), password: String(c && c.password || '') }))).catch(() => {});
     }
   });
+
+  // ---- Browser bridge: window.mayfairDesktop.browser (contract: audit/browser-bridge-contract.md) ----
+  // Every method is one allowlisted invoke 'br:<name>' that main checks again (sender, role, argument types).
+  // This list must equal the keys of BR in src/main/lib/ipc-allowlist.js (a test compares them).
+  const BR_NAMES = ['ready', 'setBounds', 'setOccluded', 'capture', 'focus', 'newTab', 'closeTab', 'activate', 'move', 'duplicate', 'pin', 'mute', 'closeOthers', 'reopenClosed',
+    'go', 'back', 'forward', 'reload', 'stop', 'home', 'suggest', 'find', 'stopFind', 'zoom', 'print', 'savePage', 'devtools', 'fullscreen', 'windowFullscreen', 'fillPassword',
+    'bookmarks.list', 'bookmarks.add', 'bookmarks.remove', 'bookmarks.update', 'bookmarks.import', 'history.list', 'history.search', 'history.remove', 'history.clear',
+    'downloads.list', 'downloads.open', 'downloads.show', 'downloads.cancel', 'downloads.clear',
+    'settings.get', 'settings.set', 'settings.setProxy', 'settings.pickFolder', 'settings.clearBrowsingData',
+    'permissions.list', 'permissions.site', 'permissions.set', 'permissions.reset', 'permissions.answer', 'popups.allow',
+    'webapps.catalogue', 'webapps.open', 'webapps.pin', 'webapps.reset', 'webapps.remove', 'webapps.shortcut',
+    'tor.status', 'tor.start', 'tor.stop', 'tor.newIdentity', 'adblock.stats', 'adblock.toggleSite', 'adblock.updateNow',
+    'extensions.list', 'extensions.install', 'extensions.remove', 'about'];
+  const BR_EVENTS = ['state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus'];
+  const BR_QUEUED = ['permission-request', 'new-window-request', 'open-url', 'menu', 'panel-request'];   // happened before anyone listened: replayed to the first listener
+  const browser = {};
+  for (const name of BR_NAMES) {
+    const fn = (...a) => ipcRenderer.invoke('br:' + name, ...a);
+    const dot = name.indexOf('.');
+    if (dot < 0) browser[name] = fn; else { const g = name.slice(0, dot); (browser[g] = browser[g] || {})[name.slice(dot + 1)] = fn; }
+  }
+  const brL = {}, brQ = {};
+  let brState = null;
+  ipcRenderer.on('br:ev', (_e, name, payload) => {
+    if (!BR_EVENTS.includes(name)) return;
+    if (name === 'state') brState = payload;
+    const ls = brL[name];
+    if (ls && ls.length) ls.slice().forEach((cb) => { try { cb(payload); } catch { /* page error */ } });
+    else if (BR_QUEUED.includes(name)) { const q = brQ[name] = brQ[name] || []; if (q.length < 20) q.push(payload); }
+  });
+  browser.on = (event, cb) => {
+    if (!BR_EVENTS.includes(event) || typeof cb !== 'function') return () => {};
+    const ls = brL[event] = brL[event] || [];
+    ls.push(cb);
+    if (ls.length === 1) ipcRenderer.invoke('br:subscribe', event, true).catch(() => {});
+    if (event === 'state' && brState) { try { cb(brState); } catch { /* page error */ } }
+    for (const p of (brQ[event] || []).splice(0)) { try { cb(p); } catch { /* page error */ } }
+    return () => {
+      brL[event] = (brL[event] || []).filter((x) => x !== cb);
+      if (!brL[event].length) ipcRenderer.invoke('br:subscribe', event, false).catch(() => {});
+    };
+  };
   contextBridge.exposeInMainWorld('mayfairDesktop', {
     isDesktop: true,
+    browser,
     info: () => ipcRenderer.invoke('web:info'),
     // Native notification. Electron has no Web Push (no Google push service), so the web app
     // should call this when its own live connection receives an event.

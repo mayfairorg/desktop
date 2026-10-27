@@ -17,7 +17,7 @@ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'mfd-home-'));
 fs.mkdirSync(out, { recursive: true });
 const args = ['-a', '-s', `-screen 0 ${size}x24`, bin, root, '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'];
 const r = spawnSync('xvfb-run', args, {
-  stdio: 'inherit', timeout: 150000,
+  stdio: 'inherit', timeout: +(process.env.MF_SMOKE_TIMEOUT || 150000), killSignal: 'SIGKILL',
   env: { ...process.env, HOME: home, XDG_CONFIG_HOME: path.join(home, '.config'), XDG_DOCUMENTS_DIR: path.join(home, 'Documents'), MAYFAIR_DESKTOP_DATA: path.join(home, 'data'), MF_SMOKE: '1', MAYFAIR_TOR_BIN: path.join(root, 'test/fixtures/fake-tor.js'), MF_SMOKE_OUT: out, MF_SMOKE_TAG: tag },
 });
 console.log('screenshots and results in', out);

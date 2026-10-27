@@ -66,6 +66,24 @@ class BookmarkStore {
     this.add(c, title, now);
     return { on: true };
   }
+  update(id, patch) {
+    const b = this.s.data.items.find((x) => x.id === id); if (!b || !patch) return false;
+    if (typeof patch.title === 'string') b.title = patch.title.slice(0, 200);
+    if (typeof patch.url === 'string') { const c = cleanUrl(patch.url); if (!c) return false; b.url = c; }
+    this.s.save(); return true;
+  }
+  // items: [{url,title}] from the Cloud side (http/https only, no duplicates, at most 5000 in total)
+  importItems(items, now = Date.now()) {
+    let added = 0;
+    for (const it of Array.isArray(items) ? items : []) {
+      if (this.s.data.items.length >= 5000) break;
+      const c = it && cleanUrl(it.url); if (!c || this.s.data.items.some((b) => b.url === c)) continue;
+      this.s.data.items.push({ id: 'b' + (now + added).toString(36) + Math.random().toString(36).slice(2, 6), url: c, title: String((it && it.title) || c).slice(0, 200), added: now });
+      added++;
+    }
+    if (added) this.s.save();
+    return added;
+  }
   rename(id, title) { const b = this.s.data.items.find((x) => x.id === id); if (!b) return false; b.title = String(title).slice(0, 200); this.s.save(); return true; }
   flush() { this.s.flush(); }
 }

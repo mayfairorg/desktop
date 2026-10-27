@@ -109,9 +109,9 @@ test('bridge channels: only the Mayfair web role, argument shapes enforced', () 
   assert.equal(check('web', 'web:extRemove', ['deals']).ok, true); assert.equal(check('web', 'web:extList', []).ok, true);
   for (const r of ['page', 'start', 'chrome', 'overlay']) for (const c of ['web:extInstall', 'web:extRemove', 'web:extList']) assert.equal(check(r, c, ['deals', 'x', sha]).ok, false, r + c);
 });
-test('bridge is exposed only by the Mayfair-tab preload, on Mayfair origins', () => {
+test('bridge is exposed only by the Mayfair-view preload, on Mayfair origins', () => {
   const web = fs.readFileSync(path.join(__dirname, '../src/preload/web.js'), 'utf8');
   assert.match(web, /MAYFAIR\.includes\(location\.origin\)/); assert.match(web, /installExtension/); assert.match(web, /mf\.pw\.request/); assert.match(web, /e\.source !== window \|\| e\.origin !== location\.origin/);
-  const br = fs.readFileSync(path.join(__dirname, '../src/main/browser.js'), 'utf8');
-  assert.match(br, /preload: PRELOAD\(pinned \? 'web' : 'page'\)/);
+  const br = fs.readFileSync(path.join(__dirname, '../src/main/browser-service.js'), 'utf8');
+  assert.match(br, /preload: PRELOAD\('web'\)/); assert.match(br, /preload: PRELOAD\('page'\)/);
 });

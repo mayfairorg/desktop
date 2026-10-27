@@ -62,7 +62,7 @@ const FUSES = {
   EnableNodeCliInspectArguments: false,               // --inspect and friends are ignored
   EnableEmbeddedAsarIntegrityValidation: true,        // the app.asar must match the hash stored in the signed binary (macOS and Windows)
   OnlyLoadAppFromAsar: true,                          // no loose app folder next to the asar
-  GrantFileProtocolExtraPrivileges: false,            // our own file:// pages need none (no fetch, storage or workers there; a test checks)
+  GrantFileProtocolExtraPrivileges: true,             // must stay on: with it off Chromium treats file:// as non-standard, CSP 'self' stops matching and the tab strip draws blank (white bar)
 };
 
 module.exports = { MANIFEST, devToolsAllowed, isDevToolsKey, isViewSource, buildManifest, verify, listFiles, sha256, FUSES };

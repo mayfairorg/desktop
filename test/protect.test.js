@@ -25,12 +25,12 @@ test('keys that open developer tools or the page source are recognised, ordinary
   assert.ok(!PROT.isDevToolsKey({ type: 'keyUp', key: 'F12' })); assert.ok(!PROT.isDevToolsKey(null));
   assert.ok(PROT.isViewSource('view-source:https://cloud.mayfairmail.com/')); assert.ok(PROT.isViewSource('  VIEW-SOURCE:x')); assert.ok(!PROT.isViewSource('https://cloud.mayfairmail.com/'));
 });
-test('the Mayfair tab is wired to it: no devtools in its web preferences, keys swallowed, view-source refused, tampered build never loads Mayfair', () => {
-  const b = read('src/main/browser.js');
-  assert.match(b, /devTools: !pinned \|\| this\.devTools/);
-  assert.match(b, /locked && !this\.devTools/); assert.match(b, /isDevToolsKey/); assert.match(b, /devtools-opened/);
-  assert.equal((b.match(/locked && PROT\.isViewSource/g) || []).length, 2, 'will-navigate/redirect and window.open');
-  assert.match(b, /pinned && this\.tampered/); assert.ok(fs.existsSync(path.join(root, 'src/ui/tampered.html')));
+test('the Mayfair view is wired to it: no devtools in its web preferences, keys swallowed, view-source refused, tampered build never loads Mayfair', () => {
+  const b = read('src/main/browser-service.js');
+  assert.match(b, /devTools: this\.devTools/);
+  assert.match(b, /if \(!this\.devTools\)/); assert.match(b, /isDevToolsKey/); assert.match(b, /devtools-opened/);
+  assert.equal((b.match(/PROT\.isViewSource/g) || []).length, 2, 'will-navigate/redirect and window.open of the Mayfair view');
+  assert.match(b, /if \(this\.tampered\)/); assert.match(b, /blocked: devtools/); assert.ok(fs.existsSync(path.join(root, 'src/ui/tampered.html')));
   const m = read('src/main/main.js');
   assert.match(m, /PROT\.verify\(path\.resolve\(__dirname, '\.\.', '\.\.'\)\)/); assert.match(m, /app\.isPackaged \? PROT\.verify/);
   assert.ok(!/toggleDevTools/.test(m.replace(/PROT\.devToolsAllowed[^\]]*\]/, '')), 'the menu item only exists when allowed');
@@ -55,7 +55,7 @@ test('integrity: a build verifies, and any changed, removed or added file (or ma
 });
 
 test('fuses: the required ones are set, and after-pack passes them to @electron/fuses', async () => {
-  assert.deepEqual(PROT.FUSES, { RunAsNode: false, EnableNodeOptionsEnvironmentVariable: false, EnableNodeCliInspectArguments: false, EnableEmbeddedAsarIntegrityValidation: true, OnlyLoadAppFromAsar: true, GrantFileProtocolExtraPrivileges: false });
+  assert.deepEqual(PROT.FUSES, { RunAsNode: false, EnableNodeOptionsEnvironmentVariable: false, EnableNodeCliInspectArguments: false, EnableEmbeddedAsarIntegrityValidation: true, OnlyLoadAppFromAsar: true, GrantFileProtocolExtraPrivileges: true });
   const AP = require('../tools/after-pack');
   const calls = [];
   const fake = { FuseVersion: { V1: 1 }, FuseV1Options: Object.fromEntries(Object.keys(PROT.FUSES).map((k, i) => [k, i])), flipFuses: async (t, w) => { calls.push([t, w]); } };
@@ -97,7 +97,7 @@ for (const engine of ['strip', 'auto']) {
     assert.ok(!/sourceMappingURL/.test(main) && !/\n\s*\/\/ /.test(main) && main.split('\n').length < 20, 'comments gone, lines collapsed');
     for (const f of PROT.listFiles(out).filter((x) => x.endsWith('.js'))) execFileSync(process.execPath, ['--check', path.join(out, f)]);
     assert.ok(fs.existsSync(path.join(out, 'LICENSE.txt')) && fs.existsSync(path.join(out, 'THIRD_PARTY_NOTICES.txt')) && fs.existsSync(path.join(out, 'assets/icon.png')));
-    fs.appendFileSync(path.join(out, 'src/main/browser.js'), '\n/*x*/'); assert.ok(!PROT.verify(out).ok, 'editing the protected copy is detected');
+    fs.appendFileSync(path.join(out, 'src/main/browser-service.js'), '\n/*x*/'); assert.ok(!PROT.verify(out).ok, 'editing the protected copy is detected');
   });
 }
 test('the strip engine keeps the syntax tree identical (templates, regexes, ASI, return/newline)', () => {
@@ -115,7 +115,7 @@ test('legal files: licence says all rights reserved, notices are generated and l
   for (const k of ['Electron', 'Chromium', 'tor (the Tor daemon)', 'BSD-3-Clause', '@ghostery/adblocker', 'MPL-2.0', 'EasyList', 'uBlock filters', 'electron-updater', 'MIT']) assert.ok(n.includes(k), k);
   const lists = require('../src/main/lib/filter-lists.json').lists;
   for (const l of lists) assert.ok(n.includes(l.credit.split(' ')[0]), 'every filter list credit appears: ' + l.id);
-  assert.match(read('src/ui/overlay.js'), /THIRD_PARTY_NOTICES\.txt/);
+  assert.match(read('src/main/lib/about.js'), /THIRD_PARTY_NOTICES\.txt/);
 });
 test('no secrets in the shipped code: no keys, tokens or private key blocks', () => {
   const pats = [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, /AKIA[0-9A-Z]{16}/, /\bsk-[A-Za-z0-9]{20,}/, /\bghp_[A-Za-z0-9]{30,}/, /xox[abp]-[A-Za-z0-9-]{10,}/, /AIza[0-9A-Za-z_-]{35}/, /(api[_-]?key|secret|passwd|password|token)\s*[:=]\s*['"][A-Za-z0-9+/_-]{24,}['"]/i];

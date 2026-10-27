@@ -1,6 +1,6 @@
 'use strict';
 // Mayfair browser extensions (Manifest V3, our own nine). Download, verify, unpack, record.
-// Loading into a session is done by browser.js; this file is pure and testable.
+// Loading into a session is done by browser-service.js; this file is pure and testable.
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');

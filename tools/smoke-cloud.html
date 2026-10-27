@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Mock Cloud</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{color-scheme:dark;--bg:#14110c;--panel:#1d1912;--line:#3a3326;--fg:#f4efe4;--mut:#b9ad94;--acc:#ffa800}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif}
+#desk{position:absolute;inset:0;background:linear-gradient(135deg,#1b160d,#0d0b07)}
+#win{position:absolute;left:5%;top:6%;width:90%;height:84%;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+#title{padding:8px 14px;border-bottom:1px solid var(--line);color:var(--mut)}
+#strip{display:flex;gap:4px;padding:6px 8px 0;border-bottom:1px solid var(--line);min-height:38px}
+.tab{padding:7px 12px;border-radius:8px 8px 0 0;background:#2a2418;max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:13px}
+.tab.on{background:var(--acc);color:#000}
+#bar{display:flex;gap:8px;padding:8px;border-bottom:1px solid var(--line)}
+#addr{flex:1;background:#0f0c08;color:var(--fg);border:1px solid var(--line);border-radius:18px;padding:7px 14px}
+#content{flex:1;min-height:60px;background:#0b0905 center/cover no-repeat;position:relative}
+#empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut)}
+#over{display:none;position:absolute;left:30%;top:30%;width:42%;height:40%;background:#2f2818;border:2px solid var(--acc);border-radius:12px;padding:18px;z-index:5}
+</style></head><body>
+<div id="desk"><div id="win">
+<div id="title">Browser</div><div id="strip"></div>
+<div id="bar"><span id="nav">back forward</span><input id="addr" aria-label="Address" placeholder="Search or type a web address"></div>
+<div id="content"><div id="empty">No tabs open</div></div></div>
+<div id="over">Another window in front of the Browser (the page must be a picture here)</div></div>
+<script>
+const B = window.mayfairDesktop && window.mayfairDesktop.browser;
+const T = window.T = { hasBridge: !!B, events: [], state: null, bounds: null, sends: 0 };
+const content = document.getElementById('content');
+function send() { const r = content.getBoundingClientRect(); T.bounds = { x: r.left, y: r.top, w: r.width, h: r.height }; T.sends++; if (B) B.setBounds({ x: r.left, y: r.top, w: r.width, h: r.height, visible: T.visible !== false }); }
+T.visible = true; T.send = send;
+function render() {
+  const s = T.state; if (!s) return;
+  const strip = document.getElementById('strip'); strip.textContent = '';
+  for (const t of s.tabs) { const d = document.createElement('div'); d.className = 'tab' + (t.id === s.activeId ? ' on' : ''); d.textContent = (t.private ? '[private] ' : '') + (t.tor ? '[tor] ' : '') + (t.pinned ? '[pin] ' : '') + (t.title || t.url || 'New tab'); strip.append(d); }
+  const a = s.tabs.find((t) => t.id === s.activeId);
+  document.getElementById('addr').value = a ? a.url : '';
+  document.getElementById('empty').style.display = s.tabs.length ? 'none' : 'flex';
+}
+if (B) {
+  B.on('state', (s) => { T.state = s; render(); });
+  for (const e of ['find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus']) B.on(e, (p) => T.events.push([e, p]));
+  new ResizeObserver(send).observe(content); window.addEventListener('resize', send); send();
+}
+if (window.mayfairDesktop) { window.mayfairDesktop.onDownload((p) => T.events.push(['legacy-download', p])); window.mayfairDesktop.onDeepLink((p) => T.events.push(['legacy-deeplink', p])); }
+// what the real Cloud does when something of Mayfair overlaps the page area
+T.occlude = async (on) => {
+  if (!B) return null;
+  if (on) { const img = await B.capture(); const r = await B.setOccluded(true); content.style.backgroundImage = img ? 'url(' + img + ')' : ''; document.getElementById('over').style.display = 'block'; return { imgLen: img.length, ...r }; }
+  document.getElementById('over').style.display = 'none'; content.style.backgroundImage = ''; await B.setOccluded(false); return {};
+};
+</script></body></html>

@@ -9,14 +9,14 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const walk = (d) => fs.readdirSync(path.join(root, d), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
 
 test('no web preferences weaken isolation', () => {
-  const src = read('src/main/browser.js');
+  const src = read('src/main/browser-service.js');
   assert.ok(!/nodeIntegration:\s*true/.test(src));
   assert.ok(!/contextIsolation:\s*false/.test(src));
   assert.ok(!/sandbox:\s*false/.test(src));
   assert.ok(!/webSecurity:\s*false/.test(src));
   assert.ok(!/allowRunningInsecureContent:\s*true/.test(src));
   assert.ok(!/enableRemoteModule|webviewTag:\s*true/.test(src));
-  assert.equal((src.match(/contextIsolation: true/g) || []).length, 3); // UI views, tabs, Web app windows
+  assert.equal((src.match(/contextIsolation: true/g) || []).length, 3); // Mayfair view, tabs, Web app windows
   assert.equal((src.match(/sandbox: true/g) || []).length, 3);
 });
 test('no certificate-error override and no CSP stripping', () => {
@@ -51,7 +51,7 @@ test('UI follows the owner skin rules: no tinted icon chips, no accent colour-mi
   assert.match(css, /--mf-accent:#ffa800/i);
 });
 test('navigation lock is wired to will-navigate, will-redirect and the window open handler', () => {
-  const src = read('src/main/browser.js');
+  const src = read('src/main/browser-service.js');
   for (const k of ["'will-navigate'", "'will-redirect'", 'setWindowOpenHandler', 'will-attach-webview']) assert.ok(src.includes(k) || read('src/main/main.js').includes(k), k);
 });
 test('packaging config covers the required targets, protocol and file types', () => {
@@ -66,7 +66,7 @@ test('packaging config covers the required targets, protocol and file types', ()
 });
 
 test('Tor tab fails closed and never shares a proxy or session with other tabs', () => {
-  const src = read('src/main/browser.js');
+  const src = read('src/main/browser-service.js');
   assert.ok(src.includes("if (tor && !this.tor.ready)"), 'no Tor tab unless Tor is connected');
   assert.ok(/tor: 'mf-tor'/.test(src) && !/tor: 'persist:/.test(src), 'Tor partition is in-memory');
   const net = src.slice(src.indexOf('async applyNetwork'), src.indexOf('async applyNetwork') + 700);
@@ -75,7 +75,7 @@ test('Tor tab fails closed and never shares a proxy or session with other tabs',
 });
 
 test('spell-check dictionary downloads (a Google host) are switched off outside macOS', () => {
-  const src = read('src/main/browser.js');
+  const src = read('src/main/browser-service.js');
   assert.ok(src.includes('setSpellCheckerDictionaryDownloadURL') && src.includes('quietSpellcheck(session.defaultSession)'));
   assert.ok(!/spellcheck: true/.test(src));
 });

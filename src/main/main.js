@@ -32,7 +32,7 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) { app.quit(); } else boot();
 
 function boot() {
-  const { Browser } = require('./browser');
+  const { BrowserService } = require('./browser-service');
   const updater = require('./updater');
   let br = null;
   let tray = null;
@@ -82,7 +82,7 @@ function boot() {
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: 'Open Mayfair', click: () => br.goHome() },
       { label: 'New tab', click: () => br.menuAction('newTab') },
-      { label: 'Web apps', click: () => { br.showWindow(); br.openPanel('apps'); } },
+      { label: 'Web apps', click: () => br.menuAction('apps') },
       { label: 'Private tab with Tor', click: () => br.menuAction('torTab') },
       ...(pinnedItems.length ? [{ type: 'separator' }, ...pinnedItems] : []),
       { type: 'separator' },
@@ -109,6 +109,8 @@ function boot() {
   function buildMenu() {
     const mac = process.platform === 'darwin';
     const A = (id) => () => br.menuAction(id);
+    // These keys are shown in the menu but not registered with the system (registerAccelerator: false): Mayfair's own apps keep
+    // Ctrl+F, Ctrl+Y, Ctrl+D, Ctrl+W... Browser tabs report them themselves (lib/shortcuts.js) and the Browser window in Mayfair Cloud handles them.
     const tpl = [
       ...(mac ? [{ role: 'appMenu' }] : []),
       { label: 'File', submenu: [
@@ -138,8 +140,8 @@ function boot() {
         ...(PROT.devToolsAllowed({ isPackaged: app.isPackaged }) ? [{ role: 'toggleDevTools' }] : []),
       ] },
       { label: 'Tabs', submenu: [
-        { label: 'Next tab', accelerator: 'Ctrl+Tab', click: A('next') },
-        { label: 'Previous tab', accelerator: 'Ctrl+Shift+Tab', click: A('prev') },
+        { label: 'Next tab', accelerator: 'Ctrl+Tab', click: A('nextTab') },
+        { label: 'Previous tab', accelerator: 'Ctrl+Shift+Tab', click: A('prevTab') },
         { label: 'Bookmark this page', accelerator: 'CmdOrCtrl+D', click: A('bookmark') },
         { label: 'Bookmarks', accelerator: 'CmdOrCtrl+Shift+O', click: A('bookmarks') },
         { label: 'History', accelerator: 'CmdOrCtrl+Y', click: A('history') },
@@ -148,14 +150,16 @@ function boot() {
       ] },
       { role: 'windowMenu' },
     ];
+    const keep = (it) => it.label === 'Quit' || /^F11$|Ctrl\+Cmd\+F/.test(it.accelerator || '');
+    for (const top of tpl) for (const it of top.submenu || []) if (it.accelerator && !keep(it)) it.registerAccelerator = false;
     Menu.setApplicationMenu(Menu.buildFromTemplate(tpl));
   }
 
   app.whenReady().then(() => {
-    // an installed build checks its own files against integrity.json (written by tools/protect.js); if they were changed the Mayfair tab will not open Mayfair Cloud
+    // an installed build checks its own files against integrity.json (written by tools/protect.js); if they were changed the Mayfair view will not open Mayfair Cloud
     const integ = app.isPackaged ? PROT.verify(path.resolve(__dirname, '..', '..')) : { ok: true };
     if (!integ.ok) console.error('Mayfair Desktop: installed files do not match the build (' + integ.reason + '): ' + integ.bad.join(', '));
-    br = new Browser({ dataDir: path.join(app.getPath('userData'), 'mayfair-desktop'), version: pkg.version, tampered: integ.ok ? null : integ });
+    br = new BrowserService({ dataDir: path.join(app.getPath('userData'), 'mayfair-desktop'), version: pkg.version, tampered: integ.ok ? null : integ });
     fs.mkdirSync(br.dir, { recursive: true });
     br.onSettingsChanged = (keys) => {
       const s = br.settings.get();
@@ -181,9 +185,9 @@ function boot() {
       },
     });
     br.updater = u;
-    br.activeTab().wc.once('did-finish-load', drain);
+    br.home.wc.once('did-finish-load', drain);
     setTimeout(drain, 2500);
-    if (process.env.MF_SMOKE && !app.isPackaged) require('../../tools/smoke-hook').run(br, app);
+    if (process.env.MF_SMOKE && !app.isPackaged) require(process.env.MF_SMOKE_HOOK === 'real' ? '../../tools/smoke-real' : '../../tools/smoke-hook').run(br, app);
   });
 
   app.on('activate', () => { if (br) br.showWindow(); });

@@ -20,6 +20,8 @@ function decidePermission(permission, { mayfair, saved }) {
     return 'deny';
   }
   if (!ASKABLE.includes(permission)) return 'deny';
+  // Full screen needs a click on the page and Esc always leaves it (as in other browsers), so it does not ask, unless the user blocked the site.
+  if (permission === 'fullscreen') return saved === 'deny' ? 'deny' : 'allow';
   return saved === 'allow' || saved === 'deny' ? saved : 'ask';
 }
 
@@ -28,8 +30,4 @@ function updateFeedConfigured(url) {
   try { const u = new URL(url); return u.protocol === 'https:' && !/(example|invalid|localhost|placeholder|your-)/i.test(u.hostname); } catch { return false; }
 }
 
-function chromeHeight(activeIsHome, settings, base = { tabs: 38, toolbar: 44, bar: 30 }) {
-  const showToolbar = !(activeIsHome && settings.hideToolbarOnMayfair);
-  return base.tabs + (showToolbar ? base.toolbar : 0) + (showToolbar && settings.bookmarksBar ? base.bar : 0);
-}
-module.exports = { popupAllowed, decidePermission, updateFeedConfigured, chromeHeight, NORMALISED };
+module.exports = { popupAllowed, decidePermission, updateFeedConfigured, NORMALISED };

@@ -8,36 +8,40 @@ const P = require('../src/main/lib/policy');
 const fs = require('node:fs');
 const path = require('node:path');
 
-test('tab 0 (Mayfair) is pinned: no close, no move, only one', () => {
+test('pinned tabs sit left, stay in their block, and can be closed', () => {
   const m = new TabModel();
-  const home = m.add({ pinned: true, url: 'https://cloud.mayfairmail.com/' });
-  const a = m.add({ url: 'https://a.com' }); const b = m.add({ url: 'https://b.com' });
-  assert.equal(m.tabs[0].id, home.id);
-  assert.equal(m.close(home.id).closed, false);
-  assert.throws(() => m.add({ pinned: true }));
-  assert.equal(m.move(home.id, 2), false);
-  assert.ok(m.move(b.id, 0));
-  assert.deepEqual(m.tabs.map((t) => t.id), [home.id, b.id, a.id]);
-  assert.equal(m.tabs[0].pinned, true);
+  const a = m.add({ url: 'https://a.com' }); const b = m.add({ url: 'https://b.com' }); const c = m.add({ url: 'https://c.com' });
+  assert.ok(m.pin(c.id, true));
+  assert.deepEqual(m.tabs.map((t) => t.id), [c.id, a.id, b.id]);
+  assert.ok(m.pin(b.id, true));
+  assert.deepEqual(m.tabs.map((t) => t.id), [c.id, b.id, a.id]);
+  assert.ok(m.move(a.id, 0)); assert.deepEqual(m.tabs.map((t) => t.id), [c.id, b.id, a.id], 'an unpinned tab cannot enter the pinned block');
+  assert.ok(m.move(c.id, 5)); assert.deepEqual(m.tabs.map((t) => t.id), [b.id, c.id, a.id], 'a pinned tab cannot leave it');
+  assert.ok(m.pin(c.id, false)); assert.deepEqual(m.tabs.map((t) => t.id), [b.id, c.id, a.id]); assert.equal(m.tabs[1].pinned, false);
+  const d = m.add({ pinned: true }); assert.equal(m.tabs[1].id, d.id, 'a new pinned tab joins the end of the block');
+  assert.equal(m.close(b.id).closed, true);
+  assert.equal(m.pin(999, true), false);
 });
-test('tab activation after close and open-next-to-active', () => {
+test('tab activation after close, open-next-to-active, and duplicate next to the source', () => {
   const m = new TabModel();
-  const home = m.add({ pinned: true });
   const a = m.add({}); const b = m.add({}); const c = m.add({});
   m.activate(b.id);
   const n = m.add({ afterActive: true });
-  assert.deepEqual(m.tabs.map((t) => t.id), [home.id, a.id, b.id, n.id, c.id]);
+  assert.deepEqual(m.tabs.map((t) => t.id), [a.id, b.id, n.id, c.id]);
   assert.equal(m.activeId, n.id);
   m.close(n.id);
   assert.equal(m.activeId, c.id);
   m.close(c.id);
   assert.equal(m.activeId, b.id);
+  const d = m.add({ afterId: a.id, activate: false });
+  assert.deepEqual(m.tabs.map((t) => t.id), [a.id, d.id, b.id]);
+  assert.equal(m.activeId, b.id);
   m.closeOthers(a.id);
-  assert.deepEqual(m.tabs.map((t) => t.id), [home.id, a.id]);
+  assert.deepEqual(m.tabs.map((t) => t.id), [a.id]);
   assert.equal(m.activeId, a.id);
   m.close(a.id);
-  assert.equal(m.activeId, home.id);
-  assert.equal(m.step(1), home.id);
+  assert.equal(m.activeId, null, 'closing the last tab leaves none, no automatic new tab');
+  assert.equal(m.step(1), null);
   assert.equal(m.hasPrivate(), false);
   m.add({ private: true });
   assert.equal(m.hasPrivate(), true);
@@ -110,11 +114,4 @@ test('update feed placeholder is detected', () => {
   assert.equal(P.updateFeedConfigured('https://updates.mayfairmail.com/desktop'), true);
   const pkg = require('../package.json');
   assert.equal(P.updateFeedConfigured(pkg.build.publish[0].url), false, 'shipping config is still a placeholder');
-});
-test('chrome height hides the toolbar on the Mayfair tab', () => {
-  const s = { hideToolbarOnMayfair: true, bookmarksBar: true };
-  assert.equal(P.chromeHeight(true, s), 38);
-  assert.equal(P.chromeHeight(false, s), 38 + 44 + 30);
-  assert.equal(P.chromeHeight(false, { ...s, bookmarksBar: false }), 82);
-  assert.equal(P.chromeHeight(true, { ...s, hideToolbarOnMayfair: false }), 112);
 });

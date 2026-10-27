@@ -13,7 +13,7 @@ const DEFAULTS = Object.freeze({
   searchEngine: 'duckduckgo',
   adblock: true,
   bookmarksBar: true,
-  hideToolbarOnMayfair: true,
+  startup: 'start', // 'start' | 'restore'
   notifications: true,
   onlineAnswers: true,
   ...PV.PRIVACY_DEFAULTS,
@@ -29,7 +29,8 @@ const SCHEMA = {
   proxyMode: (v) => PV.PROXY_MODES.includes(v),
   proxyHost: (v) => v === '' || PV.isHost(v),
   proxyPort: (v) => v === 0 || PV.isPort(v),
-  adblock: 'boolean', onlineAnswers: 'boolean', bookmarksBar: 'boolean', hideToolbarOnMayfair: 'boolean', notifications: 'boolean',
+  adblock: 'boolean', onlineAnswers: 'boolean', bookmarksBar: 'boolean',
+  startup: (v) => v === 'start' || v === 'restore', notifications: 'boolean',
 };
 const ok = (k, v) => { const s = SCHEMA[k]; return typeof s === 'function' ? s(v) : typeof v === s; };
 

@@ -1,0 +1,5 @@
+'use strict';
+// "About and licences" content for the Browser's About pane (the Cloud side draws it).
+const components = (version) => [['Mayfair Desktop ' + version, 'Copyright (c) 2022-2026 The Mayfair Organization. All rights reserved. Copying, reverse engineering and redistribution are not allowed (LICENSE.txt).'], ['Electron and Chromium', 'MIT and BSD-style licences (electronjs.org, chromium.org)'], ['@ghostery/adblocker', 'MPL-2.0, Ghostery GmbH (github.com/ghostery/adblocker)'], ['electron-updater', 'MIT, electron-userland (github.com/electron-userland/electron-builder)'], ['EasyList, EasyPrivacy, uBlock filters', 'Filter lists (data): CC BY-SA 3.0 or GPL v3, and GPL v3. See the list credits above.'], ['tor (optional, Tor tab)', 'BSD 3-clause, The Tor Project. Not Tor Browser, not endorsed by The Tor Project.'], ['Open-Meteo, Wikipedia, Free Dictionary API', 'Used only when you type weather, wiki or define. Their own terms apply.']];
+const LICENSE_NOTE = 'Full licence texts: see the licenses folder next to the app (LICENSE.txt, THIRD_PARTY_NOTICES.txt). Tor notice: licenses/TOR-NOTICE.txt.';
+module.exports = { components, LICENSE_NOTE };

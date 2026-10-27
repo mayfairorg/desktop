@@ -1,103 +1,67 @@
 'use strict';
 // The only IPC the app speaks. Every channel names who may call it and checks its arguments.
-// Roles: 'chrome' (tab strip + toolbar), 'overlay' (panels), 'web' (the Mayfair tab, Mayfair origin only),
-// 'page' (any other website: password-field detection only).
+// Roles: 'web' (the Mayfair view, Mayfair origin only: the Mayfair bridge and the Browser bridge),
+//        'start' (the Mayfair Search start page inside a tab: derived from the page URL),
+//        'page' (any other website in a tab: password-field detection only).
+// There is no UI role: the Browser's own interface is drawn by Mayfair Cloud inside the Mayfair view.
 const str = (max = 2048) => (v) => typeof v === 'string' && v.length <= max;
 const num = (v) => Number.isFinite(v);
 const bool = (v) => typeof v === 'boolean';
 const id = (v) => Number.isInteger(v) && v > 0 && v < 1e9;
+const int = (v) => Number.isInteger(v);
 const none = (a) => a.length === 0;
 const args = (...checks) => (a) => a.length === checks.length && checks.every((c, i) => c(a[i]));
+// the last arguments may be left out
+const argsOpt = (min, ...checks) => (a) => { a = a.slice(); while (a.length > min && a[a.length - 1] === undefined) a.pop(); return a.length >= min && a.length <= checks.length && a.every((x, i) => checks[i](x)); };
 const obj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const oneOf = (...xs) => (v) => xs.includes(v);
+const optStr = (max) => (v) => v === undefined || str(max)(v);
+const optBool = (v) => v === undefined || bool(v);
+const W = ['web'];
 
-const UI = ['chrome', 'overlay'];
+// Browser bridge: window.mayfairDesktop.browser.<name>  <->  channel 'br:<name>' (a dotted name stays dotted: 'br:bookmarks.list')
+const BR = {
+  ready: none, setBounds: args((v) => obj(v) && num(v.x) && num(v.y) && num(v.w) && num(v.h) && optBool(v.visible)), setOccluded: argsOpt(1, bool, (v) => obj(v) && optBool(v.focus)), capture: none,
+  focus: args(id),
+  newTab: argsOpt(0, (v) => obj(v) && optStr(2048)(v.url) && optBool(v.private) && optBool(v.tor) && optBool(v.background) && (v.webapp === undefined || v.webapp === null || str(32)(v.webapp))),
+  closeTab: args(id), activate: args(id), move: args(id, int), duplicate: args(id), pin: args(id, bool), mute: args(id, bool), closeOthers: args(id), reopenClosed: none,
+  go: args(id, str(2048)), back: args(id), forward: args(id), reload: argsOpt(1, id, bool), stop: args(id), home: none, suggest: args(str(200)),
+  find: argsOpt(2, id, str(200), (v) => obj(v) && optBool(v.forward) && optBool(v.findNext) && optBool(v.matchCase)), stopFind: args(id),
+  zoom: args(id, (v) => v === 'reset' || (Number.isInteger(v) && v >= -10 && v <= 10)), print: args(id), savePage: args(id), devtools: args(id),
+  fullscreen: args(bool), windowFullscreen: argsOpt(0, bool), fillPassword: args(id),
+  'bookmarks.list': none, 'bookmarks.add': args((v) => obj(v) && str(2048)(v.url) && optStr(200)(v.title)), 'bookmarks.remove': args(str(64)),
+  'bookmarks.update': args(str(64), (v) => obj(v) && optStr(2048)(v.url) && optStr(200)(v.title)),
+  'bookmarks.import': args((v) => Array.isArray(v) && v.length <= 5000 && v.every((x) => obj(x) && str(2048)(x.url) && optStr(200)(x.title))),
+  'history.list': argsOpt(0, (v) => int(v) && v > 0 && v <= 5000), 'history.search': argsOpt(1, str(200), (v) => int(v) && v > 0 && v <= 1000), 'history.remove': args(str(2048)), 'history.clear': argsOpt(0, num),
+  'downloads.list': none, 'downloads.open': args(str(64)), 'downloads.show': args(str(64)), 'downloads.cancel': args(str(64)), 'downloads.clear': none,
+  'settings.get': none, 'settings.set': args(obj), 'settings.setProxy': args(oneOf('off', 'http', 'socks5'), str(253), (v) => int(v) && v >= 0 && v <= 65535), 'settings.pickFolder': none,
+  'settings.clearBrowsingData': argsOpt(0, (v) => obj(v) && optBool(v.history) && optBool(v.downloads) && optBool(v.cookies) && optBool(v.cache)),
+  'permissions.list': none, 'permissions.site': args(id), 'permissions.set': args(str(300), str(40), oneOf('allow', 'deny', 'ask')), 'permissions.reset': args(str(300)), 'permissions.answer': args(str(64), bool, bool),
+  'popups.allow': args(str(64)),
+  'webapps.catalogue': none, 'webapps.open': argsOpt(1, str(32), (v) => obj(v) && optBool(v.window)), 'webapps.pin': args(str(32), bool), 'webapps.reset': args(str(32)), 'webapps.remove': args(str(32)), 'webapps.shortcut': args(str(32)),
+  'tor.status': none, 'tor.start': none, 'tor.stop': none, 'tor.newIdentity': none,
+  'adblock.stats': argsOpt(0, id), 'adblock.toggleSite': args(id), 'adblock.updateNow': none,
+  'extensions.list': none, 'extensions.install': args(str(32), str(300), str(64)), 'extensions.remove': args(str(32)),
+  about: none,
+  subscribe: args(str(40), bool),
+};
+
 const CH = {
-  // tabs
-  'tab:new': { roles: UI, check: (a) => a.length <= 1 && (a.length === 0 || (obj(a[0]) && (a[0].url === undefined || str()(a[0].url)) && (a[0].private === undefined || bool(a[0].private)))) },
-  'tab:close': { roles: UI, check: args(id) },
-  'tab:closeOthers': { roles: UI, check: args(id) },
-  'tab:activate': { roles: UI, check: args(id) },
-  'tab:move': { roles: UI, check: args(id, Number.isInteger) },
-  'tab:go': { roles: UI, check: args(str(2048)) },
-  'tab:back': { roles: UI, check: none },
-  'tab:forward': { roles: UI, check: none },
-  'tab:reload': { roles: UI, check: (a) => a.length <= 1 },
-  'tab:stop': { roles: UI, check: none },
-  'tab:list': { roles: UI, check: none },
-  'tab:duplicate': { roles: UI, check: args(id) },
-  // bookmarks and history
-  'bm:list': { roles: UI, check: none },
-  'bm:toggle': { roles: UI, check: none },
-  'bm:remove': { roles: UI, check: args(str(64)) },
-  'bm:rename': { roles: UI, check: args(str(64), str(200)) },
-  'hist:list': { roles: UI, check: (a) => a.length <= 1 && (a.length === 0 || str(200)(a[0])) },
-  'hist:remove': { roles: UI, check: args(str(2048)) },
-  'hist:clear': { roles: UI, check: (a) => a.length <= 1 && (a.length === 0 || num(a[0])) },
-  // panels, find, zoom
-  'panel:open': { roles: UI, check: args(oneOf('menu', 'privacy', 'about', 'apps', 'bookmarks', 'history', 'downloads', 'site', 'settings', 'find', 'permissions')) },
-  'panel:close': { roles: UI, check: none },
-  'find:run': { roles: ['overlay'], check: (a) => a.length === 3 && str(200)(a[0]) && bool(a[1]) && bool(a[2]) },
-  'find:stop': { roles: ['overlay'], check: none },
-  'zoom:set': { roles: UI, check: args(oneOf('in', 'out', 'reset')) },
-  'page:fullscreenToggle': { roles: UI, check: none },
-  // privacy panel
-  'privacy:get': { roles: UI, check: none },
-  'privacy:set': { roles: UI, check: args(obj) },
-  'privacy:setProxy': { roles: UI, check: args(oneOf('off', 'http', 'socks5'), str(253), (v) => Number.isInteger(v) && v >= 0 && v <= 65535) },
-  'tor:newTab': { roles: UI, check: none },
-  'tor:newIdentity': { roles: UI, check: none },
-  'tor:stop': { roles: UI, check: none },
-  // web apps catalogue
-  'apps:list': { roles: UI, check: none },
-  'apps:open': { roles: UI, check: args(str(32)) },
-  'apps:openWindow': { roles: UI, check: args(str(32)) },
-  'apps:add': { roles: UI, check: args(str(32)) },
-  'apps:remove': { roles: UI, check: args(str(32)) },
-  'apps:reset': { roles: UI, check: args(str(32)) },
-  'apps:pin': { roles: UI, check: args(str(32), bool) },
-  'apps:shortcut': { roles: UI, check: args(str(32)) },
-  // downloads
-  'dl:list': { roles: UI, check: none },
-  'dl:cancel': { roles: UI, check: args(str(64)) },
-  'dl:show': { roles: UI, check: args(str(64)) },
-  'dl:open': { roles: UI, check: args(str(64)) },
-  'dl:clear': { roles: UI, check: none },
-  // settings and permissions
-  'settings:get': { roles: UI, check: none },
-  'settings:set': { roles: UI, check: args(obj) },
-  'settings:pickFolder': { roles: UI, check: none },
-  'perm:answer': { roles: ['overlay'], check: args(str(64), oneOf('allow', 'deny'), bool) },
-  'perm:site': { roles: UI, check: none },
-  'perm:setSite': { roles: UI, check: args(str(300), str(40), oneOf('allow', 'deny', 'ask')) },
-  'perm:reset': { roles: UI, check: args(str(300)) },
-  'popup:allowOnce': { roles: UI, check: none },
-  'privacy:clearBrowsing': { roles: UI, check: none },
-  'adblock:toggleSite': { roles: UI, check: none },
-  'adblock:updateNow': { roles: UI, check: none },
-  'about:get': { roles: UI, check: none },
-  'pw:fill': { roles: UI, check: none },
-  'app:minimize': { roles: UI, check: none },
-  'app:toggleFullscreen': { roles: UI, check: none },
-  'app:quit': { roles: UI, check: none },
-  'ui:ready': { roles: UI, check: none },
-
   // Mayfair web app bridge (window.mayfairDesktop)
-  'web:info': { roles: ['web'], check: none },
-  'web:notify': { roles: ['web'], check: args((v) => obj(v) && str(200)(v.title || '') && str(1000)(v.body || '') && (v.url === undefined || str(2048)(v.url)) && (v.tag === undefined || str(100)(v.tag))) },
-  'web:openBrowser': { roles: ['web'], check: args(str(2048)) },
-  'web:readFile': { roles: ['web'], check: args(str(64)) },
-  'web:pwRespond': { roles: ['web'], check: args(str(64), (v) => Array.isArray(v) && v.length <= 20 && v.every((c) => obj(c) && str(300)(c.username || '') && str(1000)(c.password || ''))) },
-  'web:pwListening': { roles: ['web'], check: args(bool) },
-  'web:extInstall': { roles: ['web'], check: args(str(32), str(300), str(64)) },
-  'web:extRemove': { roles: ['web'], check: args(str(32)) },
-  'web:extList': { roles: ['web'], check: none },
-  'web:appsList': { roles: ['web'], check: none },
-  'web:appsOpen': { roles: ['web'], check: args(str(32)) },
-  'web:badge': { roles: ['web'], check: args((v) => Number.isInteger(v) && v >= 0 && v < 1e6) },
-
-  'web:searchRespond': { roles: ['web'], check: args(str(64), (v) => Array.isArray(v) && v.length <= 50) },
-  'web:searchListening': { roles: ['web'], check: args(bool) },
+  'web:info': { roles: W, check: none },
+  'web:notify': { roles: W, check: args((v) => obj(v) && str(200)(v.title || '') && str(1000)(v.body || '') && (v.url === undefined || str(2048)(v.url)) && (v.tag === undefined || str(100)(v.tag))) },
+  'web:openBrowser': { roles: W, check: args(str(2048)) },
+  'web:readFile': { roles: W, check: args(str(64)) },
+  'web:pwRespond': { roles: W, check: args(str(64), (v) => Array.isArray(v) && v.length <= 20 && v.every((c) => obj(c) && str(300)(c.username || '') && str(1000)(c.password || ''))) },
+  'web:pwListening': { roles: W, check: args(bool) },
+  'web:extInstall': { roles: W, check: args(str(32), str(300), str(64)) },
+  'web:extRemove': { roles: W, check: args(str(32)) },
+  'web:extList': { roles: W, check: none },
+  'web:appsList': { roles: W, check: none },
+  'web:appsOpen': { roles: W, check: args(str(32)) },
+  'web:badge': { roles: W, check: args((v) => Number.isInteger(v) && v >= 0 && v < 1e6) },
+  'web:searchRespond': { roles: W, check: args(str(64), (v) => Array.isArray(v) && v.length <= 50) },
+  'web:searchListening': { roles: W, check: args(bool) },
 
   // Mayfair Search start page (an internal page only; role 'start' is derived from the page URL)
   'search:config': { roles: ['start'], check: none },
@@ -112,14 +76,15 @@ const CH = {
   'search:home': { roles: ['start'], check: none },
 
   // untrusted sites
-  'page:pwDetected': { roles: ['page'], check: args(bool) },
+  'page:pwDetected': { roles: ['page', 'start'], check: args(bool) },
 };
+for (const [name, check] of Object.entries(BR)) CH['br:' + name] = { roles: W, check };
 
-// Channels the main process sends to renderers (one way). Used by preloads to filter listeners.
+// Channels the main process sends to renderers (one way). Used by the preload to filter listeners.
+// 'br:ev' carries every Browser bridge event as (name, payload); BR_EVENTS lists the names.
+const BR_EVENTS = ['state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus'];
 const EVENTS = {
-  chrome: ['state', 'focus-address'],
-  overlay: ['panel', 'state', 'downloads', 'prompts', 'find:result'],
-  web: ['file:open', 'deeplink', 'download:done', 'pw:request', 'search:query'],
+  web: ['file:open', 'deeplink', 'download:done', 'pw:request', 'search:query', 'br:ev'],
   start: [],
   page: ['pw:fill'],
 };
@@ -135,4 +100,4 @@ function check(role, channel, a) {
 }
 const channelsFor = (role) => Object.keys(CH).filter((c) => CH[c].roles.includes(role));
 
-module.exports = { CH, EVENTS, check, channelsFor };
+module.exports = { CH, BR, BR_EVENTS, EVENTS, check, channelsFor };
