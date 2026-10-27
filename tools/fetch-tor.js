@@ -10,14 +10,22 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 
-const [plat, arch, ver = process.env.TOR_BUNDLE_VERSION] = process.argv.slice(2);
-if (!['win', 'mac', 'linux'].includes(plat) || !['x64', 'arm64'].includes(arch) || !ver) {
+let [plat, arch, ver = process.env.TOR_BUNDLE_VERSION] = process.argv.slice(2);
+if (!['win', 'mac', 'linux'].includes(plat) || !['x64', 'arm64'].includes(arch)) {
   console.error('Usage: node tools/fetch-tor.js <win|mac|linux> <x64|arm64> <version>   (or set TOR_BUNDLE_VERSION, e.g. the current Tor Browser stable version)'); process.exit(2);
 }
+// No version given: ask the Tor Project which Tor Browser release is current (its own update feed), else read its package archive index.
+const findVersion = async () => {
+  try { const j = JSON.parse((await get('https://aus1.torproject.org/torbrowser/update_3/release/downloads.json')).toString()); if (/^\d+\.\d+(\.\d+)?$/.test(j.version)) return j.version; } catch { /* try the archive */ }
+  const idx = (await get('https://archive.torproject.org/tor-package-archive/torbrowser/')).toString();
+  const all = [...idx.matchAll(/href="(\d+\.\d+(?:\.\d+)?)\/"/g)].map((m) => m[1]);
+  all.sort((a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (y[i] || 0) - (x[i] || 0); } return 0; });
+  if (!all.length) throw new Error('could not find a current Tor version');
+  return all[0];
+};
 const osName = { win: 'windows', mac: 'macos', linux: 'linux' }[plat];
 const archName = { x64: 'x86_64', arm64: 'aarch64' }[arch];
-const base = `https://archive.torproject.org/tor-package-archive/torbrowser/${ver}/`;
-const file = `tor-expert-bundle-${osName}-${archName}-${ver}.tar.gz`;
+let base, file;
 const out = path.join(__dirname, '..', 'vendor', 'tor', `${plat}-${arch}`);
 const tmp = path.join(__dirname, '..', 'vendor', '.dl'); fs.mkdirSync(tmp, { recursive: true });
 
@@ -28,6 +36,9 @@ const get = (url) => new Promise((res, rej) => https.get(url, (r) => {
 }).on('error', rej));
 
 (async () => {
+  if (!ver) { ver = await findVersion(); console.log('current Tor version', ver); }
+  base = `https://archive.torproject.org/tor-package-archive/torbrowser/${ver}/`;
+  file = `tor-expert-bundle-${osName}-${archName}-${ver}.tar.gz`;
   const [tgz, sums, asc] = await Promise.all([get(base + file), get(base + 'sha256sums-signed-build.txt'), get(base + 'sha256sums-signed-build.txt.asc').catch(() => null)]);
   const want = (sums.toString().split(/\r?\n/).map((l) => l.trim().split(/\s+/)).find((p) => p[1] === file) || [])[0];
   const have = crypto.createHash('sha256').update(tgz).digest('hex');

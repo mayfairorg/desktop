@@ -77,7 +77,7 @@ test('settings: defaults, validation, unknown keys ignored', () => {
   assert.deepEqual(s.set({ startFullscreen: false, bogus: 1, tray: 'yes', searchEngine: 'evil', downloadMode: 'folder' }), ['startFullscreen', 'downloadMode']);
   assert.equal(s.get().startFullscreen, false);
   assert.equal(s.get().tray, DEFAULTS.tray);
-  assert.equal(s.get().searchEngine, 'duckduckgo');
+  assert.equal(s.get().searchEngine, 'google');
   assert.equal(s.get().bogus, undefined);
   assert.deepEqual(s.set({ startFullscreen: false }), []);
 });

@@ -88,8 +88,14 @@ class BookmarkStore {
   flush() { this.s.flush(); }
 }
 
+const newId = (t = Date.now()) => 'h' + Math.floor(t).toString(36) + Math.random().toString(36).slice(2, 8);
+
 class HistoryStore {
-  constructor(file, { max = 5000, ...opts } = {}) { this.max = max; this.s = new JsonStore(file, () => ({ items: [] }), opts); if (!Array.isArray(this.s.data.items)) this.s.data.items = []; }
+  constructor(file, { max = 5000, ...opts } = {}) {
+    this.max = max; this.s = new JsonStore(file, () => ({ items: [] }), opts); if (!Array.isArray(this.s.data.items)) this.s.data.items = [];
+    this.lastNew = false;      // did the last add() make a NEW entry (not a repeat of the newest one)?
+    for (const it of this.s.data.items) if (!it.id) it.id = newId(it.t);
+  }
   // private tabs must never reach here; the caller passes private:true to be safe
   add(url, title, now = Date.now(), { private: priv = false } = {}) {
     if (priv) return null;
@@ -97,8 +103,9 @@ class HistoryStore {
     if (!c) return null;
     const items = this.s.data.items;
     const last = items[0];
-    if (last && last.url === c) { if (title) last.title = String(title).slice(0, 200); last.t = now; this.s.save(); return last; }
-    const item = { url: c, title: String(title || c).slice(0, 200), t: now };
+    if (last && last.url === c) { if (title) last.title = String(title).slice(0, 200); last.t = now; this.s.save(); this.lastNew = false; return last; }
+    const item = { id: newId(now), url: c, title: String(title || c).slice(0, 200), t: now };
+    this.lastNew = true;
     items.unshift(item);
     if (items.length > this.max) items.length = this.max;
     this.s.save();
@@ -110,10 +117,26 @@ class HistoryStore {
     if (!n) return this.list(limit);
     return this.s.data.items.filter((h) => h.url.toLowerCase().includes(n) || h.title.toLowerCase().includes(n)).slice(0, limit);
   }
-  removeUrl(url) { this.s.data.items = this.s.data.items.filter((h) => h.url !== url); this.s.save(); }
+  // by address or by entry id; returns the ids that went
+  removeUrl(key) { const gone = this.s.data.items.filter((h) => h.url === key || h.id === key).map((h) => h.id); if (gone.length) { this.s.data.items = this.s.data.items.filter((h) => !gone.includes(h.id)); this.s.save(); } return gone; }
   clear(sinceMs) {
     this.s.data.items = sinceMs ? this.s.data.items.filter((h) => h.t < sinceMs) : [];
     this.s.save();
+  }
+  // entries from the user's Mayfair ID record: [{id?,url,title,t}] validated, merged by id or url+t, newest first, capped; never emits anything
+  importEntries(list, now = Date.now()) {
+    let added = 0, skipped = 0;
+    const have = new Set(this.s.data.items.map((h) => h.id)); const key = new Set(this.s.data.items.map((h) => h.url + '|' + h.t));
+    for (const e of Array.isArray(list) ? list.slice(0, 5000) : []) {
+      const c = e && typeof e === 'object' ? cleanUrl(e.url) : null;
+      const t = e && Number(e.t);
+      const id = e && typeof e.id === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(e.id) ? e.id : null;
+      if (!c || !Number.isFinite(t) || t <= 0 || t > now + 86400000 || (e.title !== undefined && typeof e.title !== 'string') || (e.id !== undefined && !id) || (id && have.has(id)) || key.has(c + '|' + t)) { skipped++; continue; }
+      const item = { id: id || newId(t), url: c, title: String(e.title || c).slice(0, 200), t: Math.floor(t) };
+      this.s.data.items.push(item); have.add(item.id); key.add(c + '|' + item.t); added++;
+    }
+    if (added) { this.s.data.items.sort((a, b) => b.t - a.t); if (this.s.data.items.length > this.max) this.s.data.items.length = this.max; this.s.save(); }
+    return { added, skipped };
   }
   flush() { this.s.flush(); }
 }

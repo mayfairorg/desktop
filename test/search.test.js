@@ -81,7 +81,7 @@ test('search engines: all seven, default DuckDuckGo, names, results go to the en
   assert.deepEqual(Object.keys(O.SEARCH_ENGINES).sort(), ['bing', 'brave', 'duckduckgo', 'ecosia', 'google', 'qwant', 'startpage']);
   for (const k of Object.keys(O.SEARCH_ENGINES)) { assert.ok(O.ENGINE_NAMES[k]); assert.ok(O.SEARCH_ENGINES[k].startsWith('https://') && O.SEARCH_ENGINES[k].includes('%s')); }
   assert.equal(O.normalizeInput('cats', 'google'), 'https://www.google.com/search?q=cats');
-  assert.equal(O.normalizeInput('cats'), 'https://duckduckgo.com/?q=cats');
+  assert.equal(O.normalizeInput('cats'), 'https://www.google.com/search?q=cats');
 });
 test('start page IPC: its own role only, no tab or settings control', () => {
   assert.ok(channelsFor('start').length >= 9);

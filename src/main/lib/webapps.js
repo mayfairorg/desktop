@@ -18,10 +18,11 @@ function validateCatalogue(list) {
     if (u.protocol !== 'https:' || u.username || u.password) { why('url must be plain https'); continue; }
     if (typeof a.name !== 'string' || !a.name.trim() || a.name.length > 40) { why('bad name'); continue; }
     const hosts = (Array.isArray(a.hosts) ? a.hosts : []).filter((h) => typeof h === 'string' && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(h));
+    const authHosts = (Array.isArray(a.authHosts) ? a.authHosts : []).filter((h) => typeof h === 'string' && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(h));
     seen.add(a.id);
     apps.push({
       id: a.id, name: a.name.trim(), url: u.toString(), category: CATEGORIES.includes(a.category) ? a.category : 'Tools',
-      description: String(a.description || '').slice(0, 120), hosts: [...new Set([u.hostname, ...hosts])],
+      description: String(a.description || '').slice(0, 120), hosts: [...new Set([u.hostname, ...hosts, ...authHosts])], authHosts: [...new Set(authHosts)],
       badge: a.badge === 'none' ? 'none' : 'title', drm: !!a.drm, adblock: !!a.adblock,
     });
   }
@@ -29,6 +30,27 @@ function validateCatalogue(list) {
 }
 
 const partitionFor = (id) => 'persist:app-' + id;
+
+// Registrable domain (no public-suffix list: the usual two-level suffixes are handled, everything else takes the last two labels)
+const SLD2 = new Set(['co.uk', 'org.uk', 'ac.uk', 'gov.uk', 'com.au', 'net.au', 'org.au', 'co.nz', 'co.jp', 'ne.jp', 'or.jp', 'com.br', 'com.mx', 'com.tr', 'co.in', 'co.za', 'com.cn', 'com.hk', 'com.sg', 'co.kr']);
+function registrable(host) {
+  const p = String(host || '').toLowerCase().replace(/\.$/, '').split('.');
+  if (p.length <= 2) return p.join('.');
+  return p.slice(SLD2.has(p.slice(-2).join('.')) ? -3 : -2).join('.');
+}
+// Which catalogue app does this web address belong to? Own site first (exact host, then sub-domains either way, then the one app
+// whose own site shares the registrable domain). Sign-in hosts (authHosts, accounts.google.com...) never match by themselves.
+// Ambiguous (several apps on one domain, e.g. Google) -> null.
+function matchApp(apps, url) {
+  let u; try { u = new URL(url); } catch { return null; }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+  const h = u.hostname.toLowerCase();
+  const own = apps.map((a) => ({ id: a.id, host: new URL(a.url).hostname.toLowerCase() }));
+  const exact = own.filter((x) => x.host === h); if (exact.length) return exact[0].id;
+  const sub = own.filter((x) => h.endsWith('.' + x.host) || x.host.endsWith('.' + h)); if (sub.length === 1) return sub[0].id;
+  if (sub.length > 1) return null;
+  const reg = own.filter((x) => registrable(x.host) === registrable(h)); return reg.length === 1 ? reg[0].id : null;
+}
 
 // Does this URL stay inside the app (own host, or a listed sign-in host)?
 function staysInApp(app, url) {
@@ -68,4 +90,4 @@ function desktopEntry(app, exec) {
 }
 const findAppArg = (argv) => { const a = (argv || []).find((x) => typeof x === 'string' && /^--app=[a-z][a-z0-9-]{0,31}$/.test(x)); return a ? a.slice(6) : null; };
 
-module.exports = { validateCatalogue, partitionFor, staysInApp, badgeFromTitle, shouldNotify, AppsStore, desktopEntry, findAppArg, CATEGORIES };
+module.exports = { registrable, matchApp, validateCatalogue, partitionFor, staysInApp, badgeFromTitle, shouldNotify, AppsStore, desktopEntry, findAppArg, CATEGORIES };

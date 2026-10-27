@@ -114,6 +114,7 @@ function boot() {
     const tpl = [
       ...(mac ? [{ role: 'appMenu' }] : []),
       { label: 'File', submenu: [
+        { label: 'New window', accelerator: 'CmdOrCtrl+N', click: A('newWindow') },
         { label: 'New tab', accelerator: 'CmdOrCtrl+T', click: A('newTab') },
         { label: 'New private tab', accelerator: 'CmdOrCtrl+Shift+N', click: A('newPrivate') },
         { label: 'New Tor tab', accelerator: 'CmdOrCtrl+Alt+T', click: A('torTab') },
@@ -191,6 +192,7 @@ function boot() {
   });
 
   app.on('activate', () => { if (br) br.showWindow(); });
+  app.on('will-quit', () => { if (br) br.flushAppSessions(); });
   app.on('before-quit', () => { if (br) { br.quitting = true; br.flushAll(); } });
   app.on('window-all-closed', () => { if (br && br.quitting) app.quit(); else if (!br || !br.settings.get().tray) app.quit(); });
   // Any web contents the app did not create itself (webview, stray windows) is refused.

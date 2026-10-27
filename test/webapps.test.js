@@ -77,3 +77,90 @@ test('Linux launcher and --app argument', () => {
   assert.match(e, /Exec="\/opt\/My App\/mayfair" --app=gmail/); assert.match(e, /^Name=Gmail$/m);
   assert.equal(W.findAppArg(['x', '--app=gmail']), 'gmail'); assert.equal(W.findAppArg(['--app=../etc']), null); assert.equal(W.findAppArg([]), null);
 });
+
+test('stay signed in: cookie rewrite rules (pure)', () => {
+  const KC = require('../src/main/lib/keepcookies');
+  const now = 1_800_000_000, D = 86400;
+  const sess = { name: 'sid', value: 'v', domain: '.example.com', hostOnly: false, path: '/a', secure: true, httpOnly: true, sameSite: 'lax', session: true };
+  const d = KC.keepCookie(sess, now);
+  assert.equal(d.expirationDate, now + 400 * D);
+  assert.deepEqual([d.name, d.value, d.domain, d.path, d.secure, d.httpOnly, d.sameSite, d.url], ['sid', 'v', '.example.com', '/a', true, true, 'lax', 'https://example.com/a']);
+  const host = KC.keepCookie({ ...sess, domain: 'www.example.com', hostOnly: true }, now);
+  assert.equal(host.domain, undefined, 'host-only cookies get no domain'); assert.equal(host.url, 'https://www.example.com/a');
+  assert.equal(KC.keepCookie({ ...sess, session: false, expirationDate: now + 30 * D }, now).expirationDate, now + 400 * D, 'near expiry is renewed');
+  assert.equal(KC.keepCookie({ ...sess, session: false, expirationDate: now + 100 * D }, now), null, 'far expiry is left alone (also stops a rewrite loop)');
+  assert.equal(KC.keepCookie({ ...sess, session: false, expirationDate: now - 5 }, now), null, 'expired cookies are not revived');
+  assert.equal(KC.keepCookie({ ...sess, secure: false }, now).url, 'http://example.com/a');
+  assert.equal(KC.keepCookie(null, now), null);
+  assert.equal(KC.shouldRewrite(false, 'explicit'), true);
+  for (const [r, c] of [[true, 'explicit'], [true, 'overwrite'], [false, 'expired'], [false, 'evicted'], [false, 'expired-overwrite']]) assert.equal(KC.shouldRewrite(r, c), false, r + c);
+});
+test('stay signed in: partitions are persistent and authHosts join the app hosts', () => {
+  const W = require('../src/main/lib/webapps');
+  assert.match(W.partitionFor('snapchat'), /^persist:app-/);
+  const { apps } = W.validateCatalogue([{ id: 'x', name: 'X', url: 'https://x.example.com/', authHosts: ['accounts.google.com', 'bad host', 5] }]);
+  assert.deepEqual(apps[0].authHosts, ['accounts.google.com']); assert.ok(apps[0].hosts.includes('accounts.google.com'));
+  assert.ok(W.staysInApp(apps[0], 'https://accounts.google.com/o/oauth2'));
+  const svc = require('node:fs').readFileSync(require('node:path').join(__dirname, '../src/main/browser-service.js'), 'utf8');
+  assert.ok(!/s\.clearStorageData|clearStorageData\(\)/.test(svc.replace(/async wipeApp[^\n]*\n/, '').replace(/async wipePrivate[\s\S]*?\n  }\n/, '').replace(/async wipeTor[^\n]*\n/, '').replace(/if \(want\('cookies'\)\)[^\n]*\n/, '')), 'no clear-on-quit or other clearing of app sessions');
+});
+
+test('site to web app matching', () => {
+  const apps = W.validateCatalogue([
+    { id: 'snapchat', name: 'Snapchat', url: 'https://web.snapchat.com/', hosts: ['snapchat.com'] },
+    { id: 'instagram', name: 'Instagram', url: 'https://www.instagram.com/', authHosts: ['accounts.google.com'] },
+    { id: 'gmail', name: 'Gmail', url: 'https://mail.google.com/' }, { id: 'drive', name: 'Drive', url: 'https://drive.google.com/' },
+  ]).apps;
+  const m = (u) => W.matchApp(apps, u);
+  assert.equal(m('https://www.snapchat.com/x'), 'snapchat'); assert.equal(m('https://accounts.snapchat.com/login'), 'snapchat'); assert.equal(m('https://web.snapchat.com/'), 'snapchat');
+  assert.equal(m('https://instagram.com/a'), 'instagram'); assert.equal(m('https://l.instagram.com/'), 'instagram');
+  assert.equal(m('https://mail.google.com/mail'), 'gmail'); assert.equal(m('https://www.google.com/'), null, 'several Google apps: ambiguous'); assert.equal(m('https://accounts.google.com/'), null, 'sign-in hosts never match alone');
+  assert.equal(m('https://example.org/'), null); assert.equal(m('javascript:1'), null); assert.equal(m('nonsense'), null); assert.equal(m('https://notsnapchat.com/'), null);
+  assert.equal(W.registrable('a.b.example.co.uk'), 'example.co.uk'); assert.equal(W.registrable('www.snapchat.com'), 'snapchat.com');
+  const { check } = require('../src/main/lib/ipc-allowlist');
+  const ok = (ch, ...a) => check('web', 'br:' + ch, a).ok;
+  for (const a of [[], [50], [{ app: 'snapchat' }], [{ app: 'snapchat', limit: 10 }]]) assert.equal(ok('history.list', ...a), true, JSON.stringify(a));
+  assert.equal(ok('history.list', { app: 'Bad Id' }), false); assert.equal(ok('history.search', 'q', { app: 'snapchat' }), true); assert.equal(ok('history.clear', { app: 'snapchat' }), true); assert.equal(ok('history.clear', 5), true);
+  assert.equal(ok('history.remove', 'https://a.com/', { app: 'snapchat' }), true); assert.equal(ok('suggest', 'x', { app: 'snapchat' }), true); assert.equal(ok('webapps.match', 'https://a.com'), true); assert.equal(ok('webapps.match', 5), false);
+});
+test('web app history is a separate store, never the browser history', () => {
+  const { HistoryStore } = require('../src/main/lib/stores');
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'mfh-'));
+  const b = new HistoryStore(path.join(d, 'history.json')), a = new HistoryStore(path.join(d, 'history-app-snapchat.json'));
+  a.add('https://web.snapchat.com/chat', 'Chat'); b.add('https://example.org/', 'Ex');
+  assert.deepEqual(a.list().map((x) => x.url), ['https://web.snapchat.com/chat']); assert.deepEqual(b.list().map((x) => x.url), ['https://example.org/']);
+  a.clear(); assert.equal(a.list().length, 0); assert.equal(b.list().length, 1);
+  const svc = fs.readFileSync(path.join(__dirname, '../src/main/browser-service.js'), 'utf8');
+  assert.ok(/hs = webapp \? this\.histFor\(webapp\.id\) : this\.history; hs\.add/.test(svc), 'tab navigation writes to the app history when the tab is a web app');
+});
+
+test('history sync: ids, import merge and validation, no echo, caps; autofill channel checks', () => {
+  const { HistoryStore } = require('../src/main/lib/stores');
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'mfs-'));
+  const h = new HistoryStore(path.join(d, 'h.json'), { max: 5 });
+  const it = h.add('https://a.com/1', 'A', 1000); assert.ok(/^h/.test(it.id)); assert.equal(h.lastNew, true);
+  h.add('https://a.com/1', 'A2', 2000); assert.equal(h.lastNew, false, 'a repeat of the newest entry is not new');
+  const r = h.importEntries([
+    { id: 'x1', url: 'https://b.com/', title: 'B', t: 500 }, { id: 'x1', url: 'https://c.com/', t: 600 }, { url: 'https://b.com/', t: 500 },
+    { url: 'javascript:1', t: 5 }, { url: 'https://d.com/', t: -1 }, { url: 'https://d.com/', t: Date.now() + 9e9 }, { id: 'bad id!', url: 'https://e.com/', t: 5 }, { url: 'https://f.com/', title: 5, t: 5 }, null, 'x',
+    { url: 'https://g.com/', t: 100 }, { url: 'https://h.com/', t: 90 }, { url: 'https://i.com/', t: 80 }, { url: 'https://j.com/', t: 70 }, { url: 'https://k.com/', t: 60 },
+  ]);
+  assert.equal(r.added, 6); assert.equal(r.skipped, 9, JSON.stringify(r));
+  assert.equal(h.list().length, 5, 'cap kept'); assert.ok(h.list()[0].t >= h.list()[1].t, 'newest first');
+  h.flush(); assert.equal(new HistoryStore(path.join(d, 'h.json')).list().length, 5, 'persisted');
+  assert.deepEqual(h.removeUrl(h.list()[0].id).length, 1, 'removal by id');
+  assert.equal(require('../src/main/lib/origins').isSearchInput('cats and dogs'), true);
+  for (const a of ['example.com', 'https://a.b/c', 'localhost:3000']) assert.equal(require('../src/main/lib/origins').isSearchInput(a), false, a);
+  const { check } = require('../src/main/lib/ipc-allowlist');
+  const w = (ch, ...a) => check('web', 'br:' + ch, a).ok;
+  assert.equal(w('history.import', [{ url: 'https://a.com', t: 1 }]), true); assert.equal(w('history.import', [{ url: 'https://a.com', t: 1 }], { app: 'snapchat' }), true);
+  assert.equal(w('history.import', [{ url: 5, t: 1 }]), false); assert.equal(w('history.import', Array(5001).fill({ url: 'https://a.com', t: 1 })), false); assert.equal(w('history.import', 'x'), false);
+  assert.equal(w('history.syncState'), true);
+  const page = (ch, ...a) => check('page', ch, a).ok;
+  assert.equal(page('page:afSubmit', { email: 'a@b.co', name: 'Ann' }), true);
+  for (const bad of [{ password: 'x' }, { cardNumber: '4111' }, { email: '' }, { email: 5 }, {}, []]) assert.equal(page('page:afSubmit', bad), false, JSON.stringify(bad));
+  assert.equal(page('page:afFocus', 'email'), true); assert.equal(page('page:afFocus', 'cc'), false); assert.equal(check('web', 'page:afSubmit', [{ email: 'a@b.co' }]).ok, false);
+  assert.equal(w('autofill.take', 'a1'), true); assert.equal(w('autofill.dismiss', 'a1', { never: true }), true); assert.equal(w('autofill.fill', 3, { email: 'a@b.co' }), true); assert.equal(w('autofill.fill', 3, { ssn: '1' }), false);
+  assert.equal(w('autofill.answer', 'r1', null), true); assert.equal(w('autofill.answer', 'r1', 'x'), true); assert.equal(w('autofill.answer', 'r1', ''), false);
+  assert.equal(check('page', 'br:autofill.take', ['a1']).ok, false);
+});

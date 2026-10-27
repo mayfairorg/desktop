@@ -14,18 +14,27 @@
 #addr{flex:1;background:#0f0c08;color:var(--fg);border:1px solid var(--line);border-radius:18px;padding:7px 14px}
 #content{flex:1;min-height:60px;background:#0b0905 center/cover no-repeat;position:relative}
 #empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut)}
+#win2{position:absolute;left:52%;top:6%;width:46%;height:84%;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:none;flex-direction:column;overflow:hidden}
 #over{display:none;position:absolute;left:30%;top:30%;width:42%;height:40%;background:#2f2818;border:2px solid var(--acc);border-radius:12px;padding:18px;z-index:5}
 </style></head><body>
 <div id="desk"><div id="win">
 <div id="title">Browser</div><div id="strip"></div>
 <div id="bar"><span id="nav">back forward</span><input id="addr" aria-label="Address" placeholder="Search or type a web address"></div>
 <div id="content"><div id="empty">No tabs open</div></div></div>
+<div id="win2"><div id="title2" style="padding:8px 14px;border-bottom:1px solid var(--line);color:var(--mut)">Browser (second window)</div><div id="strip2" style="display:flex;gap:4px;padding:6px 8px 0;border-bottom:1px solid var(--line);min-height:38px"></div><div id="content2" style="flex:1;min-height:60px;background:#0b0905 center/cover no-repeat;position:relative"></div></div>
 <div id="over">Another window in front of the Browser (the page must be a picture here)</div></div>
 <script>
 const B = window.mayfairDesktop && window.mayfairDesktop.browser;
-const T = window.T = { hasBridge: !!B, events: [], state: null, bounds: null, sends: 0 };
+const T = window.T = { hasBridge: !!B, events: [], state: null, states: {}, g1: null, g2: null, bounds: null, bounds2: null, sends: 0 };
 const content = document.getElementById('content');
-function send() { const r = content.getBoundingClientRect(); T.bounds = { x: r.left, y: r.top, w: r.width, h: r.height }; T.sends++; if (B) B.setBounds({ x: r.left, y: r.top, w: r.width, h: r.height, visible: T.visible !== false }); }
+function send() { const r = content.getBoundingClientRect(); T.bounds = { x: r.left, y: r.top, w: r.width, h: r.height }; T.sends++; if (B) B.setBounds({ x: r.left, y: r.top, w: r.width, h: r.height, visible: T.visible !== false, ...(T.g1 ? { gid: T.g1 } : {}) }); }
+const content2 = document.getElementById('content2');
+function send2() { if (!T.g2) return; const r = content2.getBoundingClientRect(); T.bounds2 = { x: r.left, y: r.top, w: r.width, h: r.height }; if (B) B.setBounds({ x: r.left, y: r.top, w: r.width, h: r.height, visible: true, gid: T.g2 }); }
+T.send2 = send2;
+// a second Browser window: window 1 moves to the left half, window 2 to the right half, each reports its own rectangle with its gid
+T.open2 = (gid1, gid2) => { T.g1 = gid1; T.g2 = gid2; const w = document.getElementById('win'); w.style.left = '2%'; w.style.width = '47%'; document.getElementById('win2').style.display = 'flex'; send(); send2(); };
+T.close2 = () => { document.getElementById('win2').style.display = 'none'; T.g2 = null; const w = document.getElementById('win'); w.style.left = '5%'; w.style.width = '90%'; send(); };
+T.occlude2 = async (on) => { if (!B || !T.g2) return null; if (on) { const img = await B.capture({ gid: T.g2 }); const r = await B.setOccluded(true, { gid: T.g2 }); content2.style.backgroundImage = img ? 'url(' + img + ')' : ''; return { imgLen: img.length, ...r }; } content2.style.backgroundImage = ''; await B.setOccluded(false, { gid: T.g2 }); return {}; };
 T.visible = true; T.send = send;
 function render() {
   const s = T.state; if (!s) return;
@@ -36,9 +45,9 @@ function render() {
   document.getElementById('empty').style.display = s.tabs.length ? 'none' : 'flex';
 }
 if (B) {
-  B.on('state', (s) => { T.state = s; render(); });
-  for (const e of ['find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus']) B.on(e, (p) => T.events.push([e, p]));
-  new ResizeObserver(send).observe(content); window.addEventListener('resize', send); send();
+  B.on('state', (s) => { T.states[s.gid] = s; if (s.gid === (T.g1 || 1)) { T.state = s; render(); } else if (s.gid === T.g2) { const st = document.getElementById('strip2'); st.textContent = ''; for (const t of s.tabs) { const d = document.createElement('div'); d.className = 'tab' + (t.id === s.activeId ? ' on' : ''); d.textContent = t.title || t.url || 'New tab'; st.append(d); } } });
+  for (const e of ['windows', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'password-offer', 'password-offer-cancel', 'password-field', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus']) B.on(e, (p) => T.events.push([e, p]));
+  new ResizeObserver(send).observe(content); new ResizeObserver(send2).observe(content2); window.addEventListener('resize', () => { send(); send2(); }); send();
 }
 if (window.mayfairDesktop) { window.mayfairDesktop.onDownload((p) => T.events.push(['legacy-download', p])); window.mayfairDesktop.onDeepLink((p) => T.events.push(['legacy-deeplink', p])); }
 // what the real Cloud does when something of Mayfair overlaps the page area

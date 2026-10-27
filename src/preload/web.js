@@ -46,16 +46,16 @@ if (MAYFAIR.includes(location.origin)) {
   // ---- Browser bridge: window.mayfairDesktop.browser (contract: audit/browser-bridge-contract.md) ----
   // Every method is one allowlisted invoke 'br:<name>' that main checks again (sender, role, argument types).
   // This list must equal the keys of BR in src/main/lib/ipc-allowlist.js (a test compares them).
-  const BR_NAMES = ['ready', 'setBounds', 'setOccluded', 'capture', 'focus', 'newTab', 'closeTab', 'activate', 'move', 'duplicate', 'pin', 'mute', 'closeOthers', 'reopenClosed',
+  const BR_NAMES = ['ready', 'setBounds', 'setOccluded', 'capture', 'windows.create', 'windows.close', 'windows.focus', 'windows.list', 'moveTab', 'focus', 'newTab', 'closeTab', 'activate', 'move', 'duplicate', 'pin', 'mute', 'closeOthers', 'reopenClosed',
     'go', 'back', 'forward', 'reload', 'stop', 'home', 'suggest', 'find', 'stopFind', 'zoom', 'print', 'savePage', 'devtools', 'fullscreen', 'windowFullscreen', 'fillPassword',
-    'bookmarks.list', 'bookmarks.add', 'bookmarks.remove', 'bookmarks.update', 'bookmarks.import', 'history.list', 'history.search', 'history.remove', 'history.clear',
+    'network.block', 'bookmarks.list', 'bookmarks.add', 'bookmarks.remove', 'bookmarks.update', 'bookmarks.import', 'history.list', 'history.search', 'history.remove', 'history.clear', 'history.import', 'history.syncState', 'autofill.take', 'autofill.dismiss', 'autofill.fill', 'autofill.answer', 'webapps.match',
     'downloads.list', 'downloads.open', 'downloads.show', 'downloads.cancel', 'downloads.clear',
     'settings.get', 'settings.set', 'settings.setProxy', 'settings.pickFolder', 'settings.clearBrowsingData',
-    'permissions.list', 'permissions.site', 'permissions.set', 'permissions.reset', 'permissions.answer', 'popups.allow',
+    'passwords.take', 'passwords.dismiss', 'permissions.list', 'permissions.site', 'permissions.set', 'permissions.reset', 'permissions.answer', 'popups.allow',
     'webapps.catalogue', 'webapps.open', 'webapps.pin', 'webapps.reset', 'webapps.remove', 'webapps.shortcut',
     'tor.status', 'tor.start', 'tor.stop', 'tor.newIdentity', 'adblock.stats', 'adblock.toggleSite', 'adblock.updateNow',
     'extensions.list', 'extensions.install', 'extensions.remove', 'about'];
-  const BR_EVENTS = ['state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus'];
+  const BR_EVENTS = ['state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus', 'windows', 'password-offer', 'password-offer-cancel', 'password-field', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'details-used'];
   const BR_QUEUED = ['permission-request', 'new-window-request', 'open-url', 'menu', 'panel-request'];   // happened before anyone listened: replayed to the first listener
   const browser = {};
   for (const name of BR_NAMES) {
@@ -64,10 +64,11 @@ if (MAYFAIR.includes(location.origin)) {
     if (dot < 0) browser[name] = fn; else { const g = name.slice(0, dot); (browser[g] = browser[g] || {})[name.slice(dot + 1)] = fn; }
   }
   const brL = {}, brQ = {};
-  let brState = null;
+  const brState = new Map();   // gid -> last state (replayed to a new 'state' subscriber)
   ipcRenderer.on('br:ev', (_e, name, payload) => {
     if (!BR_EVENTS.includes(name)) return;
-    if (name === 'state') brState = payload;
+    if (name === 'state' && payload && Number.isInteger(payload.gid)) brState.set(payload.gid, payload);
+    if (payload && Array.isArray(payload.groups) && (name === 'state' || name === 'windows')) for (const k of [...brState.keys()]) if (!payload.groups.includes(k)) brState.delete(k);   // a closed window's last state is not replayed
     const ls = brL[name];
     if (ls && ls.length) ls.slice().forEach((cb) => { try { cb(payload); } catch { /* page error */ } });
     else if (BR_QUEUED.includes(name)) { const q = brQ[name] = brQ[name] || []; if (q.length < 20) q.push(payload); }
@@ -77,7 +78,7 @@ if (MAYFAIR.includes(location.origin)) {
     const ls = brL[event] = brL[event] || [];
     ls.push(cb);
     if (ls.length === 1) ipcRenderer.invoke('br:subscribe', event, true).catch(() => {});
-    if (event === 'state' && brState) { try { cb(brState); } catch { /* page error */ } }
+    if (event === 'state') for (const k of [...brState.keys()].sort((a, b) => a - b)) { try { cb(brState.get(k)); } catch { /* page error */ } }
     for (const p of (brQ[event] || []).splice(0)) { try { cb(p); } catch { /* page error */ } }
     return () => {
       brL[event] = (brL[event] || []).filter((x) => x !== cb);

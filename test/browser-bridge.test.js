@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { TabModel } = require('../src/main/lib/tabmodel');
 const { actionForKey } = require('../src/main/lib/shortcuts');
 const { BookmarkStore } = require('../src/main/lib/stores');
 const { Settings } = require('../src/main/lib/settings');
@@ -88,7 +89,7 @@ test('tab views are added above the Mayfair view, hidden until bounds are known'
   assert.match(svc, /this\.win\.contentView\.addChildView\(view\);\n[^\n]*\n    this\.wireHome/, 'the Mayfair view is the first child');
   assert.match(svc, /this\.win\.contentView\.addChildView\(view\);\n    this\.wireTab/, 'tab views are added later, so they draw above it');
   assert.match(svc, /view\.setVisible\(false\);\n    this\.tabs\.set/);
-  assert.match(svc, /vis = !!b\.visible && !this\.occluded && w >= 1 && h >= 1/);
+  assert.match(svc, /vis = !!b\.visible && !g\.occluded && w >= 1 && h >= 1/);
   assert.match(svc, /toJPEG\(70\)/);
 });
 test('Mayfair view: open-url is the only way a foreign link leaves it, and it falls back to the system browser when nobody listens', () => {
@@ -111,4 +112,77 @@ test('contract file lists every bridge method and event', () => {
   const { BR, BR_EVENTS } = require('../src/main/lib/ipc-allowlist');
   for (const e of BR_EVENTS) assert.ok(doc.includes('`' + e + '`'), 'event not in the contract: ' + e);
   for (const n of Object.keys(BR).filter((x) => x !== 'subscribe')) assert.ok(doc.includes(n.split('.').pop().replace(/^./, (c) => c)) , 'method not in the contract: ' + n);
+});
+
+test('v3 window groups: ids are shared, tabs move between groups, pinned block is kept', () => {
+  let n = 0; const next = () => ++n;
+  const a = new TabModel(next), b = new TabModel(next);
+  const t1 = a.add({ url: 'https://a.com' }), t2 = b.add({ url: 'https://b.com' }), t3 = a.add({ url: 'https://c.com' });
+  assert.deepEqual([t1.id, t2.id, t3.id], [1, 2, 3], 'one id sequence across groups');
+  const moved = a.detach(t1.id);
+  assert.equal(a.activeId, t3.id, 'the neighbour becomes active in the source');
+  b.attach(moved, 0);
+  assert.deepEqual(b.tabs.map((t) => t.id), [t1.id, t2.id]);
+  assert.equal(b.activeId, t1.id);
+  const p = b.add({ pinned: true });
+  const x = a.detach(t3.id); x.pinned = true; b.attach(x, 99);
+  assert.deepEqual(b.tabs.map((t) => t.id), [p.id, x.id, t1.id, t2.id], 'a pinned tab stays inside the pinned block');
+  assert.equal(a.detach(999), null);
+  assert.equal(a.activeId, null);
+});
+test('v3 allowlist: gid is optional and checked, windows calls need real ids', () => {
+  const { check } = require('../src/main/lib/ipc-allowlist');
+  const ok = (ch, ...a) => check('web', 'br:' + ch, a).ok;
+  assert.equal(ok('ready'), true); assert.equal(ok('ready', { gid: 2 }), true); assert.equal(ok('ready', { gid: 0 }), false); assert.equal(ok('ready', { gid: 'x' }), false);
+  assert.equal(ok('ready', undefined), true);
+  assert.equal(ok('setBounds', { x: 0, y: 0, w: 1, h: 1, gid: 3 }), true); assert.equal(ok('setBounds', { x: 0, y: 0, w: 1, h: 1, gid: -1 }), false);
+  assert.equal(ok('setOccluded', true, { gid: 2 }), true); assert.equal(ok('setOccluded', true, { gid: 1.5 }), false);
+  assert.equal(ok('capture'), true); assert.equal(ok('capture', { gid: 2 }), true); assert.equal(ok('capture', 'x'), false);
+  assert.equal(ok('newTab', { url: 'https://a.com', gid: 2 }), true); assert.equal(ok('newTab', { gid: 'a' }), false);
+  assert.equal(ok('reopenClosed'), true); assert.equal(ok('reopenClosed', { gid: 2 }), true);
+  assert.equal(ok('fullscreen', false), true); assert.equal(ok('fullscreen', false, { gid: 2 }), true); assert.equal(ok('fullscreen', 'no'), false);
+  assert.equal(ok('windows.create'), true); assert.equal(ok("windows.create", 1), false); assert.equal(ok("windows.create", { webapp: "gmail" }), true); assert.equal(ok("windows.create", { webapp: 5 }), false);
+  assert.equal(ok('windows.close', 2), true); assert.equal(ok('windows.close'), false); assert.equal(ok('windows.close', 'a'), false);
+  assert.equal(ok('windows.focus', 2), true); assert.equal(ok('windows.list'), true);
+  assert.equal(ok('moveTab', 5, 'new'), true); assert.equal(ok('moveTab', 5, 2), true); assert.equal(ok('moveTab', 5, 2, { index: 0 }), true);
+  assert.equal(ok('moveTab', 5, 'old'), false); assert.equal(ok('moveTab', 5), false); assert.equal(ok('moveTab', 5, 2, { index: -1 }), false); assert.equal(ok('moveTab', 'a', 2), false);
+  for (const ch of ['windows.create', 'windows.close', 'windows.focus', 'windows.list', 'moveTab']) assert.equal(check('page', 'br:' + ch, ch === 'windows.close' || ch === 'windows.focus' ? [1] : ch === 'moveTab' ? [1, 'new'] : []).ok, false, 'pages cannot call ' + ch);
+});
+test('v3: Ctrl+N is a new window, Ctrl+Shift+N stays a private tab', () => {
+  const k = (o) => actionForKey({ type: 'keyDown', ...o }, 'linux');
+  assert.equal(k({ key: 'n', control: true }), 'newWindow');
+  assert.equal(k({ key: 'N', control: true, shift: true }), 'newPrivate');
+});
+test('v3 service shape: per-group state, bounds, occlusion, fullscreen; events carry gid', () => {
+  const svc = read('src/main/browser-service.js');
+  assert.ok(!/this\.model\b|this\.fsTab\b|this\.occluded\b/.test(svc), 'no single-window globals left');
+  for (const k of ["'br:windows.create'", "'br:windows.close'", "'br:windows.focus'", "'br:windows.list'", "'br:moveTab'", 'closeGroup(', 'moveTab(', "emit('windows'", 'restoreGroups']) assert.ok(svc.includes(k), k);
+  for (const ev of ["emit('fullscreen', { on: true, tabId: id, gid", "emit('find-result', { gid", "emit('menu', { action: a, gid", "{ focused: true, gid"]) assert.ok(svc.includes(ev), ev);
+});
+
+test('save-password offers: page channel is checked, bridge calls need the Mayfair view', () => {
+  const { check } = require('../src/main/lib/ipc-allowlist');
+  const good = { username: 'ann@example.com', password: 'pw', kind: 'new', settled: false };
+  assert.equal(check('page', 'page:pwSubmit', [good]).ok, true);
+  assert.equal(check('page', 'page:pwSubmit', [{ ...good, password: '' }]).ok, false, 'empty password is never handed over');
+  assert.equal(check('page', 'page:pwSubmit', [{ ...good, password: 'x'.repeat(1001) }]).ok, false);
+  assert.equal(check('page', 'page:pwSubmit', [{ ...good, kind: 'other' }]).ok, false);
+  assert.equal(check('page', 'page:pwSubmit', [{ ...good, settled: 'yes' }]).ok, false);
+  assert.equal(check('page', 'page:pwSubmit', [{ ...good, username: 5 }]).ok, false);
+  assert.equal(check('web', 'page:pwSubmit', [good]).ok, false, 'the Mayfair view cannot fake a submission');
+  assert.equal(check('page', 'page:pwFocus', []).ok, true);
+  const w = (ch, ...a) => check('web', 'br:' + ch, a).ok;
+  assert.equal(w('passwords.take', 'o1'), true); assert.equal(w('passwords.take', 5), false); assert.equal(w('passwords.take'), false);
+  assert.equal(w('passwords.dismiss', 'o1'), true); assert.equal(w('passwords.dismiss', 'o1', { never: true }), true); assert.equal(w('passwords.dismiss', 'o1', { never: 'x' }), false);
+  assert.equal(check('page', 'br:passwords.take', ['o1']).ok, false);
+  const svc = read('src/main/browser-service.js');
+  assert.ok(/m\.private \|\| m\.tor/.test(svc), 'private and Tor tabs never offer');
+  assert.ok(!/console\.\w+\([^)]*password/i.test(svc), 'passwords are never logged');
+  const { Settings } = require('../src/main/lib/settings');
+  const st = new Settings(path.join(require('node:os').tmpdir(), 'mfd-set-' + process.pid + '.json'));
+  assert.deepEqual(st.get().passwordNever, []);
+  assert.deepEqual(st.set({ passwordNever: ['https://a.com'] }), ['passwordNever']);
+  assert.deepEqual(st.get().passwordNever, ['https://a.com']);
+  assert.deepEqual(st.set({ passwordNever: [5] }), [], 'wrong type ignored'); assert.deepEqual(st.set({ passwordNever: ['https://a.com'] }), [], 'unchanged list is not a change');
+  assert.equal(st.get().passwordOffer, true);
 });

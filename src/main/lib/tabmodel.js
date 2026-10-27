@@ -2,10 +2,11 @@
 // Ordered list of browser tabs. Pinned tabs (pinned by the user) sit together at the left; every other
 // tab follows. The Mayfair view is not a tab: it lives outside this list.
 class TabModel {
-  constructor() { this.tabs = []; this.activeId = null; this.seq = 0; }
+  // nextId: optional shared id allocator, so several models (one per Browser window group) never hand out the same id
+  constructor(nextId) { this.tabs = []; this.activeId = null; this.seq = 0; this.nextId = nextId || (() => ++this.seq); }
   pinnedCount() { let n = 0; while (n < this.tabs.length && this.tabs[n].pinned) n++; return n; }
   add({ pinned = false, private: priv = false, url = '', activate = true, afterActive = false, afterId = null, appId = null, tor = false } = {}) {
-    const tab = { id: ++this.seq, pinned: !!pinned, private: priv, url, title: '', appId, tor };
+    const tab = { id: this.nextId(), pinned: !!pinned, private: priv, url, title: '', appId, tor };
     if (pinned) this.tabs.splice(this.pinnedCount(), 0, tab);
     else if (afterId != null && this.get(afterId)) this.tabs.splice(Math.max(this.index(afterId) + 1, this.pinnedCount()), 0, tab);
     else if (afterActive && this.activeId != null && this.get(this.activeId)) {
@@ -26,6 +27,24 @@ class TabModel {
     const [tab] = this.tabs.splice(i, 1);
     if (wasActive) this.activeId = (this.tabs[i] || this.tabs[i - 1] || {}).id ?? null;
     return { closed: true, tab, activeId: this.activeId };
+  }
+  // Take a tab out without closing it (moving it to another window group); the neighbour becomes active here.
+  detach(id) {
+    const i = this.index(id);
+    if (i < 0) return null;
+    const wasActive = this.activeId === id;
+    const [tab] = this.tabs.splice(i, 1);
+    if (wasActive) this.activeId = (this.tabs[i] || this.tabs[i - 1] || {}).id ?? null;
+    return tab;
+  }
+  // Put a detached tab in; pinned tabs stay in the pinned block, others never go in front of it. Becomes the active tab.
+  attach(tab, index) {
+    const p = this.pinnedCount();
+    const at = Number.isInteger(index) ? index : this.tabs.length;
+    const to = tab.pinned ? Math.max(0, Math.min(p, at)) : Math.max(p, Math.min(this.tabs.length, at));
+    this.tabs.splice(to, 0, tab);
+    this.activeId = tab.id;
+    return to;
   }
   closeOthers(id) {
     const keep = this.get(id);

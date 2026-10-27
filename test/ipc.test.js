@@ -17,8 +17,9 @@ test('there is no UI role any more: the old strip and overlay channels are gone'
   assert.deepEqual(channelsFor('overlay'), []);
   for (const ch of ['tab:new', 'panel:open', 'find:run', 'perm:answer', 'zoom:set', 'settings:set']) assert.equal(ch in CH, false, ch);
 });
-test('roles are separated: untrusted pages only get password detection', () => {
-  assert.deepEqual(channelsFor('page'), ['page:pwDetected']);
+test('roles are separated: untrusted pages only get password detection, login hand-over and the focus hint', () => {
+  assert.deepEqual(channelsFor('page').sort(), ['page:afFocus', 'page:afSubmit', 'page:pwDetected', 'page:pwFocus', 'page:pwSubmit']);
+  assert.equal(check('start', 'page:pwSubmit', [{ username: 'a', password: 'b', kind: 'new', settled: false }]).ok, false, 'the start page cannot hand over logins');
   assert.equal(check('page', 'page:pwDetected', [true]).ok, true);
   assert.equal(check('page', 'web:readFile', ['tok']).ok, false);
   assert.equal(check('page', 'br:ready', []).ok, false);

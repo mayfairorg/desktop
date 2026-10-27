@@ -115,3 +115,48 @@ test('update feed placeholder is detected', () => {
   const pkg = require('../package.json');
   assert.equal(P.updateFeedConfigured(pkg.build.publish[0].url), false, 'shipping config is still a placeholder');
 });
+
+const os = require('node:os');
+const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+test('details-used: masks, never the value, private/Tor/off silent, 30 s dedupe', () => {
+  const { DetailsLog, maskLabel, hostOf } = require('../src/main/lib/details');
+  const { Settings } = require('../src/main/lib/settings');
+  assert.equal(maskLabel('email', 'John.Smith@Example.com'), 'J***@Example.com');
+  assert.equal(maskLabel('email', 'a@b.co'), 'a***@b.co');
+  assert.equal(maskLabel('username', 'jsmith'), 'j***');
+  assert.equal(maskLabel('username', '  '), '');
+  assert.equal(hostOf('https://a.example.com:8443/x/y?q=1#z'), 'a.example.com');
+  assert.equal(hostOf('about:blank'), '');
+  let on = true; let now = 1000; const out = [];
+  const log = new DetailsLog({ enabled: () => on, emit: (n, p) => out.push([n, p]), now: () => now });
+  const ctx = (o) => ({ url: 'https://shop.example.com/login?next=/a', gid: 1, tabId: 7, fields: { email: 'jane@mail.com', username: 'janedoe' }, ...o });
+  assert.equal(log.note(ctx()), 2);
+  assert.equal(out[0][0], 'details-used');
+  assert.deepEqual(Object.keys(out[0][1]).sort(), ['field', 'gid', 'label', 'origin', 't', 'tabId']);
+  assert.equal(out[0][1].origin, 'shop.example.com');
+  assert.equal(out[0][1].label, 'j***@mail.com');
+  assert.ok(!JSON.stringify(out).includes('jane@mail.com') && !JSON.stringify(out).includes('janedoe'));
+  assert.equal(log.note(ctx({ app: 'notes' })), 0, 'deduped');
+  now += 29000; assert.equal(log.note(ctx()), 0);
+  now += 1000; assert.equal(log.note(ctx({ app: 'notes' })), 2, 'after 30 s');
+  assert.equal(out[out.length - 1][1].app, 'notes');
+  assert.equal(log.note(ctx({ fields: { email: 'other@mail.com' } })), 1, 'new label is new');
+  now += 99999;
+  assert.equal(log.note(ctx({ private: true })), 0);
+  assert.equal(log.note(ctx({ tor: true })), 0);
+  assert.equal(log.note(ctx({ url: 'file:///x' })), 0);
+  assert.equal(log.note(ctx({ fields: { email: '', username: '' } })), 0);
+  on = false; assert.equal(log.note(ctx()), 0);
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'mfd-dl-'));
+  const s = new Settings(path.join(d, 's.json'));
+  assert.equal(s.get().detailsLog, true);
+  assert.deepEqual(s.set({ detailsLog: false }), ['detailsLog']);
+  assert.equal(s.get().detailsLog, false);
+  assert.deepEqual(s.set({ detailsLog: 'no' }), []);
+});
+test('details-used is wired: event name, preload, afSubmit hook, contract', () => {
+  const { BR_EVENTS } = require('../src/main/lib/ipc-allowlist');
+  assert.ok(BR_EVENTS.includes('details-used'));
+  assert.match(read('src/preload/web.js'), /'details-used'/);
+  assert.match(read('src/main/browser-service.js'), /this\.details\.note\(/);
+});

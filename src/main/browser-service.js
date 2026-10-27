@@ -22,6 +22,7 @@ const { safeFilename, uniquePath, chooseDir } = require('./lib/downloads-path');
 const { popupAllowed, decidePermission } = require('./lib/policy');
 const IPC = require('./lib/ipc-allowlist');
 const W = require('./lib/webapps');
+const { DetailsLog } = require('./lib/details');
 const PV = require('./lib/privacy');
 const SG = require('./lib/suggest');
 const { AdEngine } = require('./lib/adblock-engine');
@@ -33,6 +34,10 @@ const { TorManager, binaryPath } = require('./lib/tor');
 const PROT = require('./lib/protect');
 const { actionForKey } = require('./lib/shortcuts');
 const ABOUT = require('./lib/about');
+const KC = require('./lib/keepcookies');
+const SEARCH_MATCH_CSS = '@media (prefers-color-scheme: dark){html,body,#main,#cnt,#searchform,.sfbg,#hdtb,#hdtb-msb,#appbar,#sfcnt{background-color:#171716 !important}}'
+  + ' html{accent-color:#ffa800}input,textarea{caret-color:#ffa800}::selection{background:#ffa800;color:#0a0a0a}:focus-visible{outline-color:#ffa800 !important}'
+  + ' [role=tab][aria-selected=true]::after,[aria-current=page]::after,#hdtb-msb .hdtb-msel::after{background-color:#ffa800 !important;border-color:#ffa800 !important}';
 
 const UI_DIR = path.join(__dirname, '..', 'ui');
 const PRELOAD = (n) => path.join(__dirname, '..', 'preload', n + '.js');
@@ -59,20 +64,35 @@ class BrowserService {
     this.winState = new WindowState(f('window.json'));
     this.bookmarks = new BookmarkStore(f('bookmarks.json'));
     this.history = new HistoryStore(f('history.json'));
+    this.searchLog = new JsonStore(f('searches.json'), () => ({ items: [] }));   // typed web searches: [{id,q,t}], newest first
+    if (!Array.isArray(this.searchLog.data.items)) this.searchLog.data.items = [];
+    this.histOutbox = [];        // history events waiting for the Mayfair page to subscribe (memory, at most 500)
+    this.histPending = new Map(); // history entry id -> timer: a visit is sent a moment after it starts, so it carries its title
+    this.histSync = { last: 0, sent: 0 };
+    this.appHistories = new Map(); // app id -> HistoryStore (history-app-<id>.json): web app pages never reach the browser history
     this.sitePerms = new SitePermissionStore(f('permissions.json'));
     this.zoomStore = new JsonStore(f('zoom.json'), () => ({ levels: {} }));
     this.tabsStore = new JsonStore(f('tabs.json'), () => ({ urls: [] }));
-    this.restoreList = Array.isArray(this.tabsStore.data.urls) ? this.tabsStore.data.urls.filter((u) => typeof u === 'string').slice(0, 30) : [];
+    const okUrls = (a) => (Array.isArray(a) ? a.filter((u) => typeof u === 'string').slice(0, 30) : []);
+    this.restoreList = okUrls(this.tabsStore.data.urls);
+    this.restoreGroupList = Array.isArray(this.tabsStore.data.groups) ? this.tabsStore.data.groups.slice(0, 8).map(okUrls).filter((g) => g.length) : [];
     this.appsStore = new W.AppsStore(f('apps.json'));
     this.catalogue = this.loadCatalogue(f('webapps-custom.json'));
     this.appBadges = new Map(); // app id -> unread count
     this.appWindows = new Map(); // app id -> BrowserWindow
     this.hardened = new Set();
+    this.keepHooked = new Set();
+    this.flushTimers = new Map();
     this.tor = new TorManager({ binary: binaryPath({ resourcesPath: process.resourcesPath, root: path.join(__dirname, '..', '..') }) });
     this.tor.on('state', () => { this.emit('tor', this.torStatus()); this.pushState(); });
     this.tor.on('exit', () => { this.notice('Tor stopped'); });
-    this.model = new TabModel();
-    this.tabs = new Map(); // id -> { view, wc, loading, favicon, pw, blocked, lastInput, crashed, shown, find }
+    this.tabSeq = 0;
+    this.groups = new Map();      // gid -> { gid, model, bounds, occluded, occSeq, fsTab, closed }  (one per Browser window in Mayfair Cloud)
+    this.gidSeq = 0;
+    this.focusedGid = null;
+    this.dirty = new Set();
+    this.createGroup({ quiet: true });
+    this.tabs = new Map(); // id -> { gid, view, wc, loading, favicon, pw, blocked, lastInput, crashed, shown, find }
     this.roles = new Map(); // webContents id -> { role, tabId }
     this.home = null;      // { view, wc }: the Mayfair view
     this.adAllow = new JsonStore(f('adblock-allow.json'), () => ({ allow: [] }));
@@ -85,14 +105,13 @@ class BrowserService {
     this.perms = new Map();       // request id -> { req, callback, origin, permission, canRemember, timer }
     this.popups = new Map();      // request id -> { tabId, url, priv }
     this.pwWaiters = new Map();
+    this.afOffers = new Map();    // form-details offers (email, name, address...): memory only, 2 minutes
+    this.afRequests = new Map();  // focus requests waiting for a value from Mayfair
+    this.details = new DetailsLog({ enabled: () => this.settings.get().detailsLog !== false, emit: (n, p) => { if (this.subs.has(n)) this.emit(n, p); } });
+    this.pwOffers = new Map();    // offer id -> { tabId, gid, origin, url, username, password, kind, timer }: login waiting for the user's yes or no, memory only, never written or logged
     this.fileTokens = new Map();
     this.subs = new Set();        // bridge events the Mayfair page is listening to
-    this.bounds = { x: 0, y: 0, w: 0, h: 0, visible: false };
-    this.occluded = false;
-    this.occSeq = 0;
     this.shots = new Map();       // tab id -> last capture (data URL)
-    this.closed = [];             // recently closed tabs, newest first
-    this.fsTab = null;            // tab id in HTML5 full screen
     this.homeListening = false;
     this.searchListening = false;
     this.searchWaiters = new Map();
@@ -113,6 +132,70 @@ class BrowserService {
     this.catalogueErrors = errors;
     return apps;
   }
+  // History of one web app, kept apart from the browser's: same format and cap, cleared by Reset / Remove / Clear browsing data with Web apps
+  histFor(appId) {
+    if (!this.appById(appId)) throw new Error('unknown app');
+    let h = this.appHistories.get(appId);
+    if (!h) { h = new HistoryStore(path.join(this.dir, 'history-app-' + appId + '.json')); this.appHistories.set(appId, h); }
+    return h;
+  }
+  // ---------- history sync to the user's Mayfair ID ----------
+  // Events for NEW entries and deletions go to the Mayfair page, which keeps them on the account record (deleted ones for 30 days).
+  // Private and Tor tabs never reach here. Imported entries never echo an event. The local files are only a cache.
+  sendHist(name, payload) {
+    if (!this.settings.get().historySync) return;
+    if (!this.subs.has(name)) { this.histOutbox.push([name, payload]); if (this.histOutbox.length > 500) this.histOutbox.shift(); return; }
+    this.histSync.last = Date.now(); this.histSync.sent++;
+    this.emit(name, payload);
+  }
+  flushHistOutbox() { const rest = []; for (const [n, p] of this.histOutbox.splice(0)) { if (this.subs.has(n)) { this.histSync.last = Date.now(); this.histSync.sent++; this.emit(n, p); } else rest.push([n, p]); } this.histOutbox = rest; }
+  noteVisit(store, appId) {
+    if (!store.lastNew) return;
+    const it = store.list(1)[0]; if (!it) return;
+    const t = setTimeout(() => { this.histPending.delete(it.id); const cur = store.s.data.items.find((x) => x.id === it.id); if (cur) this.sendHist('history-add', { entry: { id: cur.id, url: cur.url, title: cur.title, t: cur.t, kind: 'visit', ...(appId ? { app: appId } : {}) } }); }, 1500);
+    if (t.unref) t.unref();
+    this.histPending.set(it.id, t);
+  }
+  noteSearch(q) {
+    const text = String(q || '').trim().slice(0, 300); if (!text) return;
+    const e = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), q: text, t: Date.now() };
+    this.searchLog.data.items.unshift(e); if (this.searchLog.data.items.length > 2000) this.searchLog.data.items.length = 2000; this.searchLog.save();
+    this.sendHist('history-add', { entry: { id: e.id, kind: 'search', q: e.q, t: e.t } });
+  }
+  typedInTab(tabId, text) { const m = this.metaOf(tabId); if (m && !m.private && !m.tor && !m.appId && O.isSearchInput(text) && !ANS.parseCommand(text)) this.noteSearch(text); }
+  clearSearches(since) { this.searchLog.data.items = since ? this.searchLog.data.items.filter((x) => x.t < since) : []; this.searchLog.save(); }
+  histClear(o, since) {
+    const h = this.hist(o); h.clear(since);
+    if (!(o && o.app)) this.clearSearches(since);
+    this.sendHist('history-clear', { ...(o && o.app ? { app: o.app } : {}), ...(since ? { since } : {}) });
+  }
+  histRemove(key, o) {
+    const ids = this.hist(o).removeUrl(key);
+    if (!(o && o.app)) { const before = this.searchLog.data.items.length; const gone = this.searchLog.data.items.filter((x) => x.id === key).map((x) => x.id); if (gone.length) { this.searchLog.data.items = this.searchLog.data.items.filter((x) => x.id !== key); this.searchLog.save(); ids.push(...gone); } void before; }
+    if (ids.length) this.sendHist('history-remove', { ids, ...(o && o.app ? { app: o.app } : {}) });
+    return ids.length > 0;
+  }
+  histImport(list, o) {
+    const arr = Array.isArray(list) ? list.slice(0, 5000) : [];
+    const visits = arr.filter((e) => e && e.kind !== 'search');
+    const r = this.hist(o).importEntries(visits);
+    if (!(o && o.app)) {
+      const have = new Set(this.searchLog.data.items.map((x) => x.id));
+      for (const e of arr.filter((x) => x && x.kind === 'search')) {
+        const t = Number(e.t); const q = typeof e.q === 'string' ? e.q.trim().slice(0, 300) : '';
+        const id = typeof e.id === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(e.id) ? e.id : null;
+        if (!q || !id || !Number.isFinite(t) || t <= 0 || t > Date.now() + 86400000 || have.has(id)) { r.skipped++; continue; }
+        this.searchLog.data.items.push({ id, q, t: Math.floor(t) }); have.add(id); r.added++;
+      }
+      this.searchLog.data.items.sort((a, b) => b.t - a.t); if (this.searchLog.data.items.length > 2000) this.searchLog.data.items.length = 2000; this.searchLog.save();
+    }
+    return r;
+  }
+  syncState() {
+    const apps = [...this.appHistories.values()].reduce((n, h) => n + h.s.data.items.length, 0);
+    return { enabled: !!this.settings.get().historySync, subscribed: this.subs.has('history-add'), entries: this.history.s.data.items.length + this.searchLog.data.items.length + apps, searches: this.searchLog.data.items.length, waiting: this.histOutbox.length, sent: this.histSync.sent, lastEvent: this.histSync.last };
+  }
+  hist(o) { return o && o.app ? this.histFor(o.app) : this.history; }
   appById(id) { return this.catalogue.find((a) => a.id === id) || null; }
 
   // ---------- startup ----------
@@ -124,6 +207,9 @@ class BrowserService {
     this.createWindow({ hidden });
     this.createHome();
     this.applyBounds();
+    setTimeout(() => this.sweepInstalledApps(), 3000).unref();
+    setInterval(() => this.sweepInstalledApps(), 24 * 3600 * 1000).unref();
+    setInterval(() => this.flushAppSessions(), 5 * 60 * 1000).unref();
   }
 
   // Full blocker (Ghostery engine + EasyList/EasyPrivacy/uBlock lists). Falls back to the small
@@ -177,6 +263,14 @@ class BrowserService {
     } finally { clearTimeout(timer); }
   }
 
+  // Mayfair's 'Block network' switch: every browser session goes offline while it is on (Wi-Fi itself is not touched)
+  setNetworkBlocked(on) {
+    this.netBlocked = !!on;
+    const parts = [PARTITION.browse, PARTITION.private, PARTITION.tor, ...this.catalogue.map((a) => W.partitionFor(a.id))];
+    for (const p of parts) { try { const s = session.fromPartition(p); if (this.netBlocked) s.enableNetworkEmulation({ offline: true }); else s.disableNetworkEmulation(); } catch { /* ignore */ } }
+    return this.netBlocked;
+  }
+
   blockingSessions() {
     const parts = [PARTITION.browse, PARTITION.private, PARTITION.tor, ...this.catalogue.filter((a) => a.adblock).map((a) => W.partitionFor(a.id))];
     return parts.map((p) => session.fromPartition(p));
@@ -203,7 +297,7 @@ class BrowserService {
 
   setupSessions() {
     this.quietSpellcheck(session.defaultSession);
-    const ua = (s, extra, lang) => { s.setUserAgent(s.getUserAgent().replace(/ Electron\/[\d.]+/, '').replace(/ mayfair-desktop\/[\d.]+/i, '') + (extra || ''), lang); };
+    const ua = (s, extra, lang) => { s.setUserAgent(s.getUserAgent().replace(/ Electron\/[\d.]+/, '').replace(/ mayfair-?desktop\/[\d.]+/ig, '') + (extra || ''), lang); };
     for (const [name, part] of Object.entries(PARTITION)) {
       const s = session.fromPartition(part);
       ua(s, name === 'home' ? ' MayfairDesktop/' + this.version : '', name === 'tor' ? PV.STD.acceptLanguages : undefined);
@@ -228,15 +322,48 @@ class BrowserService {
   sessionForApp(app) {
     const part = W.partitionFor(app.id);
     const s = session.fromPartition(part);
+    if (this.netBlocked) { try { s.enableNetworkEmulation({ offline: true }); } catch { /* ignore */ } }
     if (!this.hardened.has(part)) {
       this.hardened.add(part);
-      s.setUserAgent(s.getUserAgent().replace(/ Electron\/[\d.]+/, '').replace(/ mayfair-desktop\/[\d.]+/i, ''));
+      s.setUserAgent(s.getUserAgent().replace(/ Electron\/[\d.]+/, '').replace(/ mayfair-?desktop\/[\d.]+/ig, ''));
       this.hardenSession(s, 'app');
+      this.keepSignedIn(s, part);
       this.applyNetwork();
       if (app.adblock && this.ad) this.applyAdblock();
     }
     return s;
   }
+
+  // ---------- web apps stay signed in ----------
+  // Every web app has its own persistent partition ('persist:app-<id>', stored in the app data folder; nothing clears it except the
+  // user: Reset, Remove, or Clear browsing data with Web apps ticked). Sign-in cookies without an expiry get 400 days and are renewed
+  // on every open and daily; storage is flushed to disk shortly after changes and on quit so a crash or power cut keeps the login.
+  keepSignedIn(s, part) {
+    if (this.keepHooked.has(part)) return;
+    this.keepHooked.add(part);
+    s.cookies.on('changed', (_e, cookie, cause, removed) => {
+      if (!KC.shouldRewrite(removed, cause)) { if (removed) this.flushSoon(s, part); return; }
+      const d = KC.keepCookie(cookie); if (!d) { this.flushSoon(s, part); return; }
+      s.cookies.set(d).catch(() => {}).then(() => this.flushSoon(s, part));
+    });
+  }
+  flushSoon(s, part) {
+    if (this.flushTimers.has(part)) return;
+    const t = setTimeout(() => { this.flushTimers.delete(part); this.flushNow(s); }, 30000); if (t.unref) t.unref();
+    this.flushTimers.set(part, t);
+  }
+  flushNow(s) { try { s.flushStorageData(); } catch { /* gone */ } try { s.cookies.flushStore().catch(() => {}); } catch { /* gone */ } }
+  // push session cookies (and ones expiring within 90 days) out to 400 days; web app sessions only
+  async sweepApp(a) {
+    const s = this.sessionForApp(a); let n = 0;
+    try {
+      for (const c of await s.cookies.get({})) { const d = KC.keepCookie(c); if (d) { try { await s.cookies.set(d); n++; } catch { /* a cookie Chromium refuses stays as it is */ } } }
+    } catch { /* session gone */ }
+    if (n) this.flushSoon(s, W.partitionFor(a.id));
+    return n;
+  }
+  sweepInstalledApps() { for (const i of this.appsStore.list()) { const a = this.appById(i.id); if (a) this.sweepApp(a).catch(() => {}); } }
+  flushAppSessions() { for (const a of this.catalogue) if (this.hardened.has(W.partitionFor(a.id))) this.flushNow(session.fromPartition(W.partitionFor(a.id))); }
 
   // Chromium downloads spell-check dictionaries from a Google host (redirector.gvt1.com) on
   // Windows and Linux. Found by watching the network: that was the only unexplained connection.
@@ -291,20 +418,29 @@ class BrowserService {
     this.win.setMenuBarVisibility(false);
     this.win.on('resize', () => { this.applyBounds(); this.rememberBounds(); });
     this.win.on('move', () => this.rememberBounds());
-    this.win.on('maximize', () => this.winState.update({ maximized: true }));
-    this.win.on('unmaximize', () => this.winState.update({ maximized: false }));
+    this.win.on('maximize', () => { this.winState.update({ maximized: true }); this.relayout(); });
+    this.win.on('unmaximize', () => { this.winState.update({ maximized: false }); this.relayout(); });
+    for (const ev of ['restore', 'show', 'resized', 'will-resize', 'moved']) this.win.on(ev, () => this.relayout());
+    for (const ev of ['display-metrics-changed', 'display-added', 'display-removed']) screen.on(ev, () => this.relayout());
     this.win.on('enter-full-screen', () => { this.applyBounds(); this.pushState(); });
-    this.win.on('leave-full-screen', () => { if (this.fsTab != null) this.leaveHtmlFullscreen(); this.applyBounds(); this.pushState(); });
+    this.win.on('leave-full-screen', () => { for (const g of this.groups.values()) if (g.fsTab != null) this.leaveHtmlFullscreen(g); this.applyBounds(); this.pushState(); });
     this.win.on('close', (e) => {
       if (!this.quitting && this.settings.get().tray && this.settings.get().closeToTray) { e.preventDefault(); this.win.hide(); }
     });
     this.win.on('closed', () => { this.win = null; });
     this.win.on('focus', () => { if (this.home && !this.home.wc.isDestroyed() && !this.hasFocusedTab()) this.home.wc.focus(); });
     const s = this.settings.get();
+    this.relayout();
     if (!hidden) this.showWindow();
     if (s.startFullscreen) this.win.setFullScreen(true);
   }
-  hasFocusedTab() { const t = this.activeTab(); return !!(t && t.shown && t.wc.isFocused()); }
+  // The Mayfair view always fills the window content area: lay out now and once more after the window system has settled
+  // (maximize, restore, show from the tray and the saved window state arrive a moment after the event).
+  relayout() {
+    this.applyBounds();
+    for (const ms of [50, 300, 1000]) { const t = setTimeout(() => { if (this.win && !this.win.isDestroyed()) this.applyBounds(); }, ms); if (t.unref) t.unref(); }
+  }
+  hasFocusedTab() { for (const g of this.groups.values()) { const t = this.activeTab(g); if (t && t.shown && t.wc.isFocused()) return true; } return false; }
 
   createHome() {
     const view = new WebContentsView({
@@ -319,7 +455,7 @@ class BrowserService {
     this.home = { view, wc };
     this.roles.set(wc.id, { role: 'web' });
     this.win.contentView.addChildView(view);
-    if (this.tampered) { const orig = wc.loadURL.bind(wc); wc.loadURL = (u, o) => (isInternal(u) ? orig(u, o) : Promise.resolve()); }   // a changed install never opens Mayfair Cloud, whoever asks
+    if (this.tampered) { const orig = wc.loadURL.bind(wc); wc.loadURL = (u, o) => (isInternal(u) || u === 'about:blank' ? orig(u, o) : Promise.resolve()); }   // about:blank must pass: preparePrivacy needs a first navigation. A changed install never opens Mayfair Cloud, whoever asks
     this.wireHome(wc);
     this.preparePrivacy({ wc }, 'home').then(() => {
       if (wc.isDestroyed()) return;
@@ -377,33 +513,119 @@ class BrowserService {
     return next;
   }
 
+  // ---------- window groups ----------
+  // One group per Browser window in Mayfair Cloud. Every tab belongs to exactly one group; a group has its own tab list,
+  // active tab, bounds, occlusion and HTML5 fullscreen tab. Bookmarks, history, downloads, permissions and settings are global.
+  createGroup({ quiet = false, focus = true, webapp = null } = {}) {
+    const gid = ++this.gidSeq;
+    const g = { gid, webapp, model: new TabModel(() => ++this.tabSeq), bounds: { x: 0, y: 0, w: 0, h: 0, visible: false }, occluded: false, occSeq: 0, fsTab: null, closed: [] };
+    this.groups.set(gid, g);
+    if (focus || this.focusedGid == null) this.focusedGid = gid;
+    if (!webapp) this.lastNormalGid = gid;
+    if (!quiet) { this.windowsEvent({ created: gid, ...(webapp ? { webapp } : {}) }); this.pushState(); }
+    return g;
+  }
+  // The group a plain call means: the focused group, unless that is a web app window (those hold exactly one app tab);
+  // then the last focused normal Browser window, else the lowest normal one, else a new one.
+  normalGroup() {
+    const f = this.groups.get(this.focusedGid);
+    if (f && !f.webapp) return f;
+    const l = this.groups.get(this.lastNormalGid);
+    if (l && !l.webapp) return l;
+    return [...this.groups.values()].filter((x) => !x.webapp).sort((a, b) => a.gid - b.gid)[0] || this.createGroup({ focus: false });
+  }
+  appGroup(appId) { for (const g of this.groups.values()) if (g.webapp === appId) return g; return null; }
+  // A group bound to a web app: reuses the existing one (focus) or makes one holding exactly that app's tab.
+  openAppGroup(appId) {
+    const a = this.appById(appId); if (!a) throw new Error('unknown app');
+    this.appsStore.add(appId);
+    let g = this.appGroup(appId);
+    if (g) { this.focusedGid = g.gid; const tab = g.model.tabs[0]; return { gid: g.gid, id: tab ? tab.id : null, existing: true }; }
+    g = this.createGroup({ quiet: true, webapp: appId });
+    const have = this.allMeta().find((t) => t.appId === appId);
+    let id;
+    if (have) { const r = this.moveTab(have.id, g.gid, {}, true); id = have.id; if (!r.ok) id = null; }
+    if (id == null) id = this.newTab({ url: a.url, appId, gid: g.gid });
+    this.windowsEvent({ created: g.gid, webapp: appId });
+    this.pushState();
+    this.onAppsChanged();
+    return { gid: g.gid, id, existing: false };
+  }
+  // gid missing: the focused group, else the lowest one, else a new default group. A wrong gid is an error.
+  group(gid) {
+    if (gid == null) return this.normalGroup();
+    const g = this.groups.get(gid);
+    if (!g) throw new Error('no such window');
+    return g;
+  }
+  groupOfTab(id) { const t = this.tabs.get(id); return t ? (this.groups.get(t.gid) || null) : null; }
+  allMeta() { const r = []; for (const g of this.groups.values()) r.push(...g.model.tabs); return r; }
+  metaOf(id) { for (const g of this.groups.values()) { const m = g.model.get(id); if (m) return m; } return null; }
+  windowsEvent(extra = {}) { this.emit('windows', { groups: [...this.groups.keys()].sort((a, b) => a - b), focusedGid: this.focusedGid, apps: this.appGroups(), ...extra }); }
+  appGroups() { const o = {}; for (const g of this.groups.values()) if (g.webapp) o[g.gid] = g.webapp; return o; }
+  focusGroup(gid) { const g = this.groups.get(gid); if (!g) return false; this.focusedGid = gid; if (!g.webapp) this.lastNormalGid = gid; return true; }
+  closeGroup(gid) {
+    const g = this.groups.get(gid); if (!g) return false;
+    for (const m of g.model.tabs.slice()) this.closeTab(m.id);
+    this.groups.delete(gid);
+    if (this.lastNormalGid === gid) this.lastNormalGid = null;
+    if (this.focusedGid === gid) this.focusedGid = [...this.groups.keys()].sort((a, b) => a - b)[0] ?? null;
+    this.windowsEvent({ closed: gid });
+    this.pushState();
+    return true;
+  }
+  moveTab(id, to, opts = {}, intoApp = false) {
+    const src = this.groupOfTab(id); if (!src) return { ok: false, gid: null };
+    let dst;
+    if (to === 'new') dst = null; else { dst = this.groups.get(to); if (!dst) throw new Error('no such window'); }
+    if (!intoApp && (src.webapp || (dst && dst.webapp))) return { ok: false, gid: src.gid };      // a web app window keeps its one tab
+    if (dst === src) return { ok: true, gid: src.gid };
+    if (src.fsTab === id) this.leaveHtmlFullscreen(src);
+    const t = this.tabs.get(id);
+    const meta = src.model.detach(id);
+    const created = !dst;
+    if (!dst) dst = this.createGroup({ quiet: true });
+    dst.model.attach(meta, opts && opts.index);
+    t.gid = dst.gid;
+    t.shown = false;
+    this.focusedGid = dst.gid; if (!dst.webapp) this.lastNormalGid = dst.gid;
+    if (created) this.windowsEvent({ created: dst.gid });
+    this.applyBounds(); this.saveTabs(); this.pushState();
+    return { ok: true, gid: dst.gid };
+  }
+
   // ---------- bounds, occlusion, capture ----------
   zf() { try { return this.home && !this.home.wc.isDestroyed() ? this.home.wc.getZoomFactor() || 1 : 1; } catch { return 1; } }
   homeTab() { return this.home; }
-  activeTab() { return this.tabs.get(this.model.activeId); }
+  activeTab(g) { g = g || this.groups.get(this.focusedGid); return g ? this.tabs.get(g.model.activeId) : undefined; }
+  anyFullscreen() { for (const g of this.groups.values()) if (g.fsTab != null) return true; return false; }
 
   applyBounds() {
     if (!this.win || !this.home) return;
-    const [cw, ch] = this.win.getContentSize();
+    const { width: cw, height: ch } = this.win.getContentBounds();
     this.home.view.setBounds({ x: 0, y: 0, width: cw, height: ch });
-    const active = this.activeTab();
-    for (const [id, t] of this.tabs) {
-      if (t !== active) { if (t.shown) { t.view.setVisible(false); t.shown = false; } continue; }
-      let r, vis;
-      if (this.fsTab === id) { r = { x: 0, y: 0, width: cw, height: ch }; vis = true; }
-      else {
-        const b = this.bounds, z = this.zf();
-        const x = Math.max(0, Math.min(cw, Math.round(b.x * z))), y = Math.max(0, Math.min(ch, Math.round(b.y * z)));
-        const w = Math.max(0, Math.min(cw - x, Math.round(b.w * z))), h = Math.max(0, Math.min(ch - y, Math.round(b.h * z)));
-        r = { x, y, width: w, height: h };
-        vis = !!b.visible && !this.occluded && w >= 1 && h >= 1;
+    for (const g of this.groups.values()) {
+      const active = this.activeTab(g);
+      for (const m of g.model.tabs) {
+        const t = this.tabs.get(m.id); if (!t) continue;
+        const id = m.id;
+        if (t !== active) { if (t.shown) { t.view.setVisible(false); t.shown = false; } continue; }
+        let r, vis;
+        if (g.fsTab === id) { r = { x: 0, y: 0, width: cw, height: ch }; vis = true; }
+        else {
+          const b = g.bounds, z = this.zf();
+          const x = Math.max(0, Math.min(cw, Math.round(b.x * z))), y = Math.max(0, Math.min(ch, Math.round(b.y * z)));
+          const w = Math.max(0, Math.min(cw - x, Math.round(b.w * z))), h = Math.max(0, Math.min(ch - y, Math.round(b.h * z)));
+          r = { x, y, width: w, height: h };
+          vis = !!b.visible && !g.occluded && w >= 1 && h >= 1;
+        }
+        t.view.setBounds(r);
+        t.view.setVisible(vis);
+        t.shown = vis;
       }
-      t.view.setBounds(r);
-      t.view.setVisible(vis);
-      t.shown = vis;
     }
   }
-  setBounds(b) { this.bounds = { x: b.x, y: b.y, w: b.w, h: b.h, visible: b.visible !== false }; this.applyBounds(); return true; }
+  setBounds(b, gid) { const g = this.group(gid); g.bounds = { x: b.x, y: b.y, w: b.w, h: b.h, visible: b.visible !== false }; this.applyBounds(); return true; }
 
   async captureNow(t, timeoutMs) {
     try {
@@ -414,32 +636,36 @@ class BrowserService {
       return url;
     } catch { return ''; }
   }
-  async capture() {
-    const t = this.activeTab(); if (!t) return '';
-    const id = this.model.activeId;
-    if (this.occluded || !t.shown) return this.shots.get(id) || '';
+  async capture(gid) {
+    const g = this.group(gid);
+    const t = this.activeTab(g); if (!t) return '';
+    const id = g.model.activeId;
+    if (g.occluded || !t.shown) return this.shots.get(id) || '';
     return (await this.captureNow(t, 1500)) || this.shots.get(id) || '';
   }
-  async setOccluded(on, opts) {
-    const seq = ++this.occSeq;
-    const t = this.activeTab();
+  async setOccluded(on, opts, gid) {
+    const g = this.group(gid);
+    const seq = ++g.occSeq;
+    const t = this.activeTab(g);
     if (on) {
       let captured = false;
-      if (!this.occluded && t && t.shown) captured = !!(await this.captureNow(t, 350));
-      if (seq !== this.occSeq) return { captured };      // a newer call (false) won while the capture ran
-      this.occluded = true; this.applyBounds();
-      return { captured: captured || !!(t && this.shots.get(this.model.activeId)) };
+      if (!g.occluded && t && t.shown && !(opts && opts.capture === false)) captured = !!(await this.captureNow(t, 350));
+      if (seq !== g.occSeq) return { captured };      // a newer call (false) won while the capture ran
+      g.occluded = true; this.applyBounds();
+      return { captured: captured || !!(t && this.shots.get(g.model.activeId)) };
     }
-    this.occluded = false; this.applyBounds();
+    g.occluded = false; this.applyBounds();
     if (opts && opts.focus && t) t.wc.focus();
     return { captured: false };
   }
 
   // ---------- tabs ----------
-  newTab({ url = '', private: priv = false, activate = true, afterActive = false, afterId = null, appId = null, tor = false, pinned = false } = {}) {
+  newTab({ url = '', private: priv = false, activate = true, afterActive = false, afterId = null, appId = null, tor = false, pinned = false, gid = null } = {}) {
     if (tor && !this.tor.ready) { this.notice('Tor is not connected'); return null; }
+    let grp = this.group(gid);
     const webapp = appId ? this.appById(appId) : null;
-    if (webapp) this.sessionForApp(webapp);
+    if (grp.webapp && (grp.model.tabs.length > 0 || appId !== grp.webapp)) grp = this.normalGroup();      // a web app window never gets a second tab
+    if (webapp) { this.sessionForApp(webapp); this.sweepApp(webapp).catch(() => {}); }
     const kind = webapp ? 'app' : tor ? 'tor' : priv ? 'private' : 'browse';
     if (tor) this.torSession();
     const view = new WebContentsView({
@@ -449,8 +675,8 @@ class BrowserService {
         allowRunningInsecureContent: false, spellcheck: process.platform === 'darwin', additionalArguments: ['--mf-role=page'],
       },
     });
-    const tab = this.model.add({ pinned, private: priv || tor, tor, url: '', activate, afterActive, afterId, appId: webapp ? webapp.id : null });
-    const t = { view, wc: view.webContents, loading: false, favicon: '', pw: false, blocked: 0, lastInput: 0, find: null, crashed: false, shown: false };
+    const tab = grp.model.add({ pinned, private: priv || tor, tor, url: '', activate, afterActive, afterId, appId: webapp ? webapp.id : null });
+    const t = { gid: grp.gid, view, wc: view.webContents, loading: false, favicon: '', pw: false, blocked: 0, lastInput: 0, find: null, crashed: false, shown: false };
     view.setVisible(false);
     this.tabs.set(tab.id, t);
     this.roles.set(t.wc.id, { role: 'page', tabId: tab.id });
@@ -470,30 +696,40 @@ class BrowserService {
   }
 
   closeTab(id) {
-    const r = this.model.close(id);
+    const g = this.groupOfTab(id);
+    if (!g) return false;
+    const r = g.model.close(id);
     if (!r.closed) return false;
     const t = this.tabs.get(id);
     this.tabs.delete(id);
     this.shots.delete(id);
     this.roles.delete(t.wc.id);
-    if (this.fsTab === id) this.fsTab = null;
-    if (!r.tab.private && !r.tab.tor && r.tab.url) { this.closed.unshift({ url: r.tab.url, appId: r.tab.appId }); this.closed.length = Math.min(this.closed.length, 10); }
+    if (g.fsTab === id) g.fsTab = null;
+    if (!r.tab.private && !r.tab.tor && r.tab.url) { g.closed.unshift({ url: r.tab.url, appId: r.tab.appId }); g.closed.length = Math.min(g.closed.length, 10); }
     try { this.win.contentView.removeChildView(t.view); } catch { /* gone */ }
     try { t.wc.close(); } catch { /* gone */ }
     for (const [pid, p] of [...this.perms]) if (p.tabId === id) this.dropPerm(pid, true);
-    if (r.tab.private && !this.model.tabs.some((x) => x.private && !x.tor)) this.wipePrivate();
-    if (r.tab.tor && !this.model.tabs.some((x) => x.tor)) { this.wipeTor(); this.tor.stop(); }
+    for (const [oid, o] of [...this.pwOffers]) if (o.tabId === id) this.dropOffer(oid);
+    for (const [oid, o] of [...this.afOffers]) if (o.tabId === id) this.dropAf(oid);
+    for (const [rid, r] of [...this.afRequests]) if (r.tabId === id) { clearTimeout(r.timer); this.afRequests.delete(rid); }
+    t.pwCand = null;
+    if (r.tab.private && !this.allMeta().some((x) => x.private && !x.tor)) this.wipePrivate();
+    if (r.tab.tor && !this.allMeta().some((x) => x.tor)) { this.wipeTor(); this.tor.stop(); }
+    if (t.wasFs && !this.anyFullscreen() && this.win && this.win.isFullScreen() && !this.settings.get().startFullscreen) this.win.setFullScreen(false);
     this.applyBounds();
     this.saveTabs();
     this.pushState();
     return true;
   }
-  reopenClosed() {
-    const c = this.closed.shift(); if (!c) return null;
-    return this.newTab({ url: c.url, appId: c.appId });
+  reopenClosed(gid) {
+    const g = this.group(gid);
+    const c = g.closed.shift(); if (!c) return null;
+    return this.newTab({ url: c.url, appId: c.appId, gid: g.gid });
   }
   saveTabs() {
-    this.tabsStore.data.urls = this.model.tabs.filter((m) => !m.private && !m.tor && !m.appId && m.url).map((m) => m.url).slice(0, 30);
+    const per = [...this.groups.values()].sort((a, b) => a.gid - b.gid).map((g) => g.model.tabs.filter((m) => !m.private && !m.tor && !m.appId && m.url).map((m) => m.url)).filter((u) => u.length);
+    this.tabsStore.data.groups = per.slice(0, 8).map((u) => u.slice(0, 30));
+    this.tabsStore.data.urls = per.flat().slice(0, 30);
     this.tabsStore.save();
   }
 
@@ -513,7 +749,6 @@ class BrowserService {
   async preparePrivacy(t, kind) {
     const p = PV.tabPrivacy(kind, this.settings.get());
     try { t.wc.setWebRTCIPHandlingPolicy(p.webrtc); } catch { /* ignore */ }
-    if (!p.standardLocale && !p.reduceFingerprint) return;
     try {
       t.wc.debugger.attach('1.3');
       // The debugger answers (and a new-document script only takes effect) after a first
@@ -521,11 +756,22 @@ class BrowserService {
       await t.wc.loadURL('about:blank').catch(() => {});
       const send = (m, params) => t.wc.debugger.sendCommand(m, params).catch(() => {});
       await send('Page.enable');
+      // Sites decide what they support from the browser identity: a plain Chrome string and Chrome brand list, no app names.
+      const full = process.versions.chrome || '140.0.0.0', major = full.split('.')[0];
+      const uaStr = t.wc.getUserAgent().replace(/ Electron\/[\d.]+/, '').replace(/ mayfair-?desktop\/[\d.]+/ig, '');
+      const plat = process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : 'Linux';
+      await send('Emulation.setUserAgentOverride', {
+        userAgent: uaStr, acceptLanguage: p.standardLocale ? 'en-US,en' : undefined,
+        userAgentMetadata: {
+          brands: [{ brand: 'Chromium', version: major }, { brand: 'Google Chrome', version: major }, { brand: 'Not=A?Brand', version: '24' }],
+          fullVersionList: [{ brand: 'Chromium', version: full }, { brand: 'Google Chrome', version: full }, { brand: 'Not=A?Brand', version: '24.0.0.0' }],
+          fullVersion: full, platform: plat, platformVersion: process.platform === 'win32' ? '10.0.0' : process.platform === 'darwin' ? '14.0.0' : '6.0.0',
+          architecture: process.arch === 'arm64' ? 'arm' : 'x86', model: '', mobile: false, bitness: '64', wow64: false,
+        },
+      });
       if (p.standardLocale) {
         await send('Emulation.setTimezoneOverride', { timezoneId: PV.STD.timezone });
         await send('Emulation.setLocaleOverride', { locale: PV.STD.locale });
-        await send('Network.enable');
-        await send('Network.setUserAgentOverride', { userAgent: t.wc.getUserAgent(), acceptLanguage: 'en-US,en' });
       }
       if (p.reduceFingerprint) await send('Page.addScriptToEvaluateOnNewDocument', { source: PV.fingerprintScript() });
       t.privacyApplied = p;
@@ -540,7 +786,8 @@ class BrowserService {
   }
 
   activate(id) {
-    if (!this.model.activate(id)) return false;
+    const g = this.groupOfTab(id);
+    if (!g || !g.model.activate(id)) return false;
     this.applyBounds();
     this.pushState();
     return true;
@@ -548,7 +795,7 @@ class BrowserService {
 
   wireTab(id, t, { priv, webapp }) {
     const wc = t.wc;
-    const upd = () => this.pushState();
+    const upd = () => this.pushState(t.gid);
     const nav = (e, url) => {
       if (isInternal(url)) return;
       let c = O.classifyNavigation(url, { locked: false });
@@ -564,21 +811,22 @@ class BrowserService {
       if (c === 'external') { shell.openExternal(d.url).catch(() => {}); return { action: 'deny' }; }
       if (c === 'block') return { action: 'deny' };
       if (webapp && W.staysInApp(webapp, d.url)) { setImmediate(() => wc.loadURL(d.url).catch(() => {})); return { action: 'deny' }; }
+      if (webapp && (this.groups.get(t.gid) || {}).webapp) { setImmediate(() => this.openInBrowser(d.url)); return { action: 'deny' }; }   // leaving an app window: a normal Browser window
       const origin = O.siteKey(wc.getURL());
       const userOpened = popupAllowed(Date.now(), t.lastInput);
       const allowedBySite = origin && this.sitePerms.get(origin, 'popups') === 'allow';
-      if (userOpened || allowedBySite) { setImmediate(() => this.newTab({ url: d.url, private: priv, afterActive: true })); return { action: 'deny' }; }
+      if (userOpened || allowedBySite) { setImmediate(() => this.newTab({ url: d.url, private: priv, afterActive: true, gid: this.tabs.has(id) ? t.gid : null })); return { action: 'deny' }; }
       this.addPopup({ tabId: id, origin: origin || '', url: d.url, priv });
       return { action: 'deny' };
     });
     wc.on('before-input-event', (e, input) => {
       if (input.type === 'keyDown' || input.type === 'mouseDown') t.lastInput = Date.now();
       const a = actionForKey(input);
-      if (a) { e.preventDefault(); this.menuAction(a); }
+      if (a) { e.preventDefault(); this.focusedGid = t.gid; const kg = this.groups.get(t.gid); if (kg && !kg.webapp) this.lastNormalGid = t.gid; this.menuAction(a, t.gid); }
     });
     wc.on('input-event', (_e, ev) => { if (ev.type === 'mouseDown' || ev.type === 'keyDown') t.lastInput = Date.now(); });
     // the page title arrives after the visit was recorded, so the history entry gets it here
-    wc.on('page-title-updated', (_e, title) => { const m = this.model.get(id); if (m) { m.title = title; if (m.url && !priv && (this.history.list(1)[0] || {}).url === m.url) this.history.add(m.url, title, Date.now()); if (webapp) this.setBadge(webapp, W.badgeFromTitle(title), this.model.activeId === id && !!this.win && this.win.isFocused()); upd(); } });
+    wc.on('page-title-updated', (_e, title) => { const m = this.metaOf(id); if (m) { m.title = title; if (m.url && !priv) { const hs = webapp ? this.histFor(webapp.id) : this.history; if ((hs.list(1)[0] || {}).url === m.url) { const it = hs.list(1)[0]; it.title = String(title).slice(0, 200); hs.s.save(); } } if (webapp) this.setBadge(webapp, W.badgeFromTitle(title), ((this.groupOfTab(id) || {}).model || {}).activeId === id && !!this.win && this.win.isFocused()); upd(); } });
     wc.on('page-favicon-updated', (_e, f) => { t.favicon = (f || []).find((x) => /^https?:/.test(x)) || ''; upd(); });
     wc.on('did-start-loading', () => { t.loading = true; upd(); });
     wc.on('did-stop-loading', () => { t.loading = false; upd(); });
@@ -586,15 +834,19 @@ class BrowserService {
     // the error page itself does not clear the crash mark
     wc.on('did-start-navigation', (_e, url, inPlace, isMain) => { if (isMain && !inPlace) { t.blocked = 0; t.pw = false; if (!isInternal(url)) t.crashed = false; } });
     const onNav = (_e, url) => {
-      const m = this.model.get(id);
+      const m = this.metaOf(id);
       if (!m) return;
       m.url = isInternal(url) ? '' : url;
       this.applyZoom(t, url);
-      if (!isInternal(url)) this.history.add(url, wc.getTitle(), Date.now(), { private: priv });
+      if (!isInternal(url) && !priv) { const hs = webapp ? this.histFor(webapp.id) : this.history; hs.add(url, wc.getTitle(), Date.now()); this.noteVisit(hs, webapp ? webapp.id : null); }
       this.saveTabs();
       upd();
     };
-    wc.on('did-navigate', onNav);
+    wc.on('did-navigate', (e, url) => { onNav(e, url); this.afterNavigation(id, t); });
+    // Google's results page already follows the dark theme; this only swaps its grey for Mayfair's own background so the two match. Background only, search pages only.
+    const matchColors = () => { try { if (this.settings.get().matchSearchColors !== false && /^https:\/\/www\.google\.[a-z.]+\/search/.test(wc.getURL()) && !wc.isDestroyed()) wc.insertCSS(SEARCH_MATCH_CSS).catch(() => {}); } catch {} };
+    wc.on('dom-ready', matchColors);
+    wc.on('did-navigate-in-page', matchColors);
     wc.on('did-navigate-in-page', (_e, url, isMain) => { if (isMain) onNav(_e, url); });
     wc.on('did-fail-load', (_e, code, desc, url, isMain) => {
       if (!isMain || code === -3 || code === 0) return; // -3 = aborted by a newer navigation
@@ -605,29 +857,34 @@ class BrowserService {
       t.crashed = true; upd();
       wc.loadFile(path.join(UI_DIR, 'error.html'), { query: { u: wc.getURL(), e: 'The page crashed (' + d.reason + ')', c: 'crash', h: '0' } }).catch(() => {});
     });
-    wc.on('found-in-page', (_e, r) => { this.emit('find-result', { id, n: r.activeMatchOrdinal, of: r.matches }); });
+    wc.on('found-in-page', (_e, r) => { this.emit('find-result', { gid: t.gid, id, n: r.activeMatchOrdinal, of: r.matches }); });
     wc.on('enter-html-full-screen', () => this.enterHtmlFullscreen(id));
-    wc.on('leave-html-full-screen', () => { if (this.fsTab === id) this.leaveHtmlFullscreen(); });
+    wc.on('leave-html-full-screen', () => { const g = this.groupOfTab(id); if (g && g.fsTab === id) this.leaveHtmlFullscreen(g); });
     wc.on('context-menu', (_e, p) => this.contextMenu(wc, p, { locked: false, priv }));
     wc.on('zoom-changed', (_e, dir) => this.zoom(id, dir === 'in' ? 1 : -1));
-    wc.on('focus', () => this.emit('focus', { focused: true }));
-    wc.on('blur', () => this.emit('focus', { focused: false }));
+    wc.on('focus', () => { this.focusedGid = t.gid; const fg = this.groups.get(t.gid); if (fg && !fg.webapp) this.lastNormalGid = t.gid; this.emit('focus', { focused: true, gid: t.gid }); });
+    wc.on('blur', () => this.emit('focus', { focused: false, gid: t.gid }));
   }
 
   enterHtmlFullscreen(id) {
-    this.fsTab = id;
-    this.win.setFullScreen(true);
+    const g = this.groupOfTab(id); if (!g) return;
+    g.fsTab = id;
     const t = this.tabs.get(id);
+    if (t) t.wasFs = true;
+    this.win.setFullScreen(true);
     if (t) this.win.contentView.addChildView(t.view);       // above everything
     this.applyBounds();
-    this.emit('fullscreen', { on: true, tabId: id });
+    this.emit('fullscreen', { on: true, tabId: id, gid: g.gid });
   }
-  leaveHtmlFullscreen() {
-    const id = this.fsTab;
-    this.fsTab = null;
-    if (!this.settings.get().startFullscreen && this.win && this.win.isFullScreen()) this.win.setFullScreen(false);
+  leaveHtmlFullscreen(g) {
+    g = g || [...this.groups.values()].find((x) => x.fsTab != null);
+    if (!g) return;
+    const id = g.fsTab;
+    g.fsTab = null;
+    const t = this.tabs.get(id); if (t) t.wasFs = false;
+    if (!this.anyFullscreen() && !this.settings.get().startFullscreen && this.win && this.win.isFullScreen()) this.win.setFullScreen(false);
     this.applyBounds();
-    this.emit('fullscreen', { on: false, tabId: id });
+    this.emit('fullscreen', { on: false, tabId: id, gid: g.gid });
   }
 
   routeBlockedNav(c, url, { fromPriv } = {}) {
@@ -636,10 +893,12 @@ class BrowserService {
   }
   // A web address that Mayfair (or the system) wants shown in the Browser. The Cloud side opens its Browser window and
   // creates the tab; when nothing is listening yet (older Cloud) the system browser is used so the link is never lost.
-  openInBrowser(url, { private: priv = false } = {}) {
+  openInBrowser(url, { private: priv = false, newWindow = false } = {}) {
     if (O.classifyNavigation(url, { locked: false }) !== 'allow') return false;
     this.showWindow();
-    if (this.subs.has('open-url')) this.emit('open-url', priv ? { url, private: true } : { url });
+    const fgrp = this.groups.get(this.focusedGid), lgrp = this.groups.get(this.lastNormalGid);
+    const gid = fgrp && !fgrp.webapp ? fgrp.gid : lgrp && !lgrp.webapp ? lgrp.gid : ([...this.groups.values()].find((x) => !x.webapp) || {}).gid ?? null;
+    if (this.subs.has('open-url')) this.emit('open-url', { url, ...(priv ? { private: true } : {}), gid, ...(newWindow ? { newWindow: true } : {}) });
     else shell.openExternal(url).catch(() => {});
     return true;
   }
@@ -647,15 +906,17 @@ class BrowserService {
   contextMenu(wc, p, { locked, priv }) {
     const items = [];
     const sel = (p.selectionText || '').trim();
-    const open = (url) => (locked ? this.openInBrowser(url) : this.newTab({ url, afterActive: true, private: priv }));
+    const tabEntry = locked ? null : [...this.tabs.values()].find((x) => x.wc === wc);
+    const open = (url) => (locked ? this.openInBrowser(url) : this.newTab({ url, afterActive: true, private: priv, gid: tabEntry ? tabEntry.gid : null }));
     if (p.linkURL) {
       const lc = O.classifyNavigation(p.linkURL, { locked: false });
       if (lc === 'allow') items.push({ label: 'Open link in new tab', click: () => open(p.linkURL) });
+      if (lc === 'allow' && !locked && !priv) items.push({ label: 'Open link in new window', click: () => { if (tabEntry) this.focusedGid = tabEntry.gid; this.openInBrowser(p.linkURL, { newWindow: true }); } });
       items.push({ label: 'Copy link address', click: () => clipboard.writeText(p.linkURL) }, { type: 'separator' });
     }
     if (sel) {
       items.push({ role: 'copy' });
-      if (!locked) items.push({ label: 'Search for "' + sel.slice(0, 30) + (sel.length > 30 ? '...' : '') + '"', click: () => this.newTab({ url: sel, afterActive: true, private: priv }) });
+      if (!locked) items.push({ label: 'Search for "' + sel.slice(0, 30) + (sel.length > 30 ? '...' : '') + '"', click: () => this.newTab({ url: sel, afterActive: true, private: priv, gid: tabEntry ? tabEntry.gid : null }) });
     }
     if (p.isEditable) items.push({ role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' });
     if (p.mediaType === 'image' && p.srcURL) items.push({ label: 'Save image', click: () => wc.downloadURL(p.srcURL) });
@@ -693,10 +954,10 @@ class BrowserService {
     f.idx = !total ? 0 : !next || !f.idx ? 1 : fwd ? (f.idx % total) + 1 : ((f.idx - 2 + total) % total) + 1;
     t.find = f;
     const r = { n: f.idx, of: total };
-    this.emit('find-result', { id, ...r });
+    this.emit('find-result', { gid: (this.tabs.get(id) || {}).gid ?? null, id, ...r });
     return r;
   }
-  stopFind(id) { const t = this.tabs.get(id); if (t) { try { t.wc.stopFindInPage('clearSelection'); } catch { /* gone */ } t.find = null; this.emit('find-result', { id, n: 0, of: 0 }); } return true; }
+  stopFind(id) { const t = this.tabs.get(id); if (t) { try { t.wc.stopFindInPage('clearSelection'); } catch { /* gone */ } t.find = null; this.emit('find-result', { gid: t.gid, id, n: 0, of: 0 }); } return true; }
 
   // ---------- events to the Mayfair page ----------
   emit(name, payload) {
@@ -713,7 +974,7 @@ class BrowserService {
     const tabEntry = [...this.tabs.entries()].find(([, t]) => t.wc.id === (wc && wc.id));
     const id = 'p' + (++this.seq);
     const label = permission === 'media' ? this.mediaLabel(details) : (PERM_LABEL[permission] || 'use your ' + permission);
-    const req = { id, tabId: tabEntry ? tabEntry[0] : null, origin: origin || 'This page', kind: permission === 'media' ? 'media' : permission, label, canRemember: !!canRemember };
+    const req = { id, tabId: tabEntry ? tabEntry[0] : null, gid: tabEntry ? tabEntry[1].gid : null, origin: origin || 'This page', kind: permission === 'media' ? 'media' : permission, label, canRemember: !!canRemember };
     const timer = setTimeout(() => this.dropPerm(id, true), 120000); if (timer.unref) timer.unref();
     this.perms.set(id, { req, callback, origin, permission, canRemember, tabId: req.tabId, timer });
     this.emit('permission-request', req);
@@ -735,9 +996,10 @@ class BrowserService {
   mediaLabel(d) { const t = (d && d.mediaTypes) || []; return t.includes('video') && t.includes('audio') ? 'camera and microphone' : t.includes('video') ? 'camera' : 'microphone'; }
   addPopup({ tabId, origin, url, priv }) {
     const id = 'w' + (++this.seq);
-    this.popups.set(id, { tabId, url, priv });
+    const gid = (this.tabs.get(tabId) || {}).gid ?? null;
+    this.popups.set(id, { tabId, gid, url, priv });
     if (this.popups.size > 20) this.popups.delete(this.popups.keys().next().value);
-    this.emit('new-window-request', { id, tabId, origin, url });
+    this.emit('new-window-request', { id, tabId, gid, origin, url });
   }
 
   // ---------- downloads ----------
@@ -771,6 +1033,106 @@ class BrowserService {
     this.emit('download', this.dlView(rec));
   }
   cleanDlUrl(u) { try { const x = new URL(u); return x.protocol === 'http:' || x.protocol === 'https:' ? x.origin + x.pathname : ''; } catch { return ''; } }
+
+  // ---------- save-password offers ----------
+  // A page tab reports a submitted login (preload/page.js). Main keeps it in memory for this tab and asks Mayfair Passwords
+  // ('password-offer') once the login looks accepted: the next page has no password field, or the page itself cleared it.
+  // Never for private or Tor tabs, sites on the 'never' list, or when the setting is off.
+  onPwSubmit(e, d) {
+    const r = this.roles.get(e.sender.id); const t = r && r.tabId ? this.tabs.get(r.tabId) : null; const m = r && r.tabId ? this.metaOf(r.tabId) : null;
+    if (!t || !m || m.private || m.tor) return false;
+    const origin = O.siteKey(e.senderFrame.url);
+    const st = this.settings.get();
+    if (!origin || !/^https?:/.test(origin) || !st.passwordOffer || st.passwordNever.includes(origin) || !this.subs.has('password-offer')) return false;
+    const c = { origin, url: origin + new URL(e.senderFrame.url).pathname, username: d.username, password: d.password, kind: d.kind, nav: 0, offered: false };
+    if (d.settled) { t.pwCand = c; this.offerPassword(r.tabId, t); return true; }
+    t.pwCand = c; clearTimeout(t.pwCandTimer); t.pwCandTimer = setTimeout(() => { t.pwCand = null; }, 120000); if (t.pwCandTimer.unref) t.pwCandTimer.unref();
+    return true;
+  }
+  afterNavigation(id, t) {
+    const c = t.pwCand; if (!c || c.offered) return;
+    c.nav++;
+    if (c.nav > 1) { t.pwCand = null; return; }
+    setTimeout(() => { if (t.pwCand !== c || !this.tabs.has(id)) return; if (t.pw) t.pwCand = null; else this.offerPassword(id, t); }, 900);     // the same login form again means the login failed
+  }
+  offerPassword(tabId, t) {
+    const c = t.pwCand; t.pwCand = null; clearTimeout(t.pwCandTimer);
+    if (!c || c.offered || !this.subs.has('password-offer')) return;
+    for (const [oid, o] of [...this.pwOffers]) if (o.tabId === tabId) this.dropOffer(oid);       // one open offer per tab
+    const id = 'o' + (++this.seq);
+    const timer = setTimeout(() => this.dropOffer(id), 120000); if (timer.unref) timer.unref();
+    this.pwOffers.set(id, { ...c, tabId, gid: t.gid, timer });
+    this.emit('password-offer', { id, tabId, gid: t.gid, origin: c.origin, username: c.username, kind: c.kind, update: c.kind === 'change' });
+  }
+  dropOffer(id) { const o = this.pwOffers.get(id); if (!o) return false; clearTimeout(o.timer); o.password = ''; this.pwOffers.delete(id); this.emit('password-offer-cancel', { id }); return true; }
+  takeOffer(id) { const o = this.pwOffers.get(id); if (!o) return null; clearTimeout(o.timer); this.pwOffers.delete(id); return { origin: o.origin, url: o.url, username: o.username, password: o.password }; }
+  dismissOffer(id, never) {
+    const o = this.pwOffers.get(id); if (!o) return false;
+    clearTimeout(o.timer); o.password = ''; this.pwOffers.delete(id);
+    if (never) { const l = this.settings.get().passwordNever; if (!l.includes(o.origin)) { this.settings.set({ passwordNever: [...l, o.origin] }); this.onSettingsChanged(['passwordNever']); } }
+    return true;
+  }
+  onPwFocus(e) {
+    const r = this.roles.get(e.sender.id); const m = r && r.tabId ? this.metaOf(r.tabId) : null; const t = r && r.tabId ? this.tabs.get(r.tabId) : null;
+    if (!m || !t || m.private || m.tor || !this.subs.has('password-field')) return false;
+    const origin = O.siteKey(e.senderFrame.url);
+    if (!origin || !origin.startsWith('https:') || this.settings.get().passwordNever.includes(origin)) return false;
+    this.emit('password-field', { tabId: r.tabId, gid: t.gid, origin, host: new URL(origin).hostname });
+    return true;
+  }
+
+  // ---------- form details for the Mayfair ID (autofill) ----------
+  afTab(e) { const r = this.roles.get(e.sender.id); const id = r && r.tabId; const t = id ? this.tabs.get(id) : null; const m = id ? this.metaOf(id) : null; return t && m && !m.private && !m.tor ? { id, t, m } : null; }
+  onAfSubmit(e, fields) {
+    const x = this.afTab(e); const st = this.settings.get();
+    const origin = O.siteKey(e.senderFrame.url);
+    if (x && fields && typeof fields === 'object') this.details.note({ url: e.senderFrame.url, app: x.m.appId || undefined, gid: x.t.gid, tabId: x.id, private: x.m.private, tor: x.m.tor, fields: { email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email || '') ? fields.email : '', username: fields.username } });
+    if (!x || !origin || !/^https?:/.test(origin) || !st.autofillSave || st.autofillNever.includes(origin) || !this.subs.has('autofill-offer')) return false;
+    if (fields.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) delete fields.email;
+    if (!Object.keys(fields).length) return false;
+    const sig = JSON.stringify(fields);
+    if (x.t.afSig === sig) return false;                  // the same details again on this tab: no second offer
+    x.t.afSig = sig;
+    for (const [oid, o] of [...this.afOffers]) if (o.tabId === x.id) this.dropAf(oid);
+    const id = 'a' + (++this.seq);
+    const timer = setTimeout(() => this.dropAf(id), 120000); if (timer.unref) timer.unref();
+    this.afOffers.set(id, { tabId: x.id, origin, fields: { ...fields }, timer });
+    this.emit('autofill-offer', { id, tabId: x.id, gid: x.t.gid, origin, fields: { ...fields } });
+    return true;
+  }
+  dropAf(id) { const o = this.afOffers.get(id); if (!o) return false; clearTimeout(o.timer); this.afOffers.delete(id); this.emit('autofill-offer-cancel', { id }); return true; }
+  takeAf(id) { const o = this.afOffers.get(id); if (!o) return null; clearTimeout(o.timer); this.afOffers.delete(id); return { origin: o.origin, fields: o.fields }; }
+  dismissAf(id, never) {
+    const o = this.afOffers.get(id); if (!o) return false;
+    clearTimeout(o.timer); this.afOffers.delete(id);
+    if (never) { const l = this.settings.get().autofillNever; if (!l.includes(o.origin)) { this.settings.set({ autofillNever: [...l, o.origin] }); this.onSettingsChanged(['autofillNever']); } }
+    return true;
+  }
+  onAfFocus(e, kind) {
+    const x = this.afTab(e); if (!x || !this.subs.has('autofill-request')) return false;
+    const origin = O.siteKey(e.senderFrame.url);
+    if (!origin || !origin.startsWith('https:') || this.settings.get().autofillNever.includes(origin)) return false;
+    for (const [rid, r] of [...this.afRequests]) if (r.tabId === x.id) { clearTimeout(r.timer); this.afRequests.delete(rid); }
+    const id = 'r' + (++this.seq);
+    const timer = setTimeout(() => this.afRequests.delete(id), 30000); if (timer.unref) timer.unref();
+    this.afRequests.set(id, { tabId: x.id, kind, origin, timer });
+    this.emit('autofill-request', { id, tabId: x.id, gid: x.t.gid, origin, kind });
+    return true;
+  }
+  answerAf(id, value) {
+    const r = this.afRequests.get(id); if (!r) return false;
+    clearTimeout(r.timer); this.afRequests.delete(id);
+    const t = this.tabs.get(r.tabId);
+    if (value === null || !t || t.wc.isDestroyed()) return false;
+    if (r.kind === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return false;
+    if (O.siteKey(t.wc.getURL()) !== r.origin) return false;       // the tab moved to another site meanwhile
+    t.wc.focus(); t.wc.insertText(value); return true;
+  }
+  fillAf(tabId, profile) {
+    const t = this.tabs.get(tabId); const m = this.metaOf(tabId);
+    if (!t || !m || m.private || m.tor) return false;
+    t.wc.send('af:fill', profile); return true;
+  }
 
   // ---------- files and the Mayfair page ----------
   registerFile(p) {
@@ -822,7 +1184,7 @@ class BrowserService {
     const inst = new Map(this.appsStore.list().map((a) => [a.id, a]));
     return this.catalogue.map((a) => {
       const i = inst.get(a.id);
-      const open = [...this.model.tabs].some((t) => t.appId === a.id) || this.appWindows.has(a.id);
+      const open = this.allMeta().some((t) => t.appId === a.id) || this.appWindows.has(a.id);
       return { ...a, installed: !!i, pinned: !!(i && i.pinned), window: !!(i && i.window), badge: this.appBadges.get(a.id) || 0, open };
     });
   }
@@ -833,10 +1195,18 @@ class BrowserService {
     if (asWindow !== undefined) this.appsStore.setWindow(id, !!asWindow);
     const wantWindow = asWindow !== undefined ? asWindow : this.appsStore.list().find((x) => x.id === id).window;
     this.showWindow();
+    if (wantWindow && this.subs.has('windows')) {
+      const r = this.openAppGroup(id);
+      if (r.existing) this.emit('menu', { action: 'showApp', gid: r.gid, appId: id });
+      this.onAppsChanged(); return true;
+    }
     if (wantWindow) { this.openAppWindow(a); this.onAppsChanged(); return true; }
-    const have = this.model.tabs.find((t) => t.appId === id);
-    if (have) this.activate(have.id); else this.newTab({ url: a.url, appId: id, afterActive: false });
-    this.emit('menu', { action: 'showBrowser' });
+    const ag = this.appGroup(id);
+    if (ag) { this.focusedGid = ag.gid; this.emit('menu', { action: 'showApp', gid: ag.gid, appId: id }); this.onAppsChanged(); return true; }
+    const have = this.allMeta().find((t) => t.appId === id);
+    let gid;
+    if (have) { this.activate(have.id); gid = this.tabs.get(have.id).gid; this.focusedGid = gid; } else { const nt = this.newTab({ url: a.url, appId: id, afterActive: false }); gid = nt != null ? this.tabs.get(nt).gid : this.group().gid; }
+    this.emit('menu', { action: 'showBrowser', gid });
     this.onAppsChanged();
     return true;
   }
@@ -858,9 +1228,9 @@ class BrowserService {
     const have = this.appWindows.get(a.id);
     if (have && !have.isDestroyed()) { have.show(); have.focus(); return; }
     // an app lives in a tab or a window, never both: close the tab, the login is shared
-    const tab = this.model.tabs.find((t) => t.appId === a.id);
+    const tab = this.allMeta().find((t) => t.appId === a.id);
     if (tab) this.closeTab(tab.id);
-    this.sessionForApp(a);
+    this.sessionForApp(a); this.sweepApp(a).catch(() => {});
     const w = new BrowserWindow({
       width: 1200, height: 800, minWidth: 480, minHeight: 360, title: a.name, backgroundColor: '#0a0a0a', autoHideMenuBar: true,
       icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'),
@@ -873,15 +1243,16 @@ class BrowserService {
     wc.setWindowOpenHandler((d) => { if (W.staysInApp(a, d.url)) setImmediate(() => wc.loadURL(d.url).catch(() => {})); else if (O.classifyNavigation(d.url, { locked: false }) === 'allow') setImmediate(() => this.openInBrowser(d.url)); return { action: 'deny' }; });
     // the page title arrives after the visit was recorded, so the history entry gets it here
     wc.on('page-title-updated', (_e, t) => this.setBadge(a, W.badgeFromTitle(t), w.isFocused()));
+    wc.on('did-navigate', (_e, url) => { if (!isInternal(url)) { const hs = this.histFor(a.id); hs.add(url, wc.getTitle(), Date.now()); this.noteVisit(hs, a.id); } });
     wc.on('did-fail-load', (_e, code, desc, url, main) => { if (main && code !== -3) wc.loadFile(path.join(UI_DIR, 'error.html'), { query: { u: url, e: desc, c: String(code), h: '0' } }).catch(() => {}); });
     w.on('closed', () => { this.appWindows.delete(a.id); this.pushState(); });
     wc.loadURL(a.url).catch(() => {});
   }
-  async wipeApp(a) { const s = this.sessionForApp(a); try { await s.clearStorageData(); await s.clearCache(); await s.clearAuthCache(); } catch { /* best effort */ } this.appBadges.delete(a.id); }
+  async wipeApp(a) { this.histClear({ app: a.id }); const s = this.sessionForApp(a); try { await s.clearStorageData(); await s.clearCache(); await s.clearAuthCache(); } catch { /* best effort */ } this.appBadges.delete(a.id); }
   async resetApp(id) {
     const a = this.appById(id); if (!a) return false;
     await this.wipeApp(a);
-    const tab = this.model.tabs.find((t) => t.appId === id);
+    const tab = this.allMeta().find((t) => t.appId === id);
     if (tab) this.tabs.get(tab.id).wc.loadURL(a.url).catch(() => {});
     const w = this.appWindows.get(id); if (w && !w.isDestroyed()) w.webContents.loadURL(a.url).catch(() => {});
     this.notice(a.name + ' signed out and reset');
@@ -889,9 +1260,11 @@ class BrowserService {
   }
   async removeApp(id) {
     const a = this.appById(id); if (!a) return false;
-    const tab = this.model.tabs.find((t) => t.appId === id); if (tab) this.closeTab(tab.id);
+    const ag = this.appGroup(id); if (ag) this.closeGroup(ag.gid);
+    const tab = this.allMeta().find((t) => t.appId === id); if (tab) this.closeTab(tab.id);
     const w = this.appWindows.get(id); if (w && !w.isDestroyed()) w.destroy();
     await this.wipeApp(a);
+    try { this.histClear({ app: id }); this.histFor(id).flush(); fs.rmSync(path.join(this.dir, 'history-app-' + id + '.json'), { force: true }); this.appHistories.delete(id); } catch { /* none */ }
     this.appsStore.remove(id);
     this.onAppsChanged(); this.pushState();
     return true;
@@ -919,7 +1292,9 @@ class BrowserService {
   }
 
   // ---------- state ----------
-  pushState() {
+  // One 'state' event per Browser window group. pushState(gid) marks one group, pushState() all of them.
+  pushState(gid) {
+    if (gid == null) for (const k of this.groups.keys()) this.dirty.add(k); else this.dirty.add(gid);
     if (this.stateTimer) return;
     this.stateTimer = setTimeout(() => { this.stateTimer = null; this.sendState(); }, 30);
   }
@@ -927,27 +1302,31 @@ class BrowserService {
     const s = this.tor.state;
     return { state: s.status === 'ready' ? 'connected' : s.status, progress: s.progress || 0, socksPort: s.socksPort || 0, message: s.error || '', available: !!this.tor.binary };
   }
-  stateObj() {
+  stateObj(g) {
+    g = g || this.group();
     return {
-      tabs: this.model.tabs.map((m) => {
+      gid: g.gid,
+      tabs: g.model.tabs.map((m) => {
         const x = this.tabs.get(m.id);
         let wcOk = false, canBack = false, canFwd = false, audible = false, muted = false, zoom = 100;
         try { if (x && !x.wc.isDestroyed()) { wcOk = true; canBack = x.wc.navigationHistory.canGoBack(); canFwd = x.wc.navigationHistory.canGoForward(); audible = x.wc.isCurrentlyAudible(); muted = x.wc.audioMuted; zoom = pctOf(x.wc.getZoomLevel()); } } catch { /* closing */ }
         const cur = wcOk ? x.wc.getURL() : '';
         return {
-          id: m.id, title: m.title || (m.url ? m.url : 'New tab'), url: m.url, favicon: x ? x.favicon : '', loading: !!(x && x.loading), canBack, canFwd,
+          id: m.id, gid: g.gid, title: m.title || (m.url ? m.url : 'New tab'), url: m.url, favicon: x ? x.favicon : '', loading: !!(x && x.loading), canBack, canFwd,
           secure: O.httpsState(m.url), pinned: !!m.pinned, private: !!m.private, tor: !!m.tor, webapp: m.appId || null, audible, muted, zoom, blocked: x ? x.blocked : 0,
           pw: !!(x && x.pw), bookmarked: this.bookmarks.has(m.url), start: isStart(cur), badge: m.appId ? (this.appBadges.get(m.appId) || 0) : 0, crashed: !!(x && x.crashed),
         };
       }),
-      activeId: this.model.activeId,
-      fullscreen: this.fsTab != null,
+      activeId: g.model.activeId,
+      fullscreen: g.fsTab != null,
       tor: this.torStatus(), proxy: !!this.proxyActive, adblockOn: !!this.settings.get().adblock,
+      groups: [...this.groups.keys()].sort((p, q) => p - q), focusedGid: this.focusedGid, webapp: g.webapp || null, apps: this.appGroups(),
     };
   }
   sendState() {
+    const ids = [...this.dirty].sort((a, b) => a - b); this.dirty.clear();
     if (!this.win) return;
-    this.emit('state', this.stateObj());
+    for (const gid of ids) { const g = this.groups.get(gid); if (g) this.emit('state', this.stateObj(g)); }
   }
 
   // ---------- IPC ----------
@@ -982,11 +1361,12 @@ class BrowserService {
       const t = this.tabs.get(id); if (!t) return false;
       const cmd = ANS.parseCommand(txt); if (cmd) return this.runCommand(cmd);
       const u = O.normalizeInput(txt, this.settings.get().searchEngine); if (!u) return false;
+      this.typedInTab(id, txt);
       t.wc.loadURL(u).catch(() => {}); return true;
     };
     const siteOf = (id) => { const t = this.tabs.get(id); return t ? O.siteKey(t.wc.getURL()) : null; };
     const adStats = (id) => {
-      const t = this.tabs.get(id == null ? this.model.activeId : id);
+      const t = id == null ? this.activeTab() : this.tabs.get(id);
       return { enabled: !!this.settings.get().adblock, engine: this.ad ? this.ad.info.engine : 'basic', rules: this.ad && this.ad.active ? this.ad.info.rules : this.blocker.size, blocked: t ? t.blocked : 0, error: this.ad ? this.ad.info.error : '', lastUpdate: this.ad ? this.ad.info.lastUpdate : 0, scriptlets: !!(this.ad && this.ad.info.scriptlets), lists: this.ad && this.ad.info.lists.length ? this.ad.info.lists : FILTERS.lists.map((l) => ({ ...l, loaded: false })), allow: this.ad ? [...this.ad.allow] : [] };
     };
     const set = (patch) => {
@@ -998,29 +1378,43 @@ class BrowserService {
       return p.then(() => ({ changed: ch, restart: ch.includes('ech') || (ch.includes('secureDns') && this.settings.get().ech), settings: this.settingsView() }));
     };
     const B = {
-      'br:ready': () => ({
-        version: this.version, platform: process.platform, tor: this.tor.ready, torAvailable: !!this.tor.binary, devtools: this.devTools, fullscreen: this.fsTab != null,
-        features: ['tabs', 'private', 'tor', 'webapps', 'find', 'zoom', 'print', 'savePage', 'bookmarks', 'history', 'downloads', 'permissions', 'adblock', 'secureDns', 'proxy', 'extensions', 'capture', 'fullscreen', ...(this.devTools ? ['devtools'] : [])],
-        state: this.stateObj(), pending: [...this.perms.values()].map((p) => p.req), downloads: this.downloads.map((d) => this.dlView(d)),
-        restore: this.settings.get().startup === 'restore' ? this.restoreList.splice(0) : [],
-      }),
-      'br:setBounds': (e, b) => this.setBounds(b),
-      'br:setOccluded': (e, on, o) => this.setOccluded(on, o),
-      'br:capture': () => this.capture(),
+      'br:ready': (e, o) => {
+        const g = this.group(o && o.gid);
+        const restore = this.settings.get().startup === 'restore';
+        const out = {
+          version: this.version, platform: process.platform, tor: this.tor.ready, torAvailable: !!this.tor.binary, devtools: this.devTools, fullscreen: g.fsTab != null,
+          features: ['tabs', 'windows', 'private', 'tor', 'webapps', 'find', 'zoom', 'print', 'savePage', 'bookmarks', 'history', 'downloads', 'permissions', 'adblock', 'secureDns', 'proxy', 'extensions', 'capture', 'fullscreen', ...(this.devTools ? ['devtools'] : [])],
+          state: this.stateObj(g), groups: [...this.groups.keys()].sort((a, b) => a - b), focusedGid: this.focusedGid, apps: this.appGroups(),
+          states: Object.fromEntries([...this.groups.values()].map((x) => [x.gid, this.stateObj(x)])),
+          pending: [...this.perms.values()].map((p) => p.req), downloads: this.downloads.map((d) => this.dlView(d)),
+          restore: restore ? this.restoreList.splice(0) : [], restoreGroups: restore ? this.restoreGroupList.splice(0) : [],
+        };
+        return out;
+      },
+      'br:setBounds': (e, b) => this.setBounds(b, b.gid),
+      'br:setOccluded': (e, on, o) => this.setOccluded(on, o, o && o.gid),
+      'br:capture': (e, o) => this.capture(o && o.gid),
+      'br:windows.create': (e, o) => (o && o.webapp ? this.openAppGroup(o.webapp) : { gid: this.createGroup().gid }),
+      'br:windows.close': (e, gid) => this.closeGroup(gid),
+      'br:windows.focus': (e, gid) => this.focusGroup(gid),
+      'br:windows.list': () => [...this.groups.values()].sort((a, b) => a.gid - b.gid).map((g) => ({ gid: g.gid, tabs: g.model.tabs.length, activeId: g.model.activeId, focused: g.gid === this.focusedGid, webapp: g.webapp || null })),
+      'br:moveTab': (e, id, to, o) => { T(id); return this.moveTab(id, to, o || {}); },
       'br:focus': (e, id) => { T(id).wc.focus(); return true; },
       'br:newTab': async (e, o = {}) => {
-        const common = { url: o.url || '', private: !!o.private, activate: !o.background };
-        if (o.tor) { const id = await this.torNewTab(common); return id ? { id } : { id: null, error: this.tor.state.error || 'Tor is not available' }; }
-        if (o.webapp) { if (!this.appById(o.webapp)) return { id: null, error: 'unknown app' }; this.appsStore.add(o.webapp); return { id: this.newTab({ ...common, url: this.appById(o.webapp).url, appId: o.webapp }) }; }
-        return { id: this.newTab(common) };
+        const g = this.group(o.gid);
+        const common = { url: o.url || '', private: !!o.private, activate: !o.background, gid: g.gid };
+        const res = (id) => ({ id, gid: id != null && this.tabs.has(id) ? this.tabs.get(id).gid : g.gid });
+        if (o.tor) { const id = await this.torNewTab(common); return id ? res(id) : { id: null, error: this.tor.state.error || 'Tor is not available' }; }
+        if (o.webapp) { if (!this.appById(o.webapp)) return { id: null, error: 'unknown app' }; this.appsStore.add(o.webapp); return res(this.newTab({ ...common, url: this.appById(o.webapp).url, appId: o.webapp })); }
+        return res(this.newTab(common));
       },
       'br:closeTab': (e, id) => this.closeTab(id),
-      'br:closeOthers': (e, id) => { for (const m of this.model.tabs.filter((t) => t.id !== id && !t.pinned)) this.closeTab(m.id); return true; },
-      'br:reopenClosed': () => ({ id: this.reopenClosed() }),
+      'br:closeOthers': (e, id) => { const g = this.groupOfTab(id); if (!g) return false; for (const m of g.model.tabs.filter((t) => t.id !== id && !t.pinned)) this.closeTab(m.id); return true; },
+      'br:reopenClosed': (e, o) => { const g = this.group(o && o.gid); const id = this.reopenClosed(g.gid); return { id, gid: id != null && this.tabs.has(id) ? this.tabs.get(id).gid : g.gid }; },
       'br:activate': (e, id) => this.activate(id),
-      'br:move': (e, id, i) => { const ok = this.model.move(id, i); this.pushState(); return ok; },
-      'br:duplicate': (e, id) => { const m = this.model.get(id); if (!m) return { id: null }; return { id: m.url ? this.newTab({ url: m.url, private: m.private && !m.tor, appId: m.appId, afterId: id }) : this.newTab({ afterId: id, private: m.private && !m.tor }) }; },
-      'br:pin': (e, id, on) => { const ok = this.model.pin(id, on); this.pushState(); return ok; },
+      'br:move': (e, id, i) => { const g = this.groupOfTab(id); const ok = !!g && g.model.move(id, i); this.pushState(); return ok; },
+      'br:duplicate': (e, id) => { const m = this.metaOf(id); if (!m) return { id: null }; const gid = this.tabs.get(id).gid; return { id: m.url ? this.newTab({ url: m.url, private: m.private && !m.tor, appId: m.appId, afterId: id, gid }) : this.newTab({ afterId: id, private: m.private && !m.tor, gid }) }; },
+      'br:pin': (e, id, on) => { const g = this.groupOfTab(id); const ok = !!g && g.model.pin(id, on); this.pushState(); return ok; },
       'br:mute': (e, id, on) => { T(id).wc.setAudioMuted(on); this.pushState(); return true; },
       'br:go': (e, id, txt) => navigate(id, txt),
       'br:back': (e, id) => { const t = T(id); if (t.wc.navigationHistory.canGoBack()) { t.wc.navigationHistory.goBack(); return true; } return false; },
@@ -1028,19 +1422,24 @@ class BrowserService {
       'br:reload': (e, id, hard) => { const t = T(id); hard ? t.wc.reloadIgnoringCache() : t.wc.reload(); return true; },
       'br:stop': (e, id) => { T(id).wc.stop(); return true; },
       'br:home': () => { this.goHome(); return true; },
-      'br:suggest': (e, q) => { const items = SG.suggest(q, this.bookmarks.list(), this.history.list(500), 7); const u = O.normalizeInput(q, this.settings.get().searchEngine); return u ? [...items, { kind: 'search', title: q, sub: '', url: u }] : items; },
+      'br:network.block': (e, on) => this.setNetworkBlocked(on),
+      'br:suggest': (e, q, o) => { const items = o && o.app ? SG.suggest(q, [], this.histFor(o.app).list(500), 7) : SG.suggest(q, this.bookmarks.list(), this.history.list(500), 7); const u = O.normalizeInput(q, this.settings.get().searchEngine); return u ? [...items, { kind: 'search', title: q, sub: '', url: u }] : items; },
       'br:find': (e, id, text, o) => { T(id); return this.find(id, text, o || {}); },
       'br:stopFind': (e, id) => this.stopFind(id),
       'br:zoom': (e, id, d) => { T(id); return this.zoom(id, d); },
       'br:print': (e, id) => { T(id).wc.print({}); return true; },
       'br:savePage': async (e, id) => {
-        const t = T(id); const m = this.model.get(id);
+        const t = T(id); const m = this.metaOf(id);
         const r = await dialog.showSaveDialog(this.win, { defaultPath: safeFilename((m && m.title) || 'page') + '.html', filters: [{ name: 'Web page', extensions: ['html'] }] });
         if (r.canceled || !r.filePath) return false;
         await t.wc.savePage(r.filePath, 'HTMLComplete'); return true;
       },
       'br:devtools': (e, id) => { if (!this.devTools) throw new Error('blocked: devtools'); T(id).wc.openDevTools({ mode: 'detach' }); return true; },
-      'br:fullscreen': (e, on) => { if (!on && this.fsTab != null) { const t = this.tabs.get(this.fsTab); try { t && t.wc.executeJavaScript('document.exitFullscreen&&document.exitFullscreen()', true).catch(() => {}); } catch { /* gone */ } this.leaveHtmlFullscreen(); } return this.fsTab != null; },
+      'br:fullscreen': (e, on, o) => {
+        const g = o && o.gid != null ? this.group(o.gid) : ([...this.groups.values()].find((x) => x.fsTab != null) || this.group());
+        if (!on && g.fsTab != null) { const t = this.tabs.get(g.fsTab); try { t && t.wc.executeJavaScript('document.exitFullscreen&&document.exitFullscreen()', true).catch(() => {}); } catch { /* gone */ } this.leaveHtmlFullscreen(g); }
+        return g.fsTab != null;
+      },
       'br:windowFullscreen': (e, on) => this.toggleFullscreen(on),
       'br:fillPassword': (e, id) => this.requestPasswordFill(id),
       'br:bookmarks.list': () => this.bookmarks.list(),
@@ -1048,10 +1447,13 @@ class BrowserService {
       'br:bookmarks.remove': (e, id) => { const r = this.bookmarks.remove(id); this.pushState(); return r; },
       'br:bookmarks.update': (e, id, p) => { const r = this.bookmarks.update(id, p); this.pushState(); return r; },
       'br:bookmarks.import': (e, items) => { const added = this.bookmarks.importItems(items); this.pushState(); return { added }; },
-      'br:history.list': (e, n) => this.history.list(n || 200).map((h) => ({ url: h.url, title: h.title, visited: h.t })),
-      'br:history.search': (e, q, n) => this.history.search(q, n || 50).map((h) => ({ url: h.url, title: h.title, visited: h.t })),
-      'br:history.remove': (e, u) => { this.history.removeUrl(u); return true; },
-      'br:history.clear': (e, since) => { this.history.clear(since); return true; },
+      'br:webapps.match': (e, u) => W.matchApp(this.catalogue, u),
+      'br:history.list': (e, n, o) => { if (n && typeof n === 'object') { o = n; n = o.limit; } return this.hist(o).list(n || 200).map((h) => ({ url: h.url, title: h.title, visited: h.t })); },
+      'br:history.search': (e, q, n, o) => { if (n && typeof n === 'object') { o = n; n = o.limit; } return this.hist(o).search(q, n || 50).map((h) => ({ url: h.url, title: h.title, visited: h.t })); },
+      'br:history.remove': (e, u, o) => this.histRemove(u, o),
+      'br:history.clear': (e, since, o) => { if (since && typeof since === 'object') { o = since; since = o.since; } this.histClear(o, since); return true; },
+      'br:history.import': (e, list, o) => this.histImport(list, o),
+      'br:history.syncState': () => this.syncState(),
       'br:downloads.list': () => this.downloads.map((d) => this.dlView(d)),
       'br:downloads.cancel': (e, id) => { const d = this.downloads.find((x) => x.id === id); if (d && d.item) { d.item.cancel(); return true; } return false; },
       'br:downloads.show': (e, id) => { const d = this.downloads.find((x) => x.id === id); if (d && d.path && d.state === 'completed') { shell.showItemInFolder(d.path); return true; } return false; },
@@ -1069,24 +1471,31 @@ class BrowserService {
       'br:settings.pickFolder': async () => { const r = await dialog.showOpenDialog(this.win, { properties: ['openDirectory', 'createDirectory'] }); if (r.canceled || !r.filePaths[0]) return null; this.settings.set({ downloadFolder: r.filePaths[0], downloadMode: 'folder' }); return r.filePaths[0]; },
       'br:settings.clearBrowsingData': async (e, o = {}) => {
         const want = (k) => o[k] !== false;
-        if (want('history')) this.history.clear();
+        if (want('history')) this.histClear(null);
         if (want('downloads')) this.downloads = this.downloads.filter((d) => d.state === 'progressing');
         const s = session.fromPartition(PARTITION.browse);
         if (want('cookies')) await s.clearStorageData();
         if (want('cache')) await s.clearCache();
+        if (o.webapps === true) for (const a of this.catalogue) await this.wipeApp(a);       // only when the user ticks Web apps
         this.notice('Browsing data cleared');
         return true;
       },
+      'br:autofill.take': (e, id) => this.takeAf(id),
+      'br:autofill.dismiss': (e, id, o) => this.dismissAf(id, !!(o && o.never)),
+      'br:autofill.fill': (e, tabId, p) => { T(tabId); return this.fillAf(tabId, p); },
+      'br:autofill.answer': (e, id, v) => this.answerAf(id, v),
+      'br:passwords.take': (e, id) => this.takeOffer(id),
+      'br:passwords.dismiss': (e, id, o) => this.dismissOffer(id, !!(o && o.never)),
       'br:permissions.list': () => ({ sites: this.sitePerms.all() }),
       'br:permissions.site': (e, id) => {
-        const t = T(id); const k = O.siteKey(t.wc.getURL()); const m = this.model.get(id);
+        const t = T(id); const k = O.siteKey(t.wc.getURL()); const m = this.metaOf(id);
         return { origin: k, secure: O.httpsState(m ? m.url : ''), perms: k ? this.sitePerms.forSite(k) : {}, blocked: t.blocked, adblock: !!this.settings.get().adblock, siteAllowed: k ? ((this.ad && this.ad.active) ? this.ad.isSiteOff(new URL(k).hostname) : this.blocker.allowSites.has(new URL(k).hostname)) : false, engine: this.ad ? this.ad.info.engine : 'basic', internal: !k };
       },
       'br:permissions.set': (e, origin, perm, val) => this.sitePerms.set(origin, perm, val === 'ask' ? null : val),
       'br:permissions.reset': (e, origin) => { this.sitePerms.resetSite(origin); return true; },
       'br:permissions.answer': (e, id, allow, remember) => this.answerPermission(id, allow, remember),
-      'br:popups.allow': (e, id) => { const p = this.popups.get(id); if (!p) return false; this.popups.delete(id); this.newTab({ url: p.url, afterActive: true, private: p.priv }); return true; },
-      'br:webapps.catalogue': () => this.appsView().map((a) => ({ id: a.id, name: a.name, url: a.url, category: a.category, description: a.description, adblock: !!a.adblock, badge: this.appById(a.id).badge, installed: a.installed, pinned: a.pinned, window: a.window, badgeCount: a.badge, open: a.open })),
+      'br:popups.allow': (e, id) => { const p = this.popups.get(id); if (!p) return false; this.popups.delete(id); this.newTab({ url: p.url, afterActive: true, private: p.priv, gid: p.gid != null && this.groups.has(p.gid) ? p.gid : null }); return true; },
+      'br:webapps.catalogue': () => this.appsView().map((a) => ({ id: a.id, name: a.name, url: a.url, category: a.category, description: a.description, adblock: !!a.adblock, badge: this.appById(a.id).badge, installed: a.installed, pinned: a.pinned, window: a.window, badgeCount: a.badge, open: a.open, match: [...new Set([W.registrable(new URL(a.url).hostname)])] })),
       'br:webapps.open': (e, id, o) => this.openApp(id, o && o.window ? { window: true } : {}),
       'br:webapps.pin': (e, id, on) => { if (!this.appById(id)) return false; this.appsStore.add(id); const ok = this.appsStore.setPinned(id, on); this.onAppsChanged(); return ok; },
       'br:webapps.reset': (e, id) => this.resetApp(id),
@@ -1094,8 +1503,8 @@ class BrowserService {
       'br:webapps.shortcut': (e, id) => this.createShortcut(id),
       'br:tor.status': () => this.torStatus(),
       'br:tor.start': async () => { try { await this.tor.start(); } catch { /* status carries the error */ } return this.torStatus(); },
-      'br:tor.stop': () => { for (const m of this.model.tabs.filter((x) => x.tor)) this.closeTab(m.id); this.tor.stop(); return true; },
-      'br:tor.newIdentity': async () => { try { await this.tor.newIdentity(); await this.wipeTor(); this.torSession(); for (const m of this.model.tabs.filter((x) => x.tor)) { const x = this.tabs.get(m.id); if (x) x.wc.reload(); } this.notice('New Tor identity'); return true; } catch (err) { this.notice(err.message); return false; } },
+      'br:tor.stop': () => { for (const m of this.allMeta().filter((x) => x.tor)) this.closeTab(m.id); this.tor.stop(); return true; },
+      'br:tor.newIdentity': async () => { try { await this.tor.newIdentity(); await this.wipeTor(); this.torSession(); for (const m of this.allMeta().filter((x) => x.tor)) { const x = this.tabs.get(m.id); if (x) x.wc.reload(); } this.notice('New Tor identity'); return true; } catch (err) { this.notice(err.message); return false; } },
       'br:adblock.stats': (e, id) => adStats(id),
       'br:adblock.toggleSite': (e, id) => {
         const t = T(id); const k = O.siteKey(t.wc.getURL()); if (!k) return false; const h = new URL(k).hostname;
@@ -1110,7 +1519,7 @@ class BrowserService {
       'br:extensions.install': async (e, id, url, sha) => { try { return await this.installExtension(id, url, sha); } catch (err) { return { ok: false, error: err.message }; } },
       'br:extensions.remove': (e, id) => this.removeExtension(id),
       'br:about': () => ({ version: this.version, platform: process.platform, components: ABOUT.components(this.version), licenseNote: ABOUT.LICENSE_NOTE, adblock: adStats(null), extensions: this.ext.list() }),
-      'br:subscribe': (e, ev, on) => { if (!IPC.BR_EVENTS.includes(ev)) return false; if (on) this.subs.add(ev); else this.subs.delete(ev); return true; },
+      'br:subscribe': (e, ev, on) => { if (!IPC.BR_EVENTS.includes(ev)) return false; if (on) { this.subs.add(ev); if (ev.startsWith('history-')) this.flushHistOutbox(); } else this.subs.delete(ev); return true; },
     };
     return {
       ...B,
@@ -1154,12 +1563,13 @@ class BrowserService {
       'search:go': (e, text) => {
         const cmd = ANS.parseCommand(text); if (cmd) return this.runCommand(cmd);
         const t = this.tabOf(e); const u = O.normalizeInput(text, this.settings.get().searchEngine); if (!t || !u) return false;
+        this.typedInTab((this.roles.get(e.sender.id) || {}).tabId, text);
         t.wc.loadURL(u).catch(() => {}); return true;
       },
       'search:command': (e, text) => { const cmd = ANS.parseCommand(text); return cmd ? this.runCommand(cmd) : false; },
       'search:online': async (e, i) => { if (!this.settings.get().onlineAnswers) return null; return ONLINE.run(i, (u) => this.fetchJson(u)); },
-      'search:panel': (e, n) => { this.emit('panel-request', { panel: n }); },
-      'search:home': () => { this.emit('panel-request', { panel: 'home' }); },
+      'search:panel': (e, n) => { const t = this.tabOf(e); this.emit('panel-request', { panel: n, gid: t ? t.gid : null }); },
+      'search:home': (e) => { const t = this.tabOf(e); this.emit('panel-request', { panel: 'home', gid: t ? t.gid : null }); },
       'web:pwListening': (e, on) => { this.homeListening = on; },
       'web:pwRespond': (e, id, creds) => {
         const w = this.pwWaiters.get(id); if (!w) return false;
@@ -1170,6 +1580,10 @@ class BrowserService {
         t.wc.send('pw:fill', creds[0]);
         return true;
       },
+      'page:pwSubmit': (e, d) => this.onPwSubmit(e, d),
+      'page:pwFocus': (e) => this.onPwFocus(e),
+      'page:afSubmit': (e, f) => this.onAfSubmit(e, f),
+      'page:afFocus': (e, k) => this.onAfFocus(e, k),
       'page:pwDetected': (e, has) => { const t = this.tabOf(e); if (t) { t.pw = has; this.pushState(); } },
     };
   }
@@ -1204,7 +1618,7 @@ class BrowserService {
   }
 
   requestPasswordFill(id) {
-    const t = this.tabs.get(id == null ? this.model.activeId : id);
+    const t = id == null ? this.activeTab() : this.tabs.get(id);
     const origin = t && O.siteKey(t.wc.getURL());
     if (!origin || !origin.startsWith('https:')) { this.notice('Passwords only fill on secure pages'); return false; }
     if (!this.homeListening) { this.notice('Open Mayfair Passwords first'); return false; }
@@ -1216,14 +1630,15 @@ class BrowserService {
   }
 
   // ---------- menu actions for main.js (menu, tray, page key shortcuts) ----------
-  flushAll() { this.adAllow.flush(); this.tabsStore.flush(); this.tor.stop(); for (const s of [this.appsStore, this.settings, this.winState, this.bookmarks, this.history, this.sitePerms, this.zoomStore]) { try { (s.flush ? s : s.s).flush(); } catch { /* ignore */ } } }
+  flushAll() { this.flushAppSessions(); this.adAllow.flush(); this.tabsStore.flush(); this.tor.stop(); for (const s of [this.appsStore, this.settings, this.winState, this.bookmarks, this.history, this.searchLog, ...this.appHistories.values(), this.sitePerms, this.zoomStore]) { try { (s.flush ? s : s.s).flush(); } catch { /* ignore */ } } }
   // The Browser's interface is in Mayfair Cloud, so an action is reported to it ('menu' event) and it decides what to do.
-  menuAction(a) {
+  menuAction(a, gid) {
     if (a === 'fullscreen') return this.toggleFullscreen();
     if (a === 'quit') return app.quit();
     if (a === 'home') return this.goHome();
     this.showWindow();
-    this.emit('menu', { action: a });
+    const g = gid != null && this.groups.has(gid) ? gid : (this.groups.has(this.focusedGid) ? this.focusedGid : null);
+    this.emit('menu', { action: a, gid: g });
   }
 }
 module.exports = { BrowserService, UI_DIR };

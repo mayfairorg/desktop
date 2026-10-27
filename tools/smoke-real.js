@@ -84,7 +84,7 @@ async function run(br, app) {
   const click = (sel) => P(`(()=>{const e=document.querySelector(${JSON.stringify(sel)});if(!e)return false;e.click();return true})()`);
   const key = (k, mods = []) => { home.wc.focus(); home.wc.sendInputEvent({ type: 'keyDown', keyCode: k, modifiers: mods }); home.wc.sendInputEvent({ type: 'char', keyCode: k, modifiers: mods }); home.wc.sendInputEvent({ type: 'keyUp', keyCode: k, modifiers: mods }); };
   const typeText = async (t) => { for (const ch of t) { home.wc.sendInputEvent({ type: 'char', keyCode: ch }); await sleep(15); } };
-  const stView = () => { const id = br.model.activeId; return id == null ? null : br.tabs.get(id); };
+  const stView = () => { const id = br.group().model.activeId; return id == null ? null : br.tabs.get(id); };
   const rectOf = async (sel) => P(`(()=>{const r=document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect();return {x:r.left,y:r.top,w:r.width,h:r.height}})()`);
   const near = (a, b) => Math.abs(a - b) <= 2;
   const viewMatches = async () => { const v = stView(); if (!v) return false; const r = await rectOf('.br-view'), z = home.wc.getZoomFactor(), b = v.view.getBounds(); return near(b.x, Math.round(r.x * z)) && near(b.y, Math.round(r.y * z)) && near(b.width, Math.round(r.w * z)) && near(b.height, Math.round(r.h * z)); };
@@ -129,7 +129,7 @@ async function run(br, app) {
   await sleep(1200);
   await shot('04-browser-start-page');
   const st0 = await P('(async()=>{const r=await window.mayfairDesktop.browser.ready();return {tabs:r.state.tabs.length,features:r.features.length}})()');
-  rec('Browser app registered with the real bridge and made its first (start page) tab', st0.tabs === 1 && br.model.tabs.length === 1, JSON.stringify(st0));
+  rec('Browser app registered with the real bridge and made its first (start page) tab', st0.tabs === 1 && br.group().model.tabs.length === 1, JSON.stringify(st0));
 
   // ---- navigate by typing in the omnibox ----
   const omnibox = async (text) => {
@@ -137,7 +137,7 @@ async function run(br, app) {
     await home.wc.insertText(text); await sleep(400); home.wc.sendInputEvent({ type: 'keyDown', keyCode: 'Return' }); home.wc.sendInputEvent({ type: 'char', keyCode: 'Return' }); home.wc.sendInputEvent({ type: 'keyUp', keyCode: 'Return' });
   };
   await omnibox(base + '/');
-  console.log('diag omnibox', JSON.stringify(await P(`(()=>{const u=document.querySelector('.br-url');return {val:u&&u.value,vis:u&&u.getBoundingClientRect().width,mode:document.querySelector('.br').dataset.mode,act:document.activeElement&&document.activeElement.className}})()`)), JSON.stringify(br.model.tabs.map((t) => [t.id, t.url])));
+  console.log('diag omnibox', JSON.stringify(await P(`(()=>{const u=document.querySelector('.br-url');return {val:u&&u.value,vis:u&&u.getBoundingClientRect().width,mode:document.querySelector('.br').dataset.mode,act:document.activeElement&&document.activeElement.className}})()`)), JSON.stringify(br.group().model.tabs.map((t) => [t.id, t.url])));
   const t1ok = await waitFor(() => { const v = stView(); return v && v.wc.getURL() === base + '/' && v.wc.getTitle() === 'Local test page'; }, 10000);
   rec('typing in the omnibox loads the local page in a native tab view', !!t1ok, stView() && stView().wc.getURL());
   await sleep(800);
@@ -212,11 +212,11 @@ async function run(br, app) {
   // ---- private tab ----
   const hn = br.history.list().length;
   key('N', ['control', 'shift']); await sleep(1500);
-  rec('Ctrl+Shift+N opens a private tab', br.model.tabs.some((t) => t.private));
+  rec('Ctrl+Shift+N opens a private tab', br.group().model.tabs.some((t) => t.private));
   await omnibox(base + '/'); await sleep(2000);
   rec('private tab page not in history', br.history.list().length === hn);
   await shot('13-private');
-  const pid = br.model.tabs.find((t) => t.private); if (pid) br.closeTab(pid.id); await sleep(600);
+  const pid = br.group().model.tabs.find((t) => t.private); if (pid) br.closeTab(pid.id); await sleep(600);
 
   // ---- web apps catalogue ----
   key('A', ['control', 'shift']); await sleep(300);
@@ -227,7 +227,7 @@ async function run(br, app) {
   key('Escape'); await sleep(400);
 
   // ---- adblock toggle ----
-  const siteAllowed = async () => (await P(`window.mayfairDesktop.browser.permissions.site(${br.model.activeId})`)).siteAllowed;
+  const siteAllowed = async () => (await P(`window.mayfairDesktop.browser.permissions.site(${br.group().model.activeId})`)).siteAllowed;
   const abBefore = await siteAllowed();
   await click('[data-k=site]'); await sleep(600);
   await shot('15-site-info');
@@ -237,7 +237,7 @@ async function run(br, app) {
   const abAfter = await siteAllowed();
   rec('adblock toggle in the site panel changes the native allow list', ab === true && abBefore !== abAfter, 'siteAllowed ' + abBefore + ' -> ' + abAfter);
   key('Escape'); await sleep(300);
-  if (abAfter) await P(`window.mayfairDesktop.browser.adblock.toggleSite(${br.model.activeId})`);
+  if (abAfter) await P(`window.mayfairDesktop.browser.adblock.toggleSite(${br.group().model.activeId})`);
 
   // ---- download ----
   const drive = path.join(app.getPath('documents'), 'Mayfair Drive', 'Downloads');
@@ -248,12 +248,12 @@ async function run(br, app) {
 
   // ---- popup / new window ----
   await omnibox(base + '/popup'); await waitFor(() => /popup/.test(stView().wc.getURL()), 6000); await sleep(800);
-  const n0 = br.model.tabs.length;
+  const n0 = br.group().model.tabs.length;
   stView().wc.focus(); await ev(stView().wc, `document.getElementById('b').focus()`).catch(() => {});
   stView().wc.sendInputEvent({ type: 'mouseDown', x: 40, y: 40, button: 'left', clickCount: 1 }); stView().wc.sendInputEvent({ type: 'mouseUp', x: 40, y: 40, button: 'left', clickCount: 1 });
   await ev(stView().wc, `(()=>{document.getElementById('b').click()})()`).catch(() => {});
   await sleep(1500);
-  rec('a page pop-up (after a click) opens as a new tab in the Browser strip', br.model.tabs.length === n0 + 1 && await P(`document.querySelectorAll('.br-tab').length`) >= 2, br.model.tabs.length + ' vs ' + n0);
+  rec('a page pop-up (after a click) opens as a new tab in the Browser strip', br.group().model.tabs.length === n0 + 1 && await P(`document.querySelectorAll('.br-tab').length`) >= 2, br.group().model.tabs.length + ' vs ' + n0);
   await shot('17-popup');
 
   // ---- Start menu overlap ----

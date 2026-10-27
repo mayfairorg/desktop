@@ -71,7 +71,7 @@ class Cdp {
   close() { try { this.ws.close(); } catch { /* closed */ } }
 }
 const targets = (port) => new Promise((res) => { http.get({ host: '127.0.0.1', port, path: '/json/list' }, (r) => { let b = ''; r.on('data', (c) => { b += c; }); r.on('end', () => { try { res(JSON.parse(b)); } catch { res([]); } }); }).on('error', () => res([])); });
-async function waitTarget(port, pred, ms = 20000) { const t0 = Date.now(); while (Date.now() - t0 < ms) { const t = (await targets(port)).find(pred); if (t) return t; await sleep(250); } return null; }
+async function waitTarget(port, pred, ms = +(process.env.PC_WAIT || 20000)) { const t0 = Date.now(); while (Date.now() - t0 < ms) { const t = (await targets(port)).find(pred); if (t) return t; await sleep(250); } return null; }
 
 async function runVariant(name, work, cert) {
   const dir = path.join(work, 'dist-' + name);

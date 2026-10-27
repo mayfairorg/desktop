@@ -41,6 +41,12 @@ Running as root on Linux (some servers and containers): Electron needs `--no-san
 
 **Web apps** (Ctrl+Shift+A in a browser tab, or from the Browser app). A JSON-driven catalogue of 36 popular sites (`src/main/lib/webapps.json`; add your own in `webapps-custom.json` inside the app data folder). Each app opens in its own tab or its own window with its own saved sign-in (its own session), shows an unread count when the site puts one in its window title, can raise a native notification when that count goes up, can be pinned (tray menu, macOS Dock menu, Windows jump list, and listed to the Cloud page), can get a desktop shortcut (Windows, Linux), and can be signed out or removed. Plain names and one neutral glyph per category; no third-party logos. Nothing on the sites is scraped or modified: the only thing read is the window title.
 
+**Synced history and form details.** With `historySync` on (default) the Browser reports new history entries, typed web searches and deletions to the Mayfair page (`history-add`, `history-remove`, `history-clear`) so they can be kept on your Mayfair ID (deleted ones for 30 days); `history.import` restores them on a new install. Private and Tor tabs never report anything. When you submit a form, the email, username, name, phone and address fields (never passwords, cards, ID numbers or codes) can be offered to the Mayfair ID (`autofill-offer`, memory only, off with `autofillSave`).
+
+**Web app history** is kept per app (`history-app-<id>.json` in the app data folder) and never appears in the browser's history, address-bar suggestions or bookmarks; Reset, Remove and Clear browsing data with Web apps ticked clear it. `webapps.match(url)` tells the Cloud which catalogue app a web address belongs to, so it can open the installed app instead of a browser tab.
+
+**Stay signed in.** Signing in to a web app keeps you signed in across restarts, reboots and updates. Each app has its own persistent session in the app data folder; nothing clears it except you (Reset this web app, Remove, or Clear browsing data with Web apps ticked). Sign-in cookies that a site would normally drop when the browser closes are kept for 400 days (the longest Chromium allows), cookies due to expire within 90 days are pushed out again each time you open the app and once a day while the app runs, and the session is written to disk a few seconds after changes and when you quit, so a crash or power cut keeps the login. Limits: a site can still sign you out on its side (password change, security check, session limit, inactivity rules), and the 400-day cap is renewed only by use. Only Web app sessions are treated this way, never normal, private or Tor tabs. A catalogue entry may list `authHosts` (sign-in hosts such as accounts.google.com) that stay inside the app window.
+
 **Privacy** (Ctrl+Shift+P in a browser tab, or from the Browser app). Private tab with Tor, secure DNS, leak protection, your own proxy. See section 5.
 
 **Ad blocker.** See section 6.
@@ -93,7 +99,7 @@ Stock Electron does not include Widevine. Verified here: in the running app `nav
 2. **Apple Developer ID** (paid, Apple Developer Program) for signing and notarising the macOS app. In GitHub secrets: `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`, `CSC_LINK` (the .p12, base64), `CSC_KEY_PASSWORD`. Without it macOS shows "unidentified developer".
 3. **Windows code-signing certificate** (paid, from a certificate authority). Secrets `WIN_CSC_LINK` (.pfx base64) and `WIN_CSC_PASSWORD`. Without it Windows SmartScreen warns on install.
 4. Uncomment the signing lines in `.github/workflows/build.yml` after adding the secrets.
-5. **Repository variable `TOR_BUNDLE_VERSION`** (GitHub, Settings, Variables): the current Tor Browser stable version, so CI can fetch the matching Tor Expert Bundle from the Tor Project's archive.
+5. Tor is fetched automatically: CI asks the Tor Project for the current release, checks the checksum and signature, and bundles the Tor daemon. Nothing to set up. (Optional: repository variable `TOR_BUNDLE_VERSION` pins a version.)
 6. Run `npm install` once locally and commit `package-lock.json`; then change `npm install` to `npm ci` in the workflow.
 7. Tell the web app team the bridge contract (section 9).
 8. Decide about Widevine (section 7).

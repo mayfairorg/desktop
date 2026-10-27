@@ -42,18 +42,14 @@ jobs:
         shell: bash
         continue-on-error: true
         run: |
-          # Tor is optional. Without the repository variable TOR_BUNDLE_VERSION the build still works and
-          # ships without the Tor private tab (the app says so). See README.md, owner to-do list.
+          # Tor is optional: if the download fails the build still works and ships without the Tor private tab (the app says so).
           mkdir -p vendor/tor/win-x64 vendor/tor/linux-x64 vendor/tor/mac-x64 vendor/tor/mac-arm64
-          if [ -n "$TOR_BUNDLE_VERSION" ]; then
-            case "${{ matrix.name }}" in
-              windows) node tools/fetch-tor.js win x64 ;;
-              linux)   node tools/fetch-tor.js linux x64 ;;
-              macos)   node tools/fetch-tor.js mac x64 && node tools/fetch-tor.js mac arm64 ;;
-            esac || echo "::warning::Tor was not fetched; this build ships without the Tor private tab"
-          else
-            echo "::warning::TOR_BUNDLE_VERSION is not set; this build ships without the Tor private tab"
-          fi
+          # The version is looked up from the Tor Project itself unless the repository variable TOR_BUNDLE_VERSION pins one.
+          case "${{ matrix.name }}" in
+            windows) node tools/fetch-tor.js win x64 ;;
+            linux)   node tools/fetch-tor.js linux x64 ;;
+            macos)   node tools/fetch-tor.js mac x64 && node tools/fetch-tor.js mac arm64 ;;
+          esac || echo "::warning::Tor was not fetched; this build ships without the Tor private tab"
           for d in vendor/tor/*; do [ -n "$(ls -A "$d")" ] || echo "Tor is not included in this build." > "$d/NOT_INCLUDED.txt"; done
         env:
           TOR_BUNDLE_VERSION: ${{ vars.TOR_BUNDLE_VERSION }}   # repository variable: current Tor Browser stable version, e.g. 15.0.1

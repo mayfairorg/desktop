@@ -23,6 +23,6 @@ function actionForKey(input, platform = process.platform) {
   if (/^[1-9]$/.test(k)) return 'tab' + k;
   if (mac && key === '[') return 'back';
   if (mac && key === ']') return 'forward';
-  return { t: 'newTab', w: 'closeTab', r: 'reload', l: 'address', f: 'find', d: 'bookmark', y: 'history', j: 'downloads', ',': 'settings', '=': 'zoomIn', '+': 'zoomIn', '-': 'zoomOut', _: 'zoomOut', '0': 'zoomReset', p: 'print' }[k] || null;
+  return { n: 'newWindow', t: 'newTab', w: 'closeTab', r: 'reload', l: 'address', f: 'find', d: 'bookmark', y: 'history', j: 'downloads', ',': 'settings', '=': 'zoomIn', '+': 'zoomIn', '-': 'zoomOut', _: 'zoomOut', '0': 'zoomReset', p: 'print' }[k] || null;
 }
 module.exports = { actionForKey };

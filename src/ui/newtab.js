@@ -2,7 +2,7 @@
 const $ = (id) => document.getElementById(id);
 const A = window.MFAnswers;
 const ic = window.mfIcon;
-let cfg = { engine: 'duckduckgo', engineName: 'DuckDuckGo', engines: {}, online: true, rates: null };
+let cfg = { engine: 'google', engineName: 'Google', engines: {}, online: true, rates: null };
 let rows = [];      // [{el, run}]
 let sel = -1;
 let seq = 0;
@@ -10,11 +10,9 @@ let timers = { local: 0, online: 0 };
 const q = $('q');
 
 const QUICK = [
-  ['home', 'Mayfair', () => mfSearch.home()],
-  ['cFiles', 'Files', () => mfSearch.command('open files')],
-  ['note', 'Notes', () => mfSearch.command('open notes')],
-  ['cMail', 'Mail', () => mfSearch.command('open mail')],
   ['apps', 'Web apps', () => mfSearch.panel('apps')],
+  ['star', 'Bookmarks', () => mfSearch.panel('bookmarks')],
+  ['clock', 'History', () => mfSearch.panel('history')],
   ['shield', 'Privacy', () => mfSearch.panel('privacy')],
 ];
 function setup() {
@@ -49,7 +47,6 @@ function render() {
     pop.append(c);
   } else if (state.onlineMsg) { const c = el('div', 'answer'); c.append(el('div', 'note', state.onlineMsg)); pop.append(c); }
   const add = (node, run) => { node._run = run; pop.append(node); rows.push(node); };
-  if (state.cmd) add(opt('home', state.cmd.label, 'Opens in your Mayfair desktop', 'Mayfair', null), () => mfSearch.command(t));
   for (const r of state.local) {
     const [icon, label] = KIND[r.kind] || ['globe', ''];
     add(opt(icon, r.title, r.sub || '', label, null), () => (r.link ? mfSearch.open('link', r.link) : mfSearch.open('url', r.url)));
@@ -71,11 +68,7 @@ function onInput() {
   state = { answer: null, online: null, onlineMsg: '', cmd: null, local: [], text: t };
   if (!t) return render();
   state.answer = A.localAnswer(t, { rates: cfg.rates });
-  state.cmd = A.parseCommand(t);
   render();
-  timers.local = setTimeout(async () => {
-    try { const r = await mfSearch.local(t); if (my !== seq) return; state.local = (r.items || []).slice(0, 6); render(); } catch { /* keep going */ }
-  }, 120);
   const intent = cfg.online && A.networkIntent(t);
   if (intent) {
     timers.online = setTimeout(async () => {
@@ -95,7 +88,6 @@ $('f').addEventListener('submit', (e) => {
   e.preventDefault();
   const t = q.value.trim(); if (!t) return;
   if (sel >= 0 && rows[sel]) return rows[sel]._run();
-  if (state.cmd) return mfSearch.command(t);
   mfSearch.go(t);
 });
 $('clear').addEventListener('click', () => { q.value = ''; onInput(); q.focus(); });

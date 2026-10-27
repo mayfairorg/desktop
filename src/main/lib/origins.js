@@ -49,10 +49,10 @@ const HOSTLIKE = /^(localhost|(\d{1,3}\.){3}\d{1,3}|([a-z0-9-]+\.)+[a-z]{2,})(:\
 
 // Address bar text -> a loadable URL. Anything that does not look like a
 // site becomes a search.
-function normalizeInput(text, engine = 'duckduckgo') {
+function normalizeInput(text, engine = 'google') {
   const raw = String(text == null ? '' : text).trim();
   if (!raw) return null;
-  const tpl = SEARCH_ENGINES[engine] || SEARCH_ENGINES.duckduckgo;
+  const tpl = SEARCH_ENGINES[engine] || SEARCH_ENGINES.google;
   const search = () => tpl.replace('%s', encodeURIComponent(raw));
   if (/^(javascript|data|file|vbscript|blob):/i.test(raw)) return search();
   if (/^https?:\/\//i.test(raw)) {
@@ -66,6 +66,17 @@ function normalizeInput(text, engine = 'duckduckgo') {
     return u ? u.toString() : search();
   }
   return search();
+}
+
+// true when typed text is a web search (not an address): same branches as normalizeInput that end in the search engine
+function isSearchInput(text) {
+  const raw = String(text == null ? '' : text).trim();
+  if (!raw) return false;
+  if (/^(javascript|data|file|vbscript|blob):/i.test(raw)) return true;
+  if (/^https?:\/\//i.test(raw)) return !parse(raw);
+  if (/\s/.test(raw)) return true;
+  if (HOSTLIKE.test(raw)) return false;
+  return true;
 }
 
 // 'secure' https, 'insecure' http, 'internal' app pages, 'none' otherwise.
@@ -118,7 +129,7 @@ function findFileArgs(argv) {
   return (argv || []).filter((a) => typeof a === 'string' && !a.startsWith('-') && !/^[a-z][a-z0-9+.-]*:\/\//i.test(a) && isHandledFile(a));
 }
 
-module.exports = {
+module.exports = { isSearchInput,
   MAYFAIR_ORIGINS, HOME_URL, SEARCH_ENGINES, ENGINE_NAMES, FILE_EXTENSIONS,
   isMayfairUrl, classifyNavigation, normalizeInput, httpsState, siteKey,
   parseDeepLink, findDeepLink, isHandledFile, findFileArgs,
