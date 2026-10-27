@@ -57,4 +57,40 @@ function registerBuiltins(manager, { stagingRoot = os.tmpdir() } = {}) {
   out.summary = { registered: n('registered'), updated: n('updated'), unchanged: n('unchanged'), failed: n('failed') };
   return out;
 }
-module.exports = { registerBuiltins, sameTree };
+
+// The passive lookups that ship with Mayfair work straight away: once the person has accepted Ghost's Terms, each one whose installed folder is
+// byte-identical to the shipped folder is approved by the app, tested against its own self-test, and switched on if the test passed. A connector the
+// person switched off is left off, one that failed its test is left as it is (the page shows why), and anything not shipped by Mayfair, and the
+// security / scanning connectors, still need the person's own approval in the native dialog.
+// -> Promise<{ approved, enabled, failed:[id], skipped:[id] }>
+async function autoSetup(manager, { stagingRoot = os.tmpdir(), only = null, concurrency = 2 } = {}) {
+  const out = { approved: 0, enabled: 0, failed: [], skipped: [] };
+  const stage = fs.mkdtempSync(path.join(stagingRoot, 'mf-ghost-auto-'));
+  const todo = [];
+  try {
+    for (const m of modules.MODULES) {
+      const id = m.meta.id; if (only && !only.includes(id)) continue;
+      let shipped = null; try { shipped = modules.materialize(id, stage); } catch { out.skipped.push(id); continue; }
+      if (!sameTree(shipped, path.join(manager.connectorsDir, id))) { out.skipped.push(id); continue; }      // not the shipped files: needs the person
+      const e = manager.get ? manager.get(id) : null; const st = e && e.state;
+      if (st === 'disabled') { out.skipped.push(id); continue; }                                           // the person switched it off
+      if (st === 'enabled' && e.install && e.install.verified === 'tested') continue;                      // already on and tested
+      todo.push(id);
+    }
+  } finally { fs.rmSync(stage, { recursive: true, force: true }); }
+  let i = 0;
+  const worker = async () => {
+    while (i < todo.length) {
+      const id = todo[i++];
+      try {
+        const e = manager.get(id);
+        if (e.state === 'not-approved') { const r = manager.approveBuiltin(id); if (!r.ok) { out.failed.push(id); continue; } out.approved++; }
+        const t = await manager.test(id);
+        if (t && t.passed === true) { if (manager.get(id).state === 'enabled') out.enabled++; else { const r = manager.enable(id); if (r && r.ok) out.enabled++; else out.failed.push(id); } } else out.failed.push(id);
+      } catch { out.failed.push(id); }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker));
+  return out;
+}
+module.exports = { registerBuiltins, autoSetup, sameTree };

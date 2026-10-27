@@ -20,7 +20,7 @@ function makeApp(mock, over = {}) {
   const ghost = new GhostService({ root, dialog: { showMessageBox: async () => ({ response: 0 }) }, isPackaged: false, safeStorage: fakeOS(), useVault: true, vaultOptions: FAST, ...(over.ghost || {}) });
   const id = new IdClient({ base: mock.base, allowLoopback: true, now: () => clock.t });
   const opened = [];
-  const app = new GhostApp({ userData: root, ghost, id, cloudBase: mock.base, allowLoopback: true, shell: { openExternal: (u) => opened.push(u) }, dialog: over.dialog || { showMessageBox: async () => ({ response: 0 }), showSaveDialog: async () => ({ canceled: true }) }, emit: (n, p) => events.push([n, p]), now: () => clock.t, version: '1.0.0-test', pollMinMs: 10, openTerminal: async () => true, openToolIntegrations: async () => true });
+  const app = new GhostApp({ autoSetup: false, userData: root, ghost, id, cloudBase: mock.base, allowLoopback: true, shell: { openExternal: (u) => opened.push(u) }, dialog: over.dialog || { showMessageBox: async () => ({ response: 0 }), showSaveDialog: async () => ({ canceled: true }) }, emit: (n, p) => events.push([n, p]), now: () => clock.t, version: '1.0.0-test', pollMinMs: 10, openTerminal: async () => true, openToolIntegrations: async () => true });
   live.ghosts.push(ghost); live.apps.push(app);
   return { app, ghost, root, clock, events, opened };
 }

@@ -106,3 +106,36 @@ test('the approval window is the user\'s: one window per connector, naming the o
   assert.equal(h.app.connectorGet('exif-meta').install.installed, true);
   await done(h, m);
 });
+test('the shipped passive lookups set themselves up after the Terms: approved by the app, tested, switched on only if the test passed; the person\'s own choices and other connectors are left alone', async () => {
+  const { autoSetup } = require('../src/main/ghost/app/builtins');
+  const m = await mockServer(); const h = makeApp(m); await signInTo(h); acceptTerms(h.app); h.app.connectorsList();
+  const mgr = h.ghost.manager;
+  assert.equal(mgr.get('hash-file').state, 'not-approved');
+  const r = await autoSetup(mgr, { only: ['hash-file', 'exif-meta'] });
+  assert.ok(r.approved >= 2, JSON.stringify(r));
+  for (const id of ['hash-file', 'exif-meta']) {
+    const e = mgr.get(id); assert.ok(e.approvedAt, id + ' approved');
+    const passed = !r.failed.includes(id);
+    assert.equal(e.state, passed ? 'enabled' : 'approved', id + ' is only switched on when its own test passed');
+  }
+  // switched off by the person: left off
+  mgr.disable('hash-file'); const r2 = await autoSetup(mgr, { only: ['hash-file'] });
+  assert.equal(mgr.get('hash-file').state, 'disabled'); assert.deepEqual(r2.skipped, ['hash-file']);
+  // a changed folder is not the shipped one: it is never approved by the app
+  const dir = path.join(mgr.connectorsDir, 'cisa-kev'); fs.appendFileSync(path.join(dir, fs.readdirSync(dir).find((f) => f.endsWith('.js') || f.endsWith('.json'))), '\n');
+  const r3 = await autoSetup(mgr, { only: ['cisa-kev'] }); assert.deepEqual(r3.skipped, ['cisa-kev']); assert.equal(mgr.get('cisa-kev').state, 'not-approved');
+  // security connectors are not part of it
+  const r4 = await autoSetup(mgr, { only: ['nmap'] }); assert.equal(r4.approved, 0);
+  await done(h, m);
+});
+test('a lookup that was switched on by hand but never tested gets its self-test too (that is the "Not tested" card)', async () => {
+  const { autoSetup } = require('../src/main/ghost/app/builtins');
+  const m = await mockServer(); const h = makeApp(m); await signInTo(h); acceptTerms(h.app); h.app.connectorsList();
+  const mgr = h.ghost.manager;
+  assert.equal(mgr.approveBuiltin('hash-file').ok, true); assert.equal(mgr.enable('hash-file').ok, true);
+  assert.notEqual(mgr.get('hash-file').install.verified, 'tested');
+  const r = await autoSetup(mgr, { only: ['hash-file'] });
+  assert.equal(mgr.get('hash-file').install.verified, r.failed.includes('hash-file') ? 'failed' : 'tested');
+  assert.equal(mgr.get('hash-file').state, 'enabled', 'it stays on; a failed test is shown, not hidden');
+  await done(h, m);
+});

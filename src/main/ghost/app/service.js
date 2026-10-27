@@ -13,7 +13,7 @@ const { CaseStore, CaseError } = require('./cases');
 const { PrefStore } = require('./prefs');
 const { ScopeGuard, ScopeError } = require('./scopelog');
 const R = require('./report');
-const { registerBuiltins } = require('./builtins');
+const { registerBuiltins, autoSetup } = require('./builtins');
 const { NoteStore } = require('./notes');
 const NR = require('./notes-report');
 
@@ -35,7 +35,8 @@ function atomic(file, text) {
 
 class GhostApp {
   constructor({ userData, ghost, id, cloudBase = CLOUD, fetchImpl = (typeof fetch === 'function' ? fetch : null), allowLoopback = false, shell = null, dialog = null, getWindow = () => null, openTerminal = async () => false, openToolIntegrations = async () => false,
-    emit = () => {}, now = Date.now, version = '0.0.0', pollMinMs = 2000, electron = null } = {}) {
+    emit = () => {}, now = Date.now, version = '0.0.0', pollMinMs = 2000, electron = null, autoSetup: autoSetupOn = true } = {}) {
+    this.autoSetupOn = autoSetupOn !== false;
     this.userData = userData; this.ghost = ghost; this.id = id; this.fetch = fetchImpl; this.shell = shell; this.dialog = dialog; this.getWindow = getWindow; this.electron = electron;
     this.openTerminal = openTerminal; this.openToolIntegrations = openToolIntegrations; this.emit = emit; this.now = now; this.version = version; this.pollMinMs = pollMinMs;
     const cb = String(cloudBase).replace(/\/+$/, '');
@@ -116,10 +117,17 @@ class GhostApp {
   // Once per run, as soon as access is granted (stage 'ready'): the connectors that ship with Mayfair are registered with the manager.
   // Register only: no approval, no run, no network. Safe to call any number of times; an identical folder is not touched.
   ensureBuiltins() {
+    if (this.mem.builtins && this.ghost && this.ghost.manager && this.ready()) { this._autoSetupBuiltins(); return this.mem.builtins; }
     if (this.mem.builtins || !this.ghost || !this.ghost.manager || !this.ready()) return this.mem.builtins;
     try { this.mem.builtins = registerBuiltins(this.ghost.manager); }
     catch (e) { this.mem.builtins = { modules: [], security: [], summary: { registered: 0, updated: 0, unchanged: 0, failed: 1 }, error: e.message }; }
+    this._autoSetupBuiltins();
     return this.mem.builtins;
+  }
+  // Once per run, after the Terms are accepted: the shipped passive lookups are approved, tested and switched on in the background (see builtins.autoSetup).
+  _autoSetupBuiltins() {
+    if (!this.autoSetupOn || this.mem.autoSetup || !this.ghost || !this.ghost.manager || !this.ready() || !this.termsAccepted()) return;
+    this.mem.autoSetup = autoSetup(this.ghost.manager).then((r) => { this.mem.autoSetupResult = r; this._changed(); return r; }, () => null);
   }
   ready() { return this.stage() === 'ready'; }
   _need(what) { if (!this.ready()) throw new AppError('not-ready', 'Finish the start steps first.'); this.ensureBuiltins(); return what; }

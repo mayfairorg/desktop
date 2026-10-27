@@ -259,6 +259,21 @@ class ConnectorManager {
     if (this.log) this.log.info('approved', { connector: id, version: m.version, scope: m.scope, network: m.network });
     return { ok: true, state: this._stateOf(rec) };
   }
+  // In-process only (never on the bridge, never reachable from a page): approval of a connector that SHIPS with Mayfair, given by the app itself when the
+  // person has accepted Ghost's Terms. The caller (app/builtins.js autoSetup) has already checked that the installed folder is byte-identical to the shipped one.
+  // It records exactly what a dialog approval records, plus `by: 'builtin'`, so any later change to the files still withdraws it (hash check, unchanged).
+  approveBuiltin(id) {
+    if (typeof id !== 'string' || !M.ID_RE.test(id)) return { ok: false, error: 'bad-id' };
+    const a = this._assess(id, { fresh: true });
+    if (!a.l.ok || !a.fp) return { ok: false, error: 'invalid' };
+    if (a.rec && a.rec.approval) return { ok: true, state: this._stateOf(a.rec), already: true };
+    const m = a.l.manifest, rec = this._rec(id);
+    rec.approval = { at: this.now(), by: 'builtin', version: m.version, scope: m.scope, network: m.network, permissions: [...m.permissions], manifestSha: a.fp.manifestSha, files: a.fp.files, combined: a.fp.combined };
+    rec.enabled = false; rec.disabled = false; rec.changed = null; rec.lastTest = null; rec.req = null;
+    this._save();
+    if (this.log) this.log.info('approved-builtin', { connector: id, version: m.version, scope: m.scope, network: m.network });
+    return { ok: true, state: this._stateOf(rec) };
+  }
   // In-process only (not reachable from the bridge): used by tests and by the smoke hook, which stand in for the dialog.
   _approvedBy(rec) { return !!(rec && rec.approval); }
 
