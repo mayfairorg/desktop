@@ -1,0 +1,85 @@
+{
+  "id": "openosint",
+  "name": "OpenOSINT (not yet wired)",
+  "version": "1.0.0",
+  "description": "Placeholder for OpenOSINT keyless modules, domain input only. Its address, licence and command line are not known yet, so it cannot run or show as installed.",
+  "capabilities": [
+    "osint-modules"
+  ],
+  "scope": "passive",
+  "network": "rate-limited",
+  "licence": {
+    "spdx": "NOASSERTION",
+    "url": "https://spdx.org/licenses/",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "OpenOSINT installed and unchanged",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--domain={domain}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "scan",
+          "selftest"
+        ]
+      },
+      {
+        "name": "domain",
+        "type": "url-host",
+        "label": "Domain"
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 300000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 1
+  },
+  "permissions": [
+    "network",
+    "temp-files"
+  ],
+  "externalRestrictions": "Not usable until the owner supplies the project address and licence (catalog.js and this manifest). Keyless modules only. No command line is assumed.",
+  "selfTest": {
+    "input": {
+      "action": "selftest",
+      "domain": "example.com"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

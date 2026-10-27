@@ -1,0 +1,122 @@
+{
+  "id": "photon",
+  "name": "Photon site crawl",
+  "version": "1.0.0",
+  "description": "Crawls one site you name, same host only, depth 1 to 3, one request per second, with the Photon program. Lists pages, scripts and files.",
+  "capabilities": [
+    "web-crawl"
+  ],
+  "scope": "active",
+  "network": "keyless-external",
+  "licence": {
+    "spdx": "GPL-3.0-only",
+    "url": "https://spdx.org/licenses/GPL-3.0-only.html",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "Photon installed and unchanged",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    },
+    {
+      "name": "Python 3 or newer",
+      "check": [
+        "@node",
+        "run.js",
+        "--check=python"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--target={target}",
+      "--scheme={scheme}",
+      "--port={port}",
+      "--depth={depth}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "scan",
+          "selftest"
+        ]
+      },
+      {
+        "name": "target",
+        "type": "url-host",
+        "label": "Target host"
+      },
+      {
+        "name": "scheme",
+        "type": "enum",
+        "label": "Scheme",
+        "required": false,
+        "values": [
+          "https",
+          "http"
+        ]
+      },
+      {
+        "name": "port",
+        "type": "integer",
+        "label": "Port",
+        "required": false,
+        "min": 1,
+        "max": 65535
+      },
+      {
+        "name": "depth",
+        "type": "integer",
+        "label": "Depth",
+        "required": false,
+        "min": 1,
+        "max": 3
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 580000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 1
+  },
+  "permissions": [
+    "network",
+    "temp-files"
+  ],
+  "externalRestrictions": "ACTIVE: it sends traffic to the target. Only use it on systems you own or have written permission to test. Every run is recorded in the audit log on this computer, needs your confirmation each time, and is never routed through Tor or any proxy. Photon does not run scripts, so pages that build links in JavaScript are only partly covered. Its email and key extraction output is never read. It is a separate program, not part of Mayfair: Ghost downloads it into its tools folder on first use (checksum verified, then tested) or you point Ghost at your own copy. It is shown as installed only after its own self-test passes.",
+  "selfTest": {
+    "input": {
+      "action": "selftest",
+      "target": "localhost"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

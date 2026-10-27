@@ -1,0 +1,5 @@
+[*] Searching hackertarget for hosts of example.com
+[*] www.example.com
+[*] [host] api.example.com (93.184.216.40)
+[*] unrelated.other.net
+[*] Summary: 2 new hosts

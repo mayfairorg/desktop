@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ghost terminal</title>
+<link rel="stylesheet" href="../ui.css"><link rel="stylesheet" href="term.css">
+</head><body>
+<div id="app">
+  <header class="bar" role="banner">
+    <div class="brand"><span class="mark" aria-hidden="true"></span><span class="word">Ghost</span><span class="sub">terminal</span></div>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Terminals"></div>
+    <button class="btn" id="newTab" title="New terminal (Ctrl+Shift+T)" aria-label="New terminal">+</button>
+    <span class="grow"></span>
+    <button class="btn" id="fontDown" title="Smaller text" aria-label="Smaller text">A-</button>
+    <button class="btn" id="fontUp" title="Larger text" aria-label="Larger text">A+</button>
+    <button class="btn line" id="toolsBtn" aria-expanded="false" aria-controls="panel">Tools</button>
+    <div class="scan" aria-hidden="true"></div>
+  </header>
+  <div class="body">
+    <main id="stage" class="stage" aria-label="Terminal"><div id="empty" class="empty" hidden></div></main>
+    <aside id="panel" class="panel" hidden aria-label="Tools"></aside>
+  </div>
+  <div id="notice" class="notice" hidden role="status"></div>
+  <footer class="foot" role="contentinfo"><span id="fMode"></span><span id="fShell"></span><span class="grow"></span><span id="fLocal">Runs on this computer. Nothing runs unless you type or paste it.</span></footer>
+  <textarea id="sink" class="sr" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Terminal input"></textarea>
+</div>
+<script src="vt.js"></script><script src="keys.js"></script><script src="linemode.js"></script><script src="dom.js"></script><script src="tools-ui.js"></script><script src="app.js"></script>
+</body></html>

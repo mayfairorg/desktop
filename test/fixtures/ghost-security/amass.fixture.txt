@@ -1,0 +1,4 @@
+www.example.com
+[crtsh]  vpn.example.com
+shop.example.com (FQDN) --> a_record --> 93.184.216.35 (IPAddress)
+offsite.other.net

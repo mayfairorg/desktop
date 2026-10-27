@@ -142,6 +142,10 @@ on(event, cb) -> off     state, find-result, download, permission-request, permi
 
 The same names are listed in three places that a test keeps equal: the allow-list (`src/main/lib/ipc-allowlist.js`), the preload (`src/preload/web.js`) and the handlers (`src/main/browser-service.js`).
 
+### Ghost connectors (`window.mayfairDesktop.browser.ghost`)
+
+External tools run as approved, hash-checked connectors in `<userData>/connectors/<id>/`. The page lists them, asks for approval (only a native dialog in the main process grants it), enables, tests and runs them by id and typed input values; it can never pass a command. Calls: `ghost.connectors.list/get/validate/test/requestApproval/enable/disable/remove/installSample`, `ghost.jobs.run/cancel/list/get`, `ghost.logs.tail`, `ghost.pickFile`, event `ghost-job`. Full reference for connector authors: `docs/connectors.md`; bridge contract: section 0.5 of `browser-bridge-contract.md`.
+
 ### Extensions (the nine Mayfair extensions)
 
 `installExtension` accepts only `https://cloud.mayfairmail.com/ext/<file>.zip` (no query, no other host), downloads at most 8 MB, checks the SHA-256, unpacks with a zip reader that refuses `..`, absolute paths, encrypted or oversized archives, requires a Manifest V3 manifest (no `nativeMessaging`, `debugger`, `proxy`, `management`, `update_url` and similar), and keeps it in the app data folder. Installed extensions load into the normal browser session only (not Mayfair, Web apps, private or Tor tabs).
@@ -178,6 +182,7 @@ Could not be done here, and why:
 ```
 src/main/main.js         start-up, single instance, tray, menus, login item, updater
 src/main/browser-service.js  BrowserService: window, the Mayfair view, tab views, bounds, occlusion, capture, state events, bridge handlers, sessions, downloads, permissions, Web apps, privacy, search
+src/main/ghost/          Ghost connectors: manifest validator, ConnectorManager, JobRunner, log, sample connector (docs/connectors.md)
 src/main/lib/            pure logic with unit tests (origins, stores, ipc allow-list, privacy, tor, webapps, adblock engine, ...)
 src/preload/             web.js (Mayfair bridge and Browser bridge), page.js (websites + start page)
 src/ui/                  pages shown inside tab content: Mayfair Search start page, error page, changed-copy page

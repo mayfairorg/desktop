@@ -23,6 +23,26 @@ const gidObj = (v) => obj(v) && optGid(v.gid);
 const AF_KEYS = ['email', 'username', 'name', 'givenName', 'familyName', 'tel', 'address', 'address2', 'postalCode', 'city', 'region', 'country', 'organization', 'birthday'];
 const afFields = (v) => obj(v) && Object.keys(v).length > 0 && Object.keys(v).length <= 14 && Object.entries(v).every(([k, x]) => AF_KEYS.includes(k) && str(300)(x) && x.length > 0);
 const W = ['web'];
+// Ghost connectors: ids, job ids, run requests. A run names a registered connector and carries input values and an optional scope declaration: never a command, argv, path or environment.
+const ghostId = (v) => typeof v === 'string' && /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(v);
+const ghostJob = (v) => typeof v === 'string' && /^[A-Za-z0-9_-]{4,64}$/.test(v);
+const exactKeys = (o, allowed) => Object.keys(o).every((k) => allowed.includes(k));
+const ghostScope = (v) => obj(v) && exactKeys(v, ['target', 'confirmedAuthorised']) && str(253)(v.target) && v.target.length > 0 && bool(v.confirmedAuthorised);
+const ghostInput = (v) => obj(v) && Object.keys(v).length <= 16 && Object.entries(v).every(([k, x]) => /^[a-z][a-zA-Z0-9_]{0,31}$/.test(k) && (str(4096)(x) || int(x)));
+const ghostRun = (v) => obj(v) && exactKeys(v, ['connector', 'input', 'scope']) && ghostId(v.connector) && (v.input === undefined || ghostInput(v.input)) && (v.scope === undefined || ghostScope(v.scope));
+const ghostJobsList = (v) => obj(v) && exactKeys(v, ['limit', 'connector']) && (v.limit === undefined || (int(v.limit) && v.limit > 0 && v.limit <= 200)) && (v.connector === undefined || ghostId(v.connector));
+// Ghost vault: secrets in (passphrase, words), status out. No path, no key, no file handle crosses the bridge.
+const vPass = (v) => str(1024)(v) && v.length > 0;
+const vWords = (v) => str(400)(v) && v.length > 0;
+const vSecret = (v) => obj(v) && (exactKeys(v, ['passphrase']) && vPass(v.passphrase) || exactKeys(v, ['phrase']) && vWords(v.phrase));
+const vImport = (v) => obj(v) && Object.keys(v).every((k) => ['passphrase', 'phrase', 'replace'].includes(k)) && (v.passphrase === undefined) !== (v.phrase === undefined) && (v.passphrase === undefined || vPass(v.passphrase)) && (v.phrase === undefined || vWords(v.phrase)) && (v.replace === undefined || bool(v.replace));
+const vAnswers = (v) => obj(v) && exactKeys(v, ['answers']) && obj(v.answers) && Object.keys(v.answers).length === 3 && Object.entries(v.answers).every(([k, x]) => /^(?:[1-9]|1[0-2])$/.test(k) && str(40)(x));
+const vBegin = (v) => obj(v) && exactKeys(v, ['passphrase']) && vPass(v.passphrase);
+const vChange = (v) => obj(v) && exactKeys(v, ['oldPassphrase', 'newPassphrase']) && vPass(v.oldPassphrase) && vPass(v.newPassphrase);
+const vReset = (v) => obj(v) && exactKeys(v, ['phrase', 'newPassphrase']) && vWords(v.phrase) && vPass(v.newPassphrase);
+const vRotate = (v) => obj(v) && exactKeys(v, ['passphrase']) && (v.passphrase === undefined || vPass(v.passphrase));
+const vWipe = (v) => obj(v) && exactKeys(v, ['confirm']) && v.confirm === 'WIPE';
+const ghostTail = (v) => obj(v) && exactKeys(v, ['jobId', 'n']) && (v.jobId === undefined || ghostJob(v.jobId)) && (v.n === undefined || (int(v.n) && v.n > 0 && v.n <= 500));
 
 // Browser bridge: window.mayfairDesktop.browser.<name>  <->  channel 'br:<name>' (a dotted name stays dotted: 'br:bookmarks.list')
 const BR = {
@@ -54,6 +74,16 @@ const BR = {
   'tor.status': none, 'tor.start': none, 'tor.stop': none, 'tor.newIdentity': none,
   'adblock.stats': argsOpt(0, id), 'adblock.toggleSite': args(id), 'adblock.updateNow': none,
   'extensions.list': none, 'extensions.install': args(str(32), str(300), str(64)), 'extensions.remove': args(str(32)),
+  // Ghost connectors (window.mayfairDesktop.browser.ghost.*): there is no call that approves, and none that runs a command
+  'ghost.connectors.list': none, 'ghost.connectors.get': args(ghostId), 'ghost.connectors.validate': args(ghostId), 'ghost.connectors.test': argsOpt(1, ghostId, ghostScope),
+  'ghost.connectors.requestApproval': args(ghostId), 'ghost.connectors.enable': args(ghostId), 'ghost.connectors.disable': args(ghostId), 'ghost.connectors.remove': args(ghostId), 'ghost.connectors.installSample': none,
+  'ghost.jobs.run': args(ghostRun), 'ghost.jobs.cancel': args(ghostJob), 'ghost.jobs.list': argsOpt(0, ghostJobsList), 'ghost.jobs.get': args(ghostJob),
+  'ghost.logs.tail': args(ghostTail), 'ghost.pickFile': none,
+  'ghost.vault.status': none, 'ghost.vault.unlock': argsOpt(0, vSecret), 'ghost.vault.lock': none, 'ghost.vault.backup.begin': args(vBegin), 'ghost.vault.backup.confirm': args(vAnswers), 'ghost.vault.backup.cancel': none,
+  'ghost.vault.backup.disable': none, 'ghost.vault.backup.newPhrase': none, 'ghost.vault.changePassphrase': args(vChange), 'ghost.vault.resetPassphrase': args(vReset), 'ghost.vault.requirePassphrase': args(bool),
+  'ghost.vault.rotateKeys': argsOpt(0, vRotate), 'ghost.vault.syncNow': none, 'ghost.vault.wipe': args(vWipe), 'ghost.vault.exportFile': none, 'ghost.vault.importFile': argsOpt(1, vImport),
+  // Ghost app (App Library entry, Research): the library listing, open (the start flow runs in the Ghost window), remove. The app itself is a separate window with its own channels.
+  'ghost.app.library': none, 'ghost.app.open': none, 'ghost.app.remove': none,
   about: none,
   subscribe: args(str(40), bool),
 };
@@ -100,7 +130,7 @@ for (const [name, check] of Object.entries(BR)) CH['br:' + name] = { roles: W, c
 
 // Channels the main process sends to renderers (one way). Used by the preload to filter listeners.
 // 'br:ev' carries every Browser bridge event as (name, payload); BR_EVENTS lists the names.
-const BR_EVENTS = ['state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus', 'windows', 'password-offer', 'password-offer-cancel', 'password-field', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'details-used'];
+const BR_EVENTS = ['ghost-job', 'state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus', 'windows', 'password-offer', 'password-offer-cancel', 'password-field', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'details-used'];
 const EVENTS = {
   web: ['file:open', 'deeplink', 'download:done', 'pw:request', 'search:query', 'br:ev'],
   start: [],

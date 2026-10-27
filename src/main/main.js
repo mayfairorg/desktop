@@ -2,7 +2,8 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
-const { app, Menu, Tray, nativeImage, Notification, shell } = require('electron');
+const electron = require('electron');
+const { app, Menu, Tray, nativeImage, Notification, shell } = electron;
 
 const pkg = require('../../package.json');
 const O = require('./lib/origins');
@@ -36,6 +37,22 @@ function boot() {
   const updater = require('./updater');
   let br = null;
   let tray = null;
+  // Ghost terminal: its own window, created on first use. No Cloud-page bridge reaches it (src/main/ghost/terminal/).
+  let term = null;
+  const ghostTerminal = () => (term || (term = require('./ghost/terminal').createTerminal({ electron, userData: app.getPath('userData'), isPackaged: app.isPackaged, icon: path.join(__dirname, '..', '..', 'assets', 'icon.png') })));
+  // Ghost investigation browser: its own windows (control window plus one per case), created on first use. No Cloud-page bridge reaches it (src/main/ghost/browser/).
+  let gbr = null;
+  const ghostBrowser = () => (gbr || (gbr = require('./ghost/browser').createGhostBrowserApp({ electron, isPackaged: app.isPackaged, icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'), getVault: () => (br && br.ghost && br.ghost.vaultSvc ? br.ghost.vaultSvc.vault : null), restoreResolver: () => (br ? br.applyNetwork() : null) })));
+  // Mayfair Ghost app: its own window (src/main/ghost/app/). Installed from the App Library, not preinstalled; the window runs the start flow.
+  let gapp = null;
+  const ghostApp = () => (gapp || (gapp = require('./ghost/app').createGhostApp({
+    electron, userData: app.getPath('userData'), ghost: br.ghost, isPackaged: app.isPackaged, icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'), version: pkg.version,
+    openTerminal: async () => ghostTerminal().show(),
+    // Tool Integrations is an existing page in Mayfair Cloud (Settings): bring the Mayfair window forward and ask it to open that page.
+    openToolIntegrations: async () => { br.showWindow(); br.emit('panel-request', { panel: 'settings', page: 'cl-ghost', gid: null }); return true; },
+    onInstallChange: () => { buildMenu(); if (tray) { buildTray(false); buildTray(true); } },
+  })));
+  const ghostInstalled = () => { try { return !!br && ghostApp().installed(); } catch { return false; } };
   let pinnedItems = [];
   const queue = { files: [], links: [], apps: [] };
   const hiddenStart = process.argv.includes('--hidden');
@@ -83,6 +100,8 @@ function boot() {
       { label: 'Open Mayfair', click: () => br.goHome() },
       { label: 'New tab', click: () => br.menuAction('newTab') },
       { label: 'Web apps', click: () => br.menuAction('apps') },
+      ...(ghostInstalled() ? [{ label: 'Mayfair Ghost', click: () => ghostApp().show() }] : []),
+      { label: 'Ghost terminal', click: () => ghostTerminal().show().catch(() => {}) },
       { label: 'Private tab with Tor', click: () => br.menuAction('torTab') },
       ...(pinnedItems.length ? [{ type: 'separator' }, ...pinnedItems] : []),
       { type: 'separator' },
@@ -122,6 +141,9 @@ function boot() {
         { type: 'separator' },
         { label: 'Mayfair home', accelerator: 'CmdOrCtrl+Shift+H', click: A('home') },
         { label: 'Web apps', accelerator: 'CmdOrCtrl+Shift+A', click: A('apps') },
+        { label: 'Mayfair Ghost', visible: ghostInstalled(), click: () => ghostApp().show() },
+        { label: 'Ghost terminal', click: () => ghostTerminal().show().catch(() => {}) },
+        { label: 'Ghost investigation browser', click: () => { ghostBrowser().showLauncher(); } },
         { label: 'Privacy', accelerator: 'CmdOrCtrl+Shift+P', click: A('privacy') },
         { label: 'About and licences', click: A('about') },
         { type: 'separator' },
@@ -162,6 +184,9 @@ function boot() {
     if (!integ.ok) console.error('Mayfair Desktop: installed files do not match the build (' + integ.reason + '): ' + integ.bad.join(', '));
     br = new BrowserService({ dataDir: path.join(app.getPath('userData'), 'mayfair-desktop'), version: pkg.version, tampered: integ.ok ? null : integ });
     fs.mkdirSync(br.dir, { recursive: true });
+    // App Library side of Ghost (browser.ghost.app.*): the listing, open, remove. Job events are also passed to the Ghost window when it exists.
+    br.ghostApp = { library: () => ghostApp().libraryEntry(), open: () => { ghostApp().show(); return { ok: true }; }, uninstall: () => ghostApp().app.uninstall() };
+    { const run = br.ghost.runner, prev = run.emit; run.emit = (n, p) => { prev(n, p); if (gapp) gapp.sendJob(n, p); }; }
     br.onSettingsChanged = (keys) => {
       const s = br.settings.get();
       if (keys.includes('launchAtLogin')) applyLoginItem(s.launchAtLogin);
@@ -186,13 +211,16 @@ function boot() {
       },
     });
     br.updater = u;
+    if (process.argv.includes('--ghost-terminal')) ghostTerminal().show().catch(() => {});
+    if (process.argv.includes('--ghost')) ghostApp().show();
+    if (process.argv.includes('--ghost-browser')) ghostBrowser().showLauncher();
     br.home.wc.once('did-finish-load', drain);
     setTimeout(drain, 2500);
     if (process.env.MF_SMOKE && !app.isPackaged) require(process.env.MF_SMOKE_HOOK === 'real' ? '../../tools/smoke-real' : '../../tools/smoke-hook').run(br, app);
   });
 
   app.on('activate', () => { if (br) br.showWindow(); });
-  app.on('will-quit', () => { if (br) br.flushAppSessions(); });
+  app.on('will-quit', () => { if (br) br.flushAppSessions(); if (term) term.shutdown(); if (gbr) gbr.shutdown(); if (gapp) gapp.shutdown(); });
   app.on('before-quit', () => { if (br) { br.quitting = true; br.icons.stop(); br.flushAll(); } });
   app.on('window-all-closed', () => { if (br && br.quitting) app.quit(); else if (!br || !br.settings.get().tray) app.quit(); });
   // Any web contents the app did not create itself (webview, stray windows) is refused.

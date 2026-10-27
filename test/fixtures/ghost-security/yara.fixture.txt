@@ -1,0 +1,5 @@
+mfselftest [test,demo] [author="Jane Doe",description="Demo, with comma",score=40] /tmp/sample with space.bin
+0x3:$a: mayfair-selftest-marker
+0x30:$a: mayfair-selftest-marker
+OtherRule [] /tmp/sample with space.bin
+unexpected output line

@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<nmaprun scanner="nmap" args="nmap" start="1790000000" version="7.95">
+<host endtime="1790000003"><status state="up" reason="user-set"/><address addr="10.0.0.9" addrtype="ipv4"/><ports><extraports state="filtered" count="100"><extrareasons reason="no-responses" count="100"/></extraports></ports></host>
+<runstats><finished time="1790000003" summary="Nmap done: 1 IP address (1 host up) scanned in 3.1 seconds" exit="success"/></runstats>
+</nmaprun>

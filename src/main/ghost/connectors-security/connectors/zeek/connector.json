@@ -1,0 +1,87 @@
+{
+  "id": "zeek",
+  "name": "Zeek capture analysis",
+  "version": "1.0.0",
+  "description": "Reads a packet capture (pcap) file you pick with the Zeek program and lists connections, DNS, HTTP, TLS and notices. Offline: no live capture.",
+  "capabilities": [
+    "pcap-analysis",
+    "network-forensics"
+  ],
+  "scope": "local",
+  "network": "local",
+  "licence": {
+    "spdx": "BSD-3-Clause",
+    "url": "https://spdx.org/licenses/BSD-3-Clause.html",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "Zeek installed and unchanged",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--pcap={pcap}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "scan",
+          "selftest"
+        ]
+      },
+      {
+        "name": "pcap",
+        "type": "file",
+        "label": "Capture file (pcap)",
+        "required": false,
+        "maxBytes": 268435456
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 300000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 1
+  },
+  "permissions": [
+    "read-picked-file",
+    "temp-files"
+  ],
+  "externalRestrictions": "Works on files you supply and never captures live traffic. Best on Linux and macOS. Captures can contain other people's data: only analyse captures you are entitled to hold. It is a separate program, not part of Mayfair: Ghost downloads it into its tools folder on first use (checksum verified, then tested) or you point Ghost at your own copy. It is shown as installed only after its own self-test passes.",
+  "selfTest": {
+    "input": {
+      "action": "selftest"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

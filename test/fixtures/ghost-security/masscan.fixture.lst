@@ -1,0 +1,5 @@
+#masscan
+open tcp 443 93.184.216.34 1790000001
+open tcp 22 93.184.216.34 1790000002
+bogus line
+# end

@@ -1,0 +1,4 @@
+{"response":{"Attribute":[
+{"id":"11","event_id":"5","category":"Network activity","type":"ip-dst","value":"203.0.113.9","to_ids":true,"timestamp":"1789000000","comment":"C2 seen in lab","Event":{"id":"5","info":"Lab campaign"},"Tag":[{"name":"tlp:amber"}]},
+{"id":"12","event_id":"6","category":"Network activity","type":"ip-src","value":"203.0.113.9","to_ids":false,"timestamp":"1789000100","Event":{"id":"6","info":"Context only"}}
+]}}

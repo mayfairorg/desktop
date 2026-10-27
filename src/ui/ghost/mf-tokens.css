@@ -1,0 +1,84 @@
+/* ==========================================================================
+   MAYFAIR SKIN: tokens. The only place a colour, radius, size or shadow is defined.
+   Apps never write a hex colour, a pixel radius or a font size by hand.
+   Dark is the default; light is the same tokens with different values.
+   ========================================================================== */
+:root,[data-theme=dark]{
+  color-scheme:dark;
+  /* colour */
+  --mf-surface:#171716;   /* window body */
+  --mf-soft:#1f1f1d;      /* sidebars, raised areas */
+  --mf-soft2:#2a2a27;     /* fields, pressed */
+  --mf-text:#f1f1ee;
+  --mf-mute:#a3a39d;
+  --mf-line:#34342f;
+  --mf-accent:#ffa800;    /* Mayfair amber */
+  --mf-on-accent:#0a0a0a;
+  --mf-danger:#ff8a80;
+  --mf-ok:#7bc58d;
+  --mf-warn:#ffcf5c;
+  --mf-info:#7db4ff;
+  --mf-paper:#fbfbf9;--mf-paper-ink:#1b1b19;--mf-paper-mute:#6b6b66;--mf-paper-line:#d9d9d4;--mf-paper-soft:#f1f1ee;--mf-scene:#0a0a0a;     /* desktop and sign-in backdrop */
+  --mf-white:#fff;
+  --mf-brand:#0a0a0a;--mf-brand-card:#141413;--mf-brand-line:#232321;--mf-brand-text:#dcdcd7;--mf-brand-mute:#9b9b95; /* sign-in brand panel: same in both themes */
+  --mf-black:#0a0a0a;
+  --mf-hov:color-mix(in srgb,#fff 8%,transparent);
+  --mf-act:color-mix(in srgb,#fff 14%,transparent);
+}
+[data-theme=light]{
+  color-scheme:light;
+  --mf-surface:#fff;
+  --mf-soft:#f3f3f2;
+  --mf-soft2:#e9e9e6;
+  --mf-text:#0a0a0a;
+  --mf-mute:#5b5b57;
+  --mf-line:#d8d8d4;
+  --mf-danger:#a82020;   /* status colours: 4.5:1 or better on white, on soft, and on their own 18% tint */
+  --mf-ok:#146a37;
+  --mf-warn:#854d00;
+  --mf-info:#17509f;
+  --mf-paper:#ffffff;--mf-paper-ink:#1b1b19;--mf-paper-mute:#6b6b66;--mf-paper-line:#d9d9d4;--mf-paper-soft:#f1f1ee;--mf-scene:#e9e9e6;
+  --mf-hov:color-mix(in srgb,#000 6%,transparent);
+  --mf-act:color-mix(in srgb,#000 11%,transparent);
+}
+:root,[data-theme],[data-theme] body{--mf-accent-ink:var(--mf-accent)}   /* amber used AS TEXT: the plain accent in dark, a deeper amber in light (amber on white is 1.7:1) */
+[data-theme=light],[data-theme=light] body{--mf-accent-ink:color-mix(in srgb,var(--mf-accent) 52%,var(--mf-black))}
+:root,[data-theme]{
+  /* derived colour (same formula in both themes) */
+  --mf-hair:color-mix(in srgb,var(--mf-text) 11%,transparent);
+  --mf-hair2:color-mix(in srgb,var(--mf-text) 6%,transparent);
+  --mf-sel:color-mix(in srgb,var(--mf-accent) 18%,transparent);
+  --mf-glass:color-mix(in srgb,var(--mf-surface) 72%,transparent);
+  --mf-mica:color-mix(in srgb,var(--mf-surface) 90%,transparent);
+  --mf-blur:blur(30px) saturate(1.6);
+  /* radius: five values, nothing else */
+  --mf-r-sm:6px;     /* chips, small tiles */
+  --mf-r-ctl:8px;    /* buttons, fields, rows, tabs */
+  --mf-r-pop:16px;   /* menus, popups, cards: same as dialogs */
+  --mf-r-dlg:16px;   /* dialogs, panels, windows */
+  --mf-r-pill:8px;     /* search, switches, badges: same curve as everything else, no pills */
+  /* space */
+  --mf-s1:4px;--mf-s2:8px;--mf-s3:12px;--mf-s4:16px;--mf-s5:24px;--mf-s6:32px;
+  /* type */
+  --mf-font:'Inter',system-ui,sans-serif;
+  --mf-mono:'Mayfair Mono',ui-monospace,monospace;
+  --mf-fs-xs:11px;--mf-fs-sm:12px;--mf-fs-md:13.5px;--mf-fs-lg:15px;--mf-fs-xl:17px;--mf-fs-h2:22px;--mf-fs-h1:28px;
+  --mf-fw-reg:400;--mf-fw-med:500;--mf-fw-semi:600;--mf-fw-bold:650;
+  /* control heights: three sizes */
+  --mf-h-s:28px;--mf-h-m:32px;--mf-h-l:40px;
+  /* rows */
+  --mf-row-nav:34px;--mf-row-list:28px;--mf-row-menu:32px;--mf-row-panel:40px;
+  /* bars */
+  --mf-bar-menu:30px;--mf-bar-sys:30px;--mf-bar-nav:40px;--mf-bar-cmd:46px;--mf-bar-status:28px;--mf-bar-task:56px;
+  --mf-side-w:240px;
+  /* icons: one weight, three sizes */
+  --mf-ico-sw:1.6;--mf-ico-s:16px;--mf-ico-m:20px;--mf-ico-l:24px;
+  /* shadow and motion */
+  --mf-sh1:0 1px 2px rgba(0,0,0,.14),0 0 0 .5px color-mix(in srgb,var(--mf-text) 14%,transparent);
+  --mf-sh-pop:0 12px 40px rgba(0,0,0,.28),0 2px 6px rgba(0,0,0,.16),0 0 0 .5px color-mix(in srgb,var(--mf-text) 16%,transparent);
+  --mf-sh-dlg:0 28px 80px rgba(0,0,0,.42),0 4px 14px rgba(0,0,0,.2),0 0 0 .5px color-mix(in srgb,var(--mf-text) 18%,transparent);
+  --mf-t1:120ms;--mf-t2:200ms;--mf-ease:cubic-bezier(.2,.8,.2,1);
+  /* file-type palette: the only colours allowed on file glyphs */
+  --mf-ft-doc:#2f6fe4;--mf-ft-sheet:#1f9d55;--mf-ft-note:#ffa800;--mf-ft-pdf:#e5484d;--mf-ft-image:#8e4ec6;
+  --mf-ft-code:#0f9d8a;--mf-ft-zip:#b36b00;--mf-ft-media:#d6336c;--mf-ft-slide:#e8590c;--mf-ft-text:#6b6b66;
+}

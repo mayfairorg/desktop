@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" class="launcher"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Ghost investigation browser</title>
+<link rel="stylesheet" href="../ui.css"><link rel="stylesheet" href="gbr.css">
+</head><body>
+<main>
+  <h1>Investigation browser</h1>
+  <p class="sub">A separate browser for one case. Each case window has its own temporary session that is wiped when it closes. Nothing is kept in your normal browser.</p>
+  <div id="notice" class="notice" hidden role="alert"></div>
+  <section class="card">
+    <h2>Open a case window</h2>
+    <label>Case ID (letters, digits, - and _)<input id="case" type="text" autocomplete="off" spellcheck="false" maxlength="40"></label>
+    <label>Case name (optional)<input id="name" type="text" autocomplete="off" maxlength="80"></label>
+    <label>First address (optional)<input id="url" type="text" autocomplete="off" spellcheck="false" maxlength="2048"></label>
+    <p class="s" id="routeline">Route: Tor, with name lookups made by Tor.</p>
+    <div class="row"><button class="btn primary" id="go">Open over Tor</button><button class="btn line" id="direct" hidden>Connect without Tor (direct, encrypted DNS)</button></div>
+  </section>
+  <section class="card" id="open-card" hidden><h2>Open case windows</h2><div id="open"></div></section>
+  <section class="card">
+    <h2>What the routes do and do not hide</h2>
+    <ul class="facts">
+      <li>Tor hides your IP address from the sites you visit. Tor relays and the exit relay can still see where traffic ends up, and the exit sees any traffic that is not HTTPS.</li>
+      <li>Direct with encrypted DNS only stops your network provider reading your name lookups. Sites and your provider still see your IP address and the sites you connect to.</li>
+      <li>Signing in to any account links that session to you. Fingerprint reduction narrows what pages can read but does not make this browser look like every other one.</li>
+      <li>Only sites you allow for the case are reached. Everything else is blocked and listed in the case window.</li>
+    </ul>
+  </section>
+  <section class="card danger">
+    <h2>Kill switch</h2>
+    <p class="s">Closes every case window, wipes their sessions, stops Tor and locks the Ghost vault. Also Ctrl+Shift+Backspace (Cmd on a Mac) from any Ghost browser window.</p>
+    <button class="btn kill" id="kill">Kill everything now</button>
+  </section>
+</main>
+<script src="launcher.js"></script>
+</body></html>

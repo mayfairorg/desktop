@@ -1,0 +1,86 @@
+{
+  "id": "subfinder",
+  "name": "Subfinder subdomain discovery",
+  "version": "1.0.0",
+  "description": "Lists subdomains of a domain that public sources know about, using the Subfinder program. Passive: it does not contact the target.",
+  "capabilities": [
+    "subdomain-discovery",
+    "passive-dns"
+  ],
+  "scope": "passive",
+  "network": "rate-limited",
+  "licence": {
+    "spdx": "MIT",
+    "url": "https://spdx.org/licenses/MIT.html",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "Subfinder installed and unchanged",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--domain={domain}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "scan",
+          "selftest"
+        ]
+      },
+      {
+        "name": "domain",
+        "type": "url-host",
+        "label": "Domain"
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 400000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 1
+  },
+  "permissions": [
+    "network",
+    "temp-files"
+  ],
+  "externalRestrictions": "Queries public sources that apply their own fair-use limits; without API keys results are fewer. Names are not resolved, so each is reported as likely or uncertain. It is a separate program, not part of Mayfair: Ghost downloads it into its tools folder on first use (checksum verified, then tested) or you point Ghost at your own copy. It is shown as installed only after its own self-test passes.",
+  "selfTest": {
+    "input": {
+      "action": "selftest",
+      "domain": "example.com"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

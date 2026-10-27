@@ -1,0 +1,96 @@
+{
+  "id": "yara",
+  "name": "YARA file scan",
+  "version": "1.0.0",
+  "description": "Scans one file you pick with a YARA rules file you pick and reports which rules matched. Local only; uses the YARA program in the Ghost tools folder.",
+  "capabilities": [
+    "malware-analysis",
+    "file-scan",
+    "yara"
+  ],
+  "scope": "local",
+  "network": "local",
+  "licence": {
+    "spdx": "BSD-3-Clause",
+    "url": "https://spdx.org/licenses/BSD-3-Clause.html",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "YARA installed and unchanged",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--rules={rules}",
+      "--file={file}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "scan",
+          "selftest"
+        ]
+      },
+      {
+        "name": "rules",
+        "type": "file",
+        "label": "Rules file",
+        "required": false,
+        "maxBytes": 268435456
+      },
+      {
+        "name": "file",
+        "type": "file",
+        "label": "File to scan",
+        "required": false,
+        "maxBytes": 268435456
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 120000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 2
+  },
+  "permissions": [
+    "read-picked-file",
+    "temp-files"
+  ],
+  "externalRestrictions": "A rule match shows the bytes matched the rule, not that a file is malicious; no match does not show it is safe. Rules you load keep their own licences. It is a separate program, not part of Mayfair: Ghost downloads it into its tools folder on first use (checksum verified, then tested) or you point Ghost at your own copy. It is shown as installed only after its own self-test passes.",
+  "selfTest": {
+    "input": {
+      "action": "selftest"
+    },
+    "expect": {
+      "minResults": 3,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

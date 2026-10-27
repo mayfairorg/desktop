@@ -1,0 +1,7 @@
+{"@programName":"ZAP","@version":"2.16.0","@generated":"Tue, 27 Oct 2026 09:00:00","site":[{"@name":"https://example.com","@host":"example.com","@port":"443","@ssl":"true","alerts":[
+{"pluginid":"10038","alertRef":"10038-1","alert":"Content Security Policy (CSP) Header Not Set","name":"Content Security Policy (CSP) Header Not Set","riskcode":"2","confidence":"3","riskdesc":"Medium (High)","desc":"<p>CSP is an added layer of security.</p>","instances":[{"uri":"https://example.com/","method":"GET"},{"uri":"https://example.com/a","method":"GET"}],"count":"2","solution":"<p>Set the header.</p>","cweid":"693","wascid":"15"},
+{"pluginid":"10020","alertRef":"10020-1","alert":"Missing Anti-clickjacking Header","riskcode":"2","confidence":"2","riskdesc":"Medium (Medium)","desc":"<p>x</p>","instances":[{"uri":"https://example.com/"}],"count":"1","solution":"<p>y</p>","cweid":"1021"},
+{"pluginid":"10096","alertRef":"10096","alert":"Timestamp Disclosure","riskcode":"0","confidence":"1","riskdesc":"Informational (Low)","instances":[],"count":"0","cweid":"200"},
+{"pluginid":"99999","alertRef":"99999","alert":"Dismissed thing","riskcode":"1","confidence":"0","riskdesc":"Low (False Positive)","instances":[],"count":"0"},
+{"pluginid":"10202","alertRef":"10202","alert":"Absence of Anti-CSRF Tokens","riskcode":"1","confidence":"4","riskdesc":"Low (Confirmed)","instances":[{"uri":"https://example.com/f"}],"count":"1","cweid":"352"}
+]}]}

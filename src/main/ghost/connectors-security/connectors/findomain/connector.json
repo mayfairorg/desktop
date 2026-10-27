@@ -1,0 +1,86 @@
+{
+  "id": "findomain",
+  "name": "Findomain subdomain listing",
+  "version": "1.0.0",
+  "description": "Lists subdomains of a domain from passive sources using the Findomain program. Quiet mode, no resolver check, no API keys.",
+  "capabilities": [
+    "subdomain-discovery",
+    "passive-dns"
+  ],
+  "scope": "passive",
+  "network": "rate-limited",
+  "licence": {
+    "spdx": "GPL-3.0-or-later",
+    "url": "https://spdx.org/licenses/GPL-3.0-or-later.html",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "Findomain installed and unchanged",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--domain={domain}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "scan",
+          "selftest"
+        ]
+      },
+      {
+        "name": "domain",
+        "type": "url-host",
+        "label": "Domain"
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 300000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 1
+  },
+  "permissions": [
+    "network",
+    "temp-files"
+  ],
+  "externalRestrictions": "Queries public sources that apply their own limits. Names are not resolved, so every result is reported as uncertain. Findomain is GPL software run as a separate program; Mayfair does not bundle it. It is a separate program, not part of Mayfair: Ghost downloads it into its tools folder on first use (checksum verified, then tested) or you point Ghost at your own copy. It is shown as installed only after its own self-test passes.",
+  "selfTest": {
+    "input": {
+      "action": "selftest",
+      "domain": "example.com"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

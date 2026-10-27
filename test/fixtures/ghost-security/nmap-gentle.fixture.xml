@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<!-- FIXTURE written by hand in the shape of nmap -oX output -->
+<nmaprun scanner="nmap" args="nmap -sT -Pn -n --top-ports 100 -oX - -- 93.184.216.34" start="1790000000" version="7.95">
+<host starttime="1790000000" endtime="1790000009"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="93.184.216.34" addrtype="ipv4"/>
+<hostnames><hostname name="example.com" type="user"/></hostnames>
+<ports><extraports state="closed" count="96"><extrareasons reason="conn-refused" count="96"/></extraports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="https" product="nginx" version="1.24.0" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="8080"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="http-proxy" method="probed" conf="5"/></port>
+<port protocol="tcp" portid="22"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ssh" method="table" conf="3"/></port>
+</ports></host>
+<runstats><finished time="1790000009" elapsed="9.40" summary="Nmap done at Tue Oct 27 09:00:09 2026; 1 IP address (1 host up) scanned in 9.40 seconds" exit="success"/><hosts up="1" down="0" total="1"/></runstats>
+</nmaprun>

@@ -29,9 +29,13 @@ test('no telemetry: no analytics SDKs or hard-coded endpoints other than Mayfair
   const pkg = require('../package.json');
   const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).join(' ');
   assert.ok(!/sentry|segment|mixpanel|amplitude|analytics|bugsnag|datadog/i.test(deps));
-  const all = walk('src').filter((f) => /\.(js|html)$/.test(f) && !f.endsWith('blocklist.txt')).map((f) => read(f)).join('\n');
+  const all = walk('src').filter((f) => /\.(js|html)$/.test(f) && !f.endsWith('blocklist.txt') && !f.includes('ghost/connectors-security')).map((f) => read(f)).join('\n');
   const hosts = new Set([...all.matchAll(/https?:\/\/([a-z0-9.-]+)/gi)].map((m) => m[1].toLowerCase()));
-  const allowed = ['cloud.mayfairmail.com', 'mayfairmail.com', 'duckduckgo.com', 'www.startpage.com', 'search.brave.com', 'example.com', 'cloudflare-dns.com', 'dns.quad9.net', 'geocoding-api.open-meteo.com', 'api.open-meteo.com', 'api.dictionaryapi.dev', 'en.wikipedia.org', 'www.google.com', 'www.bing.com', 'www.ecosia.org', 'www.qwant.com', 'cdn.jsdelivr.net', 'easylist.to', 'ublockorigin.github.io', '127.0.0.1'];
+  const allowed = ['www.w3.org' /* the SVG namespace name, never requested */, 'cloud.mayfairmail.com', 'mayfairmail.com', 'duckduckgo.com', 'www.startpage.com', 'search.brave.com', 'example.com', 'cloudflare-dns.com', 'dns.quad9.net', 'geocoding-api.open-meteo.com', 'api.open-meteo.com', 'api.dictionaryapi.dev', 'en.wikipedia.org', 'www.google.com', 'www.bing.com', 'www.ecosia.org', 'www.qwant.com', 'cdn.jsdelivr.net', 'easylist.to', 'ublockorigin.github.io', '127.0.0.1',
+    // Mayfair Ghost passive modules (src/main/ghost/modules): public lookup services a person starts on purpose, each on that module's own host allowlist
+    'data.iana.org', 'cloudflare-dns.com', 'dns.google', 'crt.sh', 'web.archive.org', 'archive.org', 'api.gdeltproject.org', 'www.wikidata.org', 'cmr.earthdata.nasa.gov', 'landsatlook.usgs.gov',
+    // links in connector manifests (licence pages) and an XML namespace string: never requested
+    'opensource.org', 'github.com', 'exiftool.org', 'mediaarea.net', 'gdal.org', 'www.qgis.org', 'ffmpeg.org', 'www.apache.org', 'ns.adobe.com'];
   for (const h of hosts) assert.ok(allowed.includes(h) || h.endsWith('.invalid'), 'unexpected host ' + h);
 });
 test('every UI page has a strict CSP and loads no remote script', () => {

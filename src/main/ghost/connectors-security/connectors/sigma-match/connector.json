@@ -1,0 +1,96 @@
+{
+  "id": "sigma-match",
+  "name": "Sigma rule matcher",
+  "version": "1.0.0",
+  "description": "Evaluates Sigma detection rules you pick against a JSON-lines log file you pick. Mayfair's own matcher, pure JavaScript, local only; unsupported rules are listed as skipped.",
+  "capabilities": [
+    "detection",
+    "log-analysis",
+    "sigma"
+  ],
+  "scope": "local",
+  "network": "local",
+  "licence": {
+    "spdx": "LicenseRef-Mayfair-Proprietary",
+    "url": "https://mayfairmail.com/legal",
+    "mode": "bundled"
+  },
+  "installRequirements": [
+    {
+      "name": "Mayfair's built-in Node runtime",
+      "check": [
+        "@node",
+        "-e",
+        "process.exit(0)"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--rules={rules}",
+      "--logs={logs}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "evaluate",
+          "selftest"
+        ]
+      },
+      {
+        "name": "rules",
+        "type": "file",
+        "label": "Sigma rules file",
+        "required": false,
+        "maxBytes": 268435456
+      },
+      {
+        "name": "logs",
+        "type": "file",
+        "label": "Events (JSON lines)",
+        "required": false,
+        "maxBytes": 52428800
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 120000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 2,
+    "maxMemoryMb": 1024
+  },
+  "permissions": [
+    "read-picked-file"
+  ],
+  "externalRestrictions": "No Sigma rules are shipped. Rules you load keep their own licences; most community rules use the Detection Rule License 1.1 (https://spdx.org/licenses/DRL-1.1.html), which requires keeping the rule author identified, so every match carries the rule's author and licence. The rule logsource is not checked.",
+  "selfTest": {
+    "input": {
+      "action": "selftest"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

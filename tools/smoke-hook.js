@@ -34,6 +34,7 @@ async function run(br, app) {
     if (req.url.startsWith('/home')) { res.writeHead(200, { 'content-type': 'text/html' }); return res.end('<title>Account home</title><p>Welcome</p>'); }
     if (req.url.startsWith('/spa')) { res.writeHead(200, { 'content-type': 'text/html' }); return res.end('<title>SPA login</title><div id=box><input id=u type=email><input id=p type=password><button id=go type=button style="width:120px;height:40px">Log in</button></div><script>document.getElementById("go").onclick=()=>fetch("/home").then(()=>{document.getElementById("box").remove()})</script>'); }
     if (req.url.startsWith('/change')) { res.writeHead(200, { 'content-type': 'text/html' }); return res.end('<title>Change</title><form id=f onsubmit="event.preventDefault();setTimeout(()=>{location.href=\'/home\'},100)"><input id=u autocomplete=username><input id=a type=password autocomplete=current-password><input id=b type=password autocomplete=new-password><input id=c type=password autocomplete=new-password><button>Change</button></form>'); }
+    if (req.url.startsWith('/trackpop')) { res.writeHead(200, { 'content-type': 'text/html' }); return res.end('<title>Tracker pop-up</title><script>setTimeout(()=>window.open("https://fls.doubleclick.net/activityi;src=1;type=x"),50)</script><p>tracker pop-up test</p>'); }
     if (req.url.startsWith('/popup')) { res.writeHead(200, { 'content-type': 'text/html' }); return res.end('<title>Popup page</title><script>setTimeout(()=>window.open("http://127.0.0.1:' + server.address().port + '/"),50)</script><p>popup test</p>'); }
     res.writeHead(200, { 'content-type': 'text/html' });
     res.end(`<!doctype html><title>Local test page</title><body style="font:16px system-ui;padding:24px;background:#fff;color:#111">
@@ -207,6 +208,9 @@ async function run(br, app) {
   rec('popups.allow opens it as a tab', (await BR(`popups.allow('${nw.id}')`)) === true && M().tabs.length === before + 1);
   for (const m of M().tabs.filter((t) => t.id !== t1)) br.closeTab(m.id);
   await sleep(300);
+  const tp = (await BR(`newTab({url:'${base}/trackpop'})`)).id; await sleep(3000);
+  rec('an advertising address opened as a pop-up is dropped, neither a tab nor a pop-up notice', !(await events('new-window-request')).some((e) => /doubleclick/.test(e.url)) && !M().tabs.some((t) => /doubleclick/.test(t.url || '')));
+  br.closeTab(tp); await sleep(300);
 
   // ---- tab management ----
   const ids = [t1];
@@ -754,6 +758,53 @@ async function run(br, app) {
   rec('unreachable page shows the error page inside the tab', /error\.html/.test(br.tabs.get(et).wc.getURL()));
   await shot('08-error-in-tab');
   br.closeTab(et);
+
+  // ---- Ghost connectors: the sample installs into userData, is approved through the (test-only) stand-in for the native dialog, tested, run, and its real results come back over the bridge ----
+  {
+    const crypto = require('node:crypto');
+    const ghostText = 'smoke test text\nsecond line here\n';
+    const gl0 = await BR('ghost.connectors.installSample()');
+    rec('ghost: sample installs into userData/connectors (no network)', gl0 && gl0.ok && fs.existsSync(path.join(app.getPath('userData'), 'connectors', 'sample-textstats', 'connector.json')), JSON.stringify(gl0));
+    const e0 = ((await BR('ghost.connectors.list()')) || []).find((x) => x.id === 'sample-textstats');
+    rec('ghost: a fresh connector is not approved and not reported as installed', e0 && e0.state === 'not-approved' && e0.install.installed === false && e0.install.verified === 'not-tested', JSON.stringify(e0 && e0.install));
+    const r0 = await BR(`ghost.jobs.run({connector:'sample-textstats',input:{text:'x'}})`);
+    rec('ghost: an unapproved connector cannot run', r0 && r0.ok === false && r0.error === 'not-approved', JSON.stringify(r0));
+    const refused = await BR(`ghost.jobs.run({connector:'sample-textstats',command:'/bin/sh',input:{}})`);
+    rec('ghost: the bridge refuses a run request that carries a command', refused && /blocked: bad-args/.test(refused.__err || ''), JSON.stringify(refused));
+    br.ghost.useTestConfirm(() => false);
+    const rd = await BR(`ghost.connectors.requestApproval('sample-textstats')`);
+    rec('ghost: the page cannot approve; a "no" in the dialog leaves it not-approved', rd && rd.ok === false && rd.error === 'declined' && ((await BR('ghost.connectors.list()'))[0].state === 'not-approved'), JSON.stringify(rd));
+    br.ghost.useTestConfirm((o) => o.kind === 'approve');           // stands in for the user pressing Approve (smoke runs only, never in an installed app)
+    await P(`(()=>{window.__ghostEv=[];window.mayfairDesktop.browser.on('ghost-job',(p)=>window.__ghostEv.push(p));return 1})()`);
+    const ra = await BR(`ghost.connectors.requestApproval('sample-textstats')`);
+    rec('ghost: approved through the dialog stand-in', ra && ra.ok === true && ra.state === 'approved', JSON.stringify(ra));
+    const tt = await BR(`ghost.connectors.test('sample-textstats')`);
+    rec('ghost: self-test really ran and passed', tt && tt.ok && tt.passed === true && tt.verified === 'tested', JSON.stringify(tt));
+    const en = await BR(`ghost.connectors.enable('sample-textstats')`);
+    const e1 = ((await BR('ghost.connectors.list()')) || []).find((x) => x.id === 'sample-textstats');
+    rec('ghost: enabled, and now reported installed because the self-test passed', en && en.ok && e1 && e1.state === 'enabled' && e1.install.installed === true && e1.install.requirements.every((q) => q.status === 'ok'), JSON.stringify(e1 && e1.install));
+    const run = await BR(`ghost.jobs.run({connector:'sample-textstats',input:{text:${JSON.stringify(ghostText)}}})`);
+    rec('ghost: a run is accepted', run && run.ok === true && /^j-/.test(run.jobId || ''), JSON.stringify(run));
+    let job = null;
+    for (let i = 0; i < 60; i++) { job = await BR(`ghost.jobs.get('${run.jobId}')`); if (job && ['done', 'failed', 'cancelled', 'timed-out'].includes(job.status)) break; await sleep(250); }
+    const by = Object.fromEntries(((job && job.results) || []).map((x) => [x.entity.type, x.entity.value]));
+    const want = { sha256: crypto.createHash('sha256').update(ghostText).digest('hex'), 'byte-count': String(Buffer.byteLength(ghostText)), 'line-count': '2', 'word-count': '6' };
+    rec('ghost: real results came back and match an independent computation', job && job.status === 'done' && JSON.stringify(by) === JSON.stringify(want), JSON.stringify(job && { status: job.status, error: job.error, by }));
+    await sleep(300);
+    const evs = (await P('window.__ghostEv')) || [];
+    rec('ghost: ghost-job events reached the page (running, done)', evs.some((x) => x.jobId === run.jobId && x.status === 'running') && evs.some((x) => x.jobId === run.jobId && x.status === 'done'), JSON.stringify(evs.map((x) => x.status)));
+    const jl = await BR('ghost.jobs.list()');
+    const lg = await BR(`ghost.logs.tail({jobId:'${run.jobId}',n:20})`);
+    rec('ghost: job history and log are readable over the bridge', Array.isArray(jl) && jl.some((x) => x.id === run.jobId) && Array.isArray(lg) && lg.some((x) => x.event === 'job-end'), JSON.stringify(lg && lg.map((x) => x.event)));
+    fs.appendFileSync(path.join(app.getPath('userData'), 'connectors', 'sample-textstats', 'run.js'), '\n// changed on disk\n');
+    const e2 = ((await BR('ghost.connectors.list()')) || []).find((x) => x.id === 'sample-textstats');
+    const r2 = await BR(`ghost.jobs.run({connector:'sample-textstats',input:{text:'x'}})`);
+    rec('ghost: changing a connector file revokes approval and stops runs', e2 && e2.state === 'not-approved' && e2.health === 'changed' && r2 && r2.ok === false, JSON.stringify({ s: e2 && e2.state, h: e2 && e2.health, r2 }));
+    br.ghost.useTestConfirm((o) => o.kind === 'remove');
+    const rm = await BR(`ghost.connectors.remove('sample-textstats')`);
+    rec('ghost: remove (confirmed) deletes the connector', rm && rm.ok === true && !fs.existsSync(path.join(app.getPath('userData'), 'connectors', 'sample-textstats')), JSON.stringify(rm));
+    br.ghost.confirmOverride = null;
+  }
 
   // ---- extensions (real packages from test/fixtures/ext, download replaced by a file read) ----
   const fx = path.join(__dirname, '..', 'test', 'fixtures', 'ext');

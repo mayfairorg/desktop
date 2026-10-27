@@ -1,0 +1,104 @@
+{
+  "id": "bbot-active",
+  "name": "BBOT active web scan",
+  "version": "1.0.0",
+  "description": "Scope-limited active scan of one host with BBOT's web-basic preset: strict scope, no aggressive or deadly modules.",
+  "capabilities": [
+    "asset-discovery",
+    "web-scan"
+  ],
+  "scope": "active",
+  "network": "keyless-external",
+  "licence": {
+    "spdx": "AGPL-3.0-only",
+    "url": "https://spdx.org/licenses/AGPL-3.0-only.html",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "BBOT installed and unchanged",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    },
+    {
+      "name": "Python 3 or newer",
+      "check": [
+        "@node",
+        "run.js",
+        "--check=python"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--target={target}",
+      "--preset={preset}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "scan",
+          "selftest"
+        ]
+      },
+      {
+        "name": "target",
+        "type": "url-host",
+        "label": "Target host"
+      },
+      {
+        "name": "preset",
+        "type": "enum",
+        "label": "Preset",
+        "required": false,
+        "values": [
+          "web-basic"
+        ]
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 600000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 1
+  },
+  "permissions": [
+    "network",
+    "temp-files"
+  ],
+  "externalRestrictions": "ACTIVE: it sends traffic to the target. Only use it on systems you own or have written permission to test. Every run is recorded in the audit log on this computer, needs your confirmation each time, and is never routed through Tor or any proxy. BBOT is AGPL software: never bundled, run only as a separate program. Anything about individuals (email addresses, usernames, people, social profiles) is discarded by design; the tool is run with a fixed allowlist, so those modules cannot be selected. It is a separate program, not part of Mayfair: Ghost downloads it into its tools folder on first use (checksum verified, then tested) or you point Ghost at your own copy. It is shown as installed only after its own self-test passes.",
+  "selfTest": {
+    "input": {
+      "action": "selftest",
+      "target": "localhost"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

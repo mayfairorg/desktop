@@ -1,0 +1,29 @@
+/* Ghost vault: Mayfair dark skin. Tokens come from ../ui.css. */
+html,body{overflow:auto;-webkit-user-select:text;user-select:text}
+main{max-width:720px;margin:0 auto;padding:var(--mf-s5) var(--mf-s4) 64px}
+.top{display:flex;gap:var(--mf-s4);align-items:flex-start;justify-content:space-between;margin-bottom:var(--mf-s4)}
+h1{font:600 22px/1.2 var(--mf-font);margin:0 0 4px}
+h2{font:600 15px/1.3 var(--mf-font);margin:0 0 var(--mf-s2)}
+.sub,.s{color:var(--mf-mute);margin:0 0 var(--mf-s3)}
+.s{font-size:var(--mf-fs-md)}.mute{font-size:var(--mf-fs-sm)}
+.pill{flex:none;padding:4px 12px;border-radius:99px;border:1px solid var(--mf-hair2);font-size:var(--mf-fs-sm);font-weight:600}
+.pill.ok{color:var(--mf-ok);border-color:color-mix(in srgb,var(--mf-ok) 50%,transparent)}
+.pill.warn{color:var(--mf-accent);border-color:color-mix(in srgb,var(--mf-accent) 50%,transparent)}
+.card{background:var(--mf-surface);border:1px solid var(--mf-hair);border-radius:var(--mf-r-md);padding:var(--mf-s4);margin-bottom:var(--mf-s4)}
+.card.danger{border-color:color-mix(in srgb,var(--mf-danger) 40%,transparent)}
+.tag{font:500 11px var(--mf-font);color:var(--mf-mute);border:1px solid var(--mf-hair2);border-radius:99px;padding:1px 8px;margin-left:6px;vertical-align:middle}
+label{display:block;font-size:var(--mf-fs-sm);color:var(--mf-mute);margin:var(--mf-s3) 0 0}
+input[type=text],input[type=password]{display:block;width:100%;margin-top:4px;height:36px;padding:0 var(--mf-s3);background:var(--mf-surface2);color:var(--mf-text);border:1px solid var(--mf-hair2);border-radius:var(--mf-r-sm)}
+.row{display:flex;flex-wrap:wrap;gap:var(--mf-s2);margin-top:var(--mf-s3)}
+.btn.bad{color:var(--mf-danger);border-color:color-mix(in srgb,var(--mf-danger) 50%,transparent)}
+.notice{border:1px solid var(--mf-hair2);border-left:3px solid var(--mf-accent);background:var(--mf-surface);padding:var(--mf-s3) var(--mf-s4);border-radius:var(--mf-r-sm);margin-bottom:var(--mf-s4)}
+.notice.err{border-left-color:var(--mf-danger)}.notice.ok{border-left-color:var(--mf-ok)}
+.facts{display:grid;grid-template-columns:max-content 1fr;gap:4px var(--mf-s4);margin:0 0 var(--mf-s3);font-size:var(--mf-fs-md)}
+.facts dt{color:var(--mf-mute)}.facts dd{margin:0}
+.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--mf-s2);list-style:none;padding:0;margin:var(--mf-s3) 0}
+.words li{background:var(--mf-surface2);border:1px solid var(--mf-hair);border-radius:var(--mf-r-sm);padding:6px 10px;font-weight:600}
+.words li span{color:var(--mf-mute);font-weight:400;margin-right:6px;font-size:var(--mf-fs-sm)}
+.check{display:flex;gap:var(--mf-s2);align-items:center;margin-top:var(--mf-s3);color:var(--mf-text);font-size:var(--mf-fs-md)}
+.check input{width:16px;height:16px}
+details{margin-top:var(--mf-s4);border-top:1px solid var(--mf-hair);padding-top:var(--mf-s3)}summary{cursor:pointer;color:var(--mf-mute)}
+@media (max-width:480px){.top{flex-direction:column}}

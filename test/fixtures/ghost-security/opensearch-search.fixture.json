@@ -1,0 +1,1 @@
+{"took":3,"hits":{"total":{"value":30,"relation":"eq"},"hits":[{"_index":"ioc-2026","_id":"a1","_score":3.2,"_source":{"@timestamp":"2026-10-01T00:00:00Z","indicator":"203.0.113.9","note":"seen in proxy log","nested":{"x":1}}}]}}

@@ -1,0 +1,86 @@
+{
+  "id": "amass",
+  "name": "Amass passive enumeration",
+  "version": "1.0.0",
+  "description": "Enumerates subdomains of a domain with the OWASP Amass program in passive mode only (no active probing, no brute force).",
+  "capabilities": [
+    "subdomain-discovery",
+    "passive-dns"
+  ],
+  "scope": "passive",
+  "network": "rate-limited",
+  "licence": {
+    "spdx": "Apache-2.0",
+    "url": "https://spdx.org/licenses/Apache-2.0.html",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "Amass installed and unchanged",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--domain={domain}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "scan",
+          "selftest"
+        ]
+      },
+      {
+        "name": "domain",
+        "type": "url-host",
+        "label": "Domain"
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 580000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 1
+  },
+  "permissions": [
+    "network",
+    "temp-files"
+  ],
+  "externalRestrictions": "Passive mode only: this connector never passes the active or brute-force options. Sources apply their own limits. Results are uncertain because names are not contacted. It is a separate program, not part of Mayfair: Ghost downloads it into its tools folder on first use (checksum verified, then tested) or you point Ghost at your own copy. It is shown as installed only after its own self-test passes.",
+  "selfTest": {
+    "input": {
+      "action": "selftest",
+      "domain": "example.com"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

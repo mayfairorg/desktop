@@ -225,6 +225,14 @@
     "extraMetadata": {
       "main": "build-protected/src/main/main.js"
     },
-    "afterPack": "tools/after-pack.js"
+    "afterPack": "tools/after-pack.js",
+    "asarUnpack": [
+      "**/node_modules/node-pty/**",
+      "**/ghost/terminal/pty-helper.py",
+      "**/ghost/node-runner/bootstrap.js"
+    ]
+  },
+  "optionalDependencies": {
+    "node-pty": "^1.0.0"
   }
 }

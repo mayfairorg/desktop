@@ -1,0 +1,102 @@
+{
+  "id": "misp-client",
+  "name": "MISP (your instance)",
+  "version": "1.0.0",
+  "description": "Searches YOUR OWN MISP server instance for an indicator (IP, domain, URL or file hash). Read-only. The server is not part of Mayfair; you supply its address and key.",
+  "capabilities": [
+    "threat-intel",
+    "instance-adapter"
+  ],
+  "scope": "passive",
+  "network": "rate-limited",
+  "licence": {
+    "spdx": "AGPL-3.0-or-later",
+    "url": "https://spdx.org/licenses/AGPL-3.0-or-later.html",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "Instance address and key saved in Ghost",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--kind={kind}",
+      "--indicator={indicator}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "search",
+          "ping"
+        ]
+      },
+      {
+        "name": "kind",
+        "type": "enum",
+        "label": "Indicator type",
+        "required": false,
+        "values": [
+          "ip",
+          "domain",
+          "url",
+          "md5",
+          "sha1",
+          "sha256"
+        ]
+      },
+      {
+        "name": "indicator",
+        "type": "string",
+        "label": "Indicator",
+        "required": false,
+        "maxLength": 300,
+        "pattern": "^[A-Za-z0-9:/._%?&=#~+-]{1,300}$"
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 60000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 2
+  },
+  "permissions": [
+    "network"
+  ],
+  "externalRestrictions": "Contacts only the address you saved in your instance config; nothing is bundled and nothing is sent to Mayfair. Your key is kept in <userData>/ghost/instances/ with owner-only permissions and never appears in logs, job history or results. Email addresses, phone numbers and account handles are refused as search values. Shown as installed only after the instance answers the self-test. MISP is AGPL software that you run yourself; Mayfair only calls its REST API.",
+  "selfTest": {
+    "input": {
+      "action": "ping"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

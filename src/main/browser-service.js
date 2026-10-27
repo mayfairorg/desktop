@@ -9,7 +9,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const {
-  app, BaseWindow, BrowserWindow, WebContentsView, nativeImage, net, session, ipcMain, Menu, Notification, dialog, shell, screen, clipboard,
+  app, BaseWindow, BrowserWindow, WebContentsView, nativeImage, net, session, ipcMain, Menu, Notification, dialog, shell, screen, clipboard, utilityProcess,
 } = require('electron');
 
 const O = require('./lib/origins');
@@ -35,6 +35,7 @@ const { TorManager, binaryPath } = require('./lib/tor');
 const PROT = require('./lib/protect');
 const { actionForKey } = require('./lib/shortcuts');
 const ABOUT = require('./lib/about');
+const { GhostService } = require('./ghost');
 const KC = require('./lib/keepcookies');
 const SEARCH_DARK_JS = `(()=>{try{const c=getComputedStyle(document.body).backgroundColor,m=/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/.exec(c);return !!m&&(+m[1]+ +m[2]+ +m[3])<260}catch(e){return false}})()`;
 const SEARCH_TAB_JS = `(()=>{try{const light=c=>{const m=/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*([\\d.]+))?\\)/.exec(c||'');return !!m&&(m[4]===undefined||+m[4]>0.5)&&+m[1]>190&&+m[2]>190&&+m[3]>190};
@@ -121,6 +122,7 @@ class BrowserService {
     this.pwOffers = new Map();    // offer id -> { tabId, gid, origin, url, username, password, kind, timer }: login waiting for the user's yes or no, memory only, never written or logged
     this.fileTokens = new Map();
     this.subs = new Set();        // bridge events the Mayfair page is listening to
+    this.ghost = new GhostService({ root: app.getPath('userData'), dialog, getWindow: () => this.win, emit: (n, p) => { if (this.subs.has(n)) this.emit(n, p); }, isPackaged: app.isPackaged, useVault: true, safeStorage: require('electron').safeStorage, utilityProcess });   // Ghost connectors: approvals only through native dialogs
     this.shots = new Map();       // tab id -> last capture (data URL)
     this.homeListening = false;
     this.searchListening = false;
@@ -835,6 +837,8 @@ class BrowserService {
       if (c === 'block') return { action: 'deny' };
       if (webapp && W.staysInApp(webapp, d.url)) { setImmediate(() => wc.loadURL(d.url).catch(() => {})); return { action: 'deny' }; }
       if (webapp && (this.groups.get(t.gid) || {}).webapp) { setImmediate(() => this.openInBrowser(d.url)); return { action: 'deny' }; }   // leaving an app window: a normal Browser window
+      // a pop-up that is only an advertising or tracking address (a conversion pixel fired from a click) is never a tab, whatever the page did before
+      try { if (this.settings.get().adblock && this.blocker && this.blocker.matches(new URL(d.url).hostname)) { t.blocked = (t.blocked || 0) + 1; upd(); return { action: 'deny' }; } } catch { /* not a URL: handled below */ }
       const origin = O.siteKey(wc.getURL());
       const userOpened = popupAllowed(Date.now(), t.lastInput);
       const allowedBySite = origin && this.sitePerms.get(origin, 'popups') === 'allow';
@@ -1550,6 +1554,40 @@ class BrowserService {
       'br:extensions.install': async (e, id, url, sha) => { try { return await this.installExtension(id, url, sha); } catch (err) { return { ok: false, error: err.message }; } },
       'br:extensions.remove': (e, id) => this.removeExtension(id),
       'br:about': () => ({ version: this.version, platform: process.platform, components: ABOUT.components(this.version), licenseNote: ABOUT.LICENSE_NOTE, adblock: adStats(null), extensions: this.ext.list() }),
+      'br:ghost.connectors.list': () => this.ghost.api()['ghost.connectors.list'](),
+      'br:ghost.connectors.get': (e, id) => this.ghost.api()['ghost.connectors.get'](id),
+      'br:ghost.connectors.validate': (e, id) => this.ghost.api()['ghost.connectors.validate'](id),
+      'br:ghost.connectors.test': (e, id, scope) => this.ghost.api()['ghost.connectors.test'](id, scope),
+      'br:ghost.connectors.requestApproval': (e, id) => this.ghost.api()['ghost.connectors.requestApproval'](id),
+      'br:ghost.connectors.enable': (e, id) => this.ghost.api()['ghost.connectors.enable'](id),
+      'br:ghost.connectors.disable': (e, id) => this.ghost.api()['ghost.connectors.disable'](id),
+      'br:ghost.connectors.remove': (e, id) => this.ghost.api()['ghost.connectors.remove'](id),
+      'br:ghost.connectors.installSample': () => this.ghost.api()['ghost.connectors.installSample'](),
+      'br:ghost.jobs.run': (e, o) => this.ghost.api()['ghost.jobs.run'](o),
+      'br:ghost.jobs.cancel': (e, id) => this.ghost.api()['ghost.jobs.cancel'](id),
+      'br:ghost.jobs.list': (e, o) => this.ghost.api()['ghost.jobs.list'](o),
+      'br:ghost.jobs.get': (e, id) => this.ghost.api()['ghost.jobs.get'](id),
+      'br:ghost.logs.tail': (e, o) => this.ghost.api()['ghost.logs.tail'](o),
+      'br:ghost.vault.status': (e, o) => this.ghost.api()['ghost.vault.status'](o),
+      'br:ghost.vault.unlock': (e, o) => this.ghost.api()['ghost.vault.unlock'](o),
+      'br:ghost.vault.lock': (e, o) => this.ghost.api()['ghost.vault.lock'](o),
+      'br:ghost.vault.backup.begin': (e, o) => this.ghost.api()['ghost.vault.backup.begin'](o),
+      'br:ghost.vault.backup.confirm': (e, o) => this.ghost.api()['ghost.vault.backup.confirm'](o),
+      'br:ghost.vault.backup.cancel': (e, o) => this.ghost.api()['ghost.vault.backup.cancel'](o),
+      'br:ghost.vault.backup.disable': (e, o) => this.ghost.api()['ghost.vault.backup.disable'](o),
+      'br:ghost.vault.backup.newPhrase': (e, o) => this.ghost.api()['ghost.vault.backup.newPhrase'](o),
+      'br:ghost.vault.changePassphrase': (e, o) => this.ghost.api()['ghost.vault.changePassphrase'](o),
+      'br:ghost.vault.resetPassphrase': (e, o) => this.ghost.api()['ghost.vault.resetPassphrase'](o),
+      'br:ghost.vault.requirePassphrase': (e, o) => this.ghost.api()['ghost.vault.requirePassphrase'](o),
+      'br:ghost.vault.rotateKeys': (e, o) => this.ghost.api()['ghost.vault.rotateKeys'](o),
+      'br:ghost.vault.syncNow': (e, o) => this.ghost.api()['ghost.vault.syncNow'](o),
+      'br:ghost.vault.wipe': (e, o) => this.ghost.api()['ghost.vault.wipe'](o),
+      'br:ghost.vault.exportFile': (e, o) => this.ghost.api()['ghost.vault.exportFile'](o),
+      'br:ghost.vault.importFile': (e, o) => this.ghost.api()['ghost.vault.importFile'](o),
+      'br:ghost.pickFile': () => this.ghost.api()['ghost.pickFile'](),
+      'br:ghost.app.library': () => (this.ghostApp ? this.ghostApp.library() : null),
+      'br:ghost.app.open': () => (this.ghostApp ? this.ghostApp.open() : { ok: false }),
+      'br:ghost.app.remove': () => (this.ghostApp ? this.ghostApp.uninstall() : { ok: false }),
       'br:subscribe': (e, ev, on) => { if (!IPC.BR_EVENTS.includes(ev)) return false; if (on) { this.subs.add(ev); if (ev.startsWith('history-')) this.flushHistOutbox(); } else this.subs.delete(ev); return true; },
     };
     return {
@@ -1661,7 +1699,7 @@ class BrowserService {
   }
 
   // ---------- menu actions for main.js (menu, tray, page key shortcuts) ----------
-  flushAll() { this.flushAppSessions(); this.adAllow.flush(); this.tabsStore.flush(); this.tor.stop(); for (const s of [this.appsStore, this.settings, this.winState, this.bookmarks, this.history, this.searchLog, ...this.appHistories.values(), this.sitePerms, this.zoomStore]) { try { (s.flush ? s : s.s).flush(); } catch { /* ignore */ } } }
+  flushAll() { try { this.ghost.shutdown(); } catch { /* ignore */ } this.flushAppSessions(); this.adAllow.flush(); this.tabsStore.flush(); this.tor.stop(); for (const s of [this.appsStore, this.settings, this.winState, this.bookmarks, this.history, this.searchLog, ...this.appHistories.values(), this.sitePerms, this.zoomStore]) { try { (s.flush ? s : s.s).flush(); } catch { /* ignore */ } } }
   // The Browser's interface is in Mayfair Cloud, so an action is reported to it ('menu' event) and it decides what to do.
   menuAction(a, gid) {
     if (a === 'fullscreen') return this.toggleFullscreen();

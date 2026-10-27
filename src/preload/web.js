@@ -54,14 +54,20 @@ if (MAYFAIR.includes(location.origin)) {
     'passwords.take', 'passwords.dismiss', 'permissions.list', 'permissions.site', 'permissions.set', 'permissions.reset', 'permissions.answer', 'popups.allow',
     'webapps.catalogue', 'webapps.open', 'webapps.pin', 'webapps.reset', 'webapps.remove', 'webapps.shortcut',
     'tor.status', 'tor.start', 'tor.stop', 'tor.newIdentity', 'adblock.stats', 'adblock.toggleSite', 'adblock.updateNow',
-    'extensions.list', 'extensions.install', 'extensions.remove', 'about'];
-  const BR_EVENTS = ['state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus', 'windows', 'password-offer', 'password-offer-cancel', 'password-field', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'details-used'];
+    'extensions.list', 'extensions.install', 'extensions.remove', 'about',
+    'ghost.connectors.list', 'ghost.connectors.get', 'ghost.connectors.validate', 'ghost.connectors.test', 'ghost.connectors.requestApproval', 'ghost.connectors.enable', 'ghost.connectors.disable', 'ghost.connectors.remove', 'ghost.connectors.installSample',
+    'ghost.jobs.run', 'ghost.jobs.cancel', 'ghost.jobs.list', 'ghost.jobs.get', 'ghost.logs.tail', 'ghost.pickFile',
+    'ghost.vault.status', 'ghost.vault.unlock', 'ghost.vault.lock', 'ghost.vault.backup.begin', 'ghost.vault.backup.confirm', 'ghost.vault.backup.cancel', 'ghost.vault.backup.disable', 'ghost.vault.backup.newPhrase', 'ghost.vault.changePassphrase', 'ghost.vault.resetPassphrase', 'ghost.vault.requirePassphrase', 'ghost.vault.rotateKeys', 'ghost.vault.syncNow', 'ghost.vault.wipe', 'ghost.vault.exportFile', 'ghost.vault.importFile',
+    'ghost.app.library', 'ghost.app.open', 'ghost.app.remove'];
+  const BR_EVENTS = ['ghost-job', 'state', 'find-result', 'download', 'permission-request', 'permission-cancel', 'new-window-request', 'open-url', 'fullscreen', 'menu', 'panel-request', 'notice', 'tor', 'focus', 'windows', 'password-offer', 'password-offer-cancel', 'password-field', 'history-add', 'history-remove', 'history-clear', 'autofill-offer', 'autofill-offer-cancel', 'autofill-request', 'details-used'];
   const BR_QUEUED = ['permission-request', 'new-window-request', 'open-url', 'menu', 'panel-request'];   // happened before anyone listened: replayed to the first listener
   const browser = {};
   for (const name of BR_NAMES) {
     const fn = (...a) => ipcRenderer.invoke('br:' + name, ...a);
-    const dot = name.indexOf('.');
-    if (dot < 0) browser[name] = fn; else { const g = name.slice(0, dot); (browser[g] = browser[g] || {})[name.slice(dot + 1)] = fn; }
+    const parts = name.split('.');   // 'bookmarks.list' -> browser.bookmarks.list; 'ghost.jobs.run' -> browser.ghost.jobs.run
+    let o = browser;
+    for (const g of parts.slice(0, -1)) o = (o[g] = o[g] || {});
+    o[parts[parts.length - 1]] = fn;
   }
   const brL = {}, brQ = {};
   const brState = new Map();   // gid -> last state (replayed to a new 'state' subscriber)

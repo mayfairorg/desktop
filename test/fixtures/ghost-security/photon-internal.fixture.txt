@@ -1,0 +1,5 @@
+https://example.com/
+https://example.com/about
+https://example.com/about
+http://evil.net/x
+not a url

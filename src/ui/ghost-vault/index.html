@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Ghost vault</title>
+<link rel="stylesheet" href="../ui.css"><link rel="stylesheet" href="vault.css">
+</head><body>
+<main id="app" aria-live="polite">
+  <header class="top">
+    <div><h1>Ghost vault</h1><p class="sub">Your cases, scan logs and connector settings are encrypted on this computer. No set-up needed.</p></div>
+    <span id="pill" class="pill" role="status">Checking</span>
+  </header>
+  <div id="notice" class="notice" hidden role="alert"></div>
+  <section id="locked" class="card" hidden>
+    <h2>Unlock the vault</h2>
+    <p class="s">This vault asks for your passphrase before it opens.</p>
+    <label>Passphrase<input id="u-pass" type="password" autocomplete="current-password"></label>
+    <div class="row"><button class="btn primary" id="u-go">Unlock</button></div>
+    <details><summary>Forgot it? Use the recovery phrase</summary>
+      <label>12-word recovery phrase<input id="u-phrase" type="text" autocomplete="off" spellcheck="false"></label>
+      <label>New passphrase (at least 10 characters)<input id="u-new" type="password" autocomplete="new-password"></label>
+      <div class="row"><button class="btn line" id="u-phrase-go">Unlock and set a new passphrase</button></div>
+    </details>
+  </section>
+  <div id="main" hidden>
+    <section class="card" id="protection"><h2>What protects it</h2><p id="prot-msg" class="s"></p><dl id="facts" class="facts"></dl>
+      <p class="s mute">Not covered: someone already using this computer account while the vault is unlocked, malware running as you, a screen capture, or the file names and sizes in the vault folder. Locking the vault removes the key from memory.</p>
+      <div class="row"><button class="btn line" id="lock">Lock now</button><button class="btn line" id="rotate">Rotate keys</button></div>
+    </section>
+    <section class="card" id="backup"><h2>Backup and passphrase <span class="tag">optional</span></h2><div id="backup-body"></div></section>
+    <section class="card danger"><h2>Wipe the vault</h2>
+      <p class="s">Deletes every case, log and setting, and destroys the keys. A vault file you downloaded earlier can still be opened with its passphrase or phrase: delete those copies yourself.</p>
+      <label>Type WIPE to confirm<input id="w-text" type="text" autocomplete="off"></label>
+      <div class="row"><button class="btn line bad" id="w-go" disabled>Wipe the vault</button></div>
+    </section>
+  </div>
+</main>
+<script src="vault.js"></script>
+</body></html>

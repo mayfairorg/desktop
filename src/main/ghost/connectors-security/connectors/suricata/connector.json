@@ -1,0 +1,103 @@
+{
+  "id": "suricata",
+  "name": "Suricata capture replay",
+  "version": "1.0.0",
+  "description": "Replays a packet capture (pcap) you pick through the Suricata program with rules you pick, and lists alerts, DNS, HTTP and TLS. Offline: no live capture.",
+  "capabilities": [
+    "pcap-analysis",
+    "ids"
+  ],
+  "scope": "local",
+  "network": "local",
+  "licence": {
+    "spdx": "GPL-2.0-only",
+    "url": "https://spdx.org/licenses/GPL-2.0-only.html",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "Suricata installed and unchanged",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--pcap={pcap}",
+      "--rules={rules}",
+      "--config={config}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "scan",
+          "selftest"
+        ]
+      },
+      {
+        "name": "pcap",
+        "type": "file",
+        "label": "Capture file (pcap)",
+        "required": false,
+        "maxBytes": 268435456
+      },
+      {
+        "name": "rules",
+        "type": "file",
+        "label": "Rules file",
+        "required": false,
+        "maxBytes": 268435456
+      },
+      {
+        "name": "config",
+        "type": "file",
+        "label": "suricata.yaml",
+        "required": false,
+        "maxBytes": 268435456
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 300000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 1
+  },
+  "permissions": [
+    "read-picked-file",
+    "temp-files"
+  ],
+  "externalRestrictions": "Replays files you supply and never captures live traffic or runs inline. No rules are shipped; rules you load keep their own licences. An alert is a signature match, not proof of an attack. Suricata is GPL software run as a separate program. It is a separate program, not part of Mayfair: Ghost downloads it into its tools folder on first use (checksum verified, then tested) or you point Ghost at your own copy. It is shown as installed only after its own self-test passes.",
+  "selfTest": {
+    "input": {
+      "action": "selftest"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "id": "nmap",
+  "name": "Nmap port scan",
+  "version": "1.0.0",
+  "description": "Connect-scans the most common ports of one host with the Nmap program. No scripts, no raw sockets, no administrator rights.",
+  "capabilities": [
+    "port-scan",
+    "service-detection"
+  ],
+  "scope": "active",
+  "network": "keyless-external",
+  "licence": {
+    "spdx": "LicenseRef-Nmap-NPSL",
+    "url": "https://nmap.org/npsl/",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "Nmap installed and unchanged",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--target={target}",
+      "--preset={preset}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "scan",
+          "selftest"
+        ]
+      },
+      {
+        "name": "target",
+        "type": "url-host",
+        "label": "Target host"
+      },
+      {
+        "name": "preset",
+        "type": "enum",
+        "label": "Preset",
+        "required": false,
+        "values": [
+          "gentle",
+          "normal"
+        ]
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 600000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 1
+  },
+  "permissions": [
+    "network",
+    "temp-files"
+  ],
+  "externalRestrictions": "ACTIVE: it sends traffic to the target. Only use it on systems you own or have written permission to test. Every run is recorded in the audit log on this computer, needs your confirmation each time, and is never routed through Tor or any proxy. Nmap is licensed under the Nmap Public Source License, which does not allow redistribution inside a proprietary product: Mayfair never bundles or redistributes it. It is fetched from its own project by you, or you point Ghost at a copy you already have; whether that suits your use is for you to confirm. It is a separate program, not part of Mayfair: Ghost downloads it into its tools folder on first use (checksum verified, then tested) or you point Ghost at your own copy. It is shown as installed only after its own self-test passes.",
+  "selfTest": {
+    "input": {
+      "action": "selftest",
+      "target": "localhost"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

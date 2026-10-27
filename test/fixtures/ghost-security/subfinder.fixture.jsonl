@@ -1,0 +1,5 @@
+{"host":"www.example.com","input":"example.com","source":["crtsh","hackertarget"]}
+{"host":"mail.example.com","input":"example.com","source":["crtsh"]}
+{"host":"*.dev.example.com","input":"example.com","source":["alienvault","crtsh","rapiddns"]}
+{"host":"evil.other.org","input":"example.com","source":["crtsh"]}
+this line is not json

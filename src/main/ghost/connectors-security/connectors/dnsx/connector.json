@@ -1,0 +1,97 @@
+{
+  "id": "dnsx",
+  "name": "dnsx DNS records",
+  "version": "1.0.0",
+  "description": "Looks up A, AAAA, CNAME, MX, NS and TXT records for one domain with the dnsx program, through the resolver you choose. No brute force.",
+  "capabilities": [
+    "dns-lookup"
+  ],
+  "scope": "passive",
+  "network": "keyless-external",
+  "licence": {
+    "spdx": "MIT",
+    "url": "https://spdx.org/licenses/MIT.html",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "dnsx installed and unchanged",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--domain={domain}",
+      "--resolver={resolver}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "scan",
+          "selftest"
+        ]
+      },
+      {
+        "name": "domain",
+        "type": "url-host",
+        "label": "Domain"
+      },
+      {
+        "name": "resolver",
+        "type": "enum",
+        "label": "Resolver",
+        "required": false,
+        "values": [
+          "system",
+          "cloudflare",
+          "quad9"
+        ]
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 120000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 2
+  },
+  "permissions": [
+    "network",
+    "temp-files"
+  ],
+  "externalRestrictions": "Sends ordinary DNS queries to the resolver you choose (your system resolver, Cloudflare or Quad9), which can see them. The target's own servers are not contacted by this connector. No wordlist or brute-force mode. It is a separate program, not part of Mayfair: Ghost downloads it into its tools folder on first use (checksum verified, then tested) or you point Ghost at your own copy. It is shown as installed only after its own self-test passes.",
+  "selfTest": {
+    "input": {
+      "action": "selftest",
+      "domain": "example.com"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

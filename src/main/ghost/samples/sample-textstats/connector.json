@@ -1,0 +1,38 @@
+{
+  "id": "sample-textstats",
+  "name": "Text statistics (sample)",
+  "version": "1.0.0",
+  "description": "Harmless local sample: SHA-256, byte, line and word counts of a pasted text or a file you pick. No network.",
+  "capabilities": ["text-stats", "file-hash"],
+  "scope": "local",
+  "network": "local",
+  "licence": { "spdx": "LicenseRef-Mayfair-Proprietary", "url": "https://mayfairmail.com/legal", "mode": "bundled" },
+  "installRequirements": [
+    { "name": "Mayfair's built-in Node runtime", "check": ["@node", "-e", "process.exit(0)"] }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": ["run.js", "--text={text}", "--file={file}"]
+  },
+  "input": {
+    "fields": [
+      { "name": "text", "type": "string", "label": "Text", "required": false, "maxLength": 4096 },
+      { "name": "file", "type": "file", "label": "File", "required": false, "maxBytes": 52428800 }
+    ]
+  },
+  "output": { "format": "jsonl" },
+  "limits": { "timeoutMs": 20000, "maxOutputBytes": 65536, "maxMemoryMb": 256, "maxConcurrent": 2 },
+  "permissions": ["read-picked-file"],
+  "externalRestrictions": "None. This connector runs entirely on this computer and sends nothing anywhere.",
+  "selfTest": {
+    "input": { "text": "hello world\nsecond line\n" },
+    "expect": {
+      "minResults": 4,
+      "contains": [
+        { "type": "sha256", "value": "1cf34cbeaca6f2ce821c4b6369c37c583b1cc10846122a8c77a4df77d0d5b7b8" },
+        { "type": "line-count", "value": "2" },
+        { "type": "word-count", "value": "4" }
+      ]
+    }
+  }
+}

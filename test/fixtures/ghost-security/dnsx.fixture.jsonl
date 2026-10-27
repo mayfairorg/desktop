@@ -1,0 +1,2 @@
+{"host":"example.com","resolver":["1.1.1.1:53"],"a":["93.184.216.34"],"aaaa":["2606:2800:21f:cb07:6820:80da:af6b:8b2c"],"mx":["mail.example.com."],"ns":["a.iana-servers.net.","b.iana-servers.net."],"txt":["v=spf1 -all"],"status_code":"NOERROR","timestamp":"2026-10-27T09:00:00.123456789Z"}
+{"host":"nope.example.com","resolver":["1.1.1.1:53"],"status_code":"NXDOMAIN","timestamp":"2026-10-27T09:00:01Z"}

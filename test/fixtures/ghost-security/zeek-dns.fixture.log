@@ -1,0 +1,1 @@
+{"ts":1790000001.0,"uid":"CAbc2","id.orig_h":"192.168.1.5","id.resp_h":"192.168.1.1","proto":"udp","query":"example.com","qtype_name":"A","rcode_name":"NOERROR","answers":["93.184.216.34"]}

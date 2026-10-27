@@ -1,0 +1,12 @@
+[
+ {"id":"SSLv3","ip":"example.com/93.184.216.34","port":"443","severity":"OK","finding":"not offered"},
+ {"id":"TLS1","ip":"example.com/93.184.216.34","port":"443","severity":"LOW","finding":"offered (deprecated)"},
+ {"id":"TLS1_2","ip":"example.com/93.184.216.34","port":"443","severity":"OK","finding":"offered"},
+ {"id":"TLS1_3","ip":"example.com/93.184.216.34","port":"443","severity":"OK","finding":"offered with final"},
+ {"id":"cert_commonName","ip":"example.com/93.184.216.34","port":"443","severity":"INFO","finding":"www.example.org"},
+ {"id":"cert_notAfter","ip":"example.com/93.184.216.34","port":"443","severity":"OK","finding":"2027-01-15 12:00"},
+ {"id":"BREACH","ip":"example.com/93.184.216.34","port":"443","severity":"HIGH","finding":"potentially vulnerable, uses gzip HTTP compression","cve":"CVE-2013-3587"},
+ {"id":"ROBOT","ip":"example.com/93.184.216.34","port":"443","severity":"MEDIUM","finding":"VULNERABLE -- but also supports higher protocols"},
+ {"id":"clientsimulation","ip":"example.com/93.184.216.34","port":"443","severity":"FATAL","finding":"Client simulation failed"},
+ {"id":"scanTime","ip":"example.com/93.184.216.34","port":"443","severity":"INFO","finding":"24"}
+]

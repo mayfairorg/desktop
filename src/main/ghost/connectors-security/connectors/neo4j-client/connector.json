@@ -1,0 +1,120 @@
+{
+  "id": "neo4j-client",
+  "name": "Neo4j (your instance)",
+  "version": "1.0.0",
+  "description": "Searches YOUR OWN Neo4j server instance for an indicator (IP, domain, URL or file hash). Read-only. The server is not part of Mayfair; you supply its address and key.",
+  "capabilities": [
+    "threat-intel",
+    "instance-adapter"
+  ],
+  "scope": "passive",
+  "network": "rate-limited",
+  "licence": {
+    "spdx": "GPL-3.0-only",
+    "url": "https://spdx.org/licenses/GPL-3.0-only.html",
+    "mode": "separate-program"
+  },
+  "installRequirements": [
+    {
+      "name": "Instance address and key saved in Ghost",
+      "check": [
+        "@node",
+        "run.js",
+        "--check"
+      ]
+    }
+  ],
+  "command": {
+    "executable": "@node",
+    "args": [
+      "run.js",
+      "--action={action}",
+      "--kind={kind}",
+      "--indicator={indicator}",
+      "--label={label}",
+      "--property={property}"
+    ],
+    "files": [
+      "common.js",
+      "tool.js"
+    ]
+  },
+  "input": {
+    "fields": [
+      {
+        "name": "action",
+        "type": "enum",
+        "label": "Mode",
+        "required": false,
+        "values": [
+          "search",
+          "ping"
+        ]
+      },
+      {
+        "name": "kind",
+        "type": "enum",
+        "label": "Indicator type",
+        "required": false,
+        "values": [
+          "ip",
+          "domain",
+          "url",
+          "md5",
+          "sha1",
+          "sha256"
+        ]
+      },
+      {
+        "name": "indicator",
+        "type": "string",
+        "label": "Indicator",
+        "required": false,
+        "maxLength": 300,
+        "pattern": "^[A-Za-z0-9:/._%?&=#~+-]{1,300}$"
+      },
+      {
+        "name": "label",
+        "type": "string",
+        "label": "Node label",
+        "required": false,
+        "maxLength": 41,
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,40}$"
+      },
+      {
+        "name": "property",
+        "type": "string",
+        "label": "Property",
+        "required": false,
+        "maxLength": 41,
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,40}$"
+      }
+    ]
+  },
+  "output": {
+    "format": "jsonl"
+  },
+  "limits": {
+    "timeoutMs": 60000,
+    "maxOutputBytes": 8388608,
+    "maxConcurrent": 2
+  },
+  "permissions": [
+    "network"
+  ],
+  "externalRestrictions": "Contacts only the address you saved in your instance config; nothing is bundled and nothing is sent to Mayfair. Your key is kept in <userData>/ghost/instances/ with owner-only permissions and never appears in logs, job history or results. Email addresses, phone numbers and account handles are refused as search values. Shown as installed only after the instance answers the self-test. Neo4j Community is GPL software that you run yourself. Needs Neo4j 5. Use a read-only database user.",
+  "selfTest": {
+    "input": {
+      "action": "ping"
+    },
+    "expect": {
+      "minResults": 2,
+      "contains": [
+        {
+          "type": "selftest",
+          "value": "passed"
+        }
+      ]
+    }
+  }
+}

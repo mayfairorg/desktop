@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Ghost investigation</title>
+<link rel="stylesheet" href="../ui.css"><link rel="stylesheet" href="gbr.css">
+</head><body>
+<div class="bar" role="toolbar" aria-label="Browser">
+  <button class="btn" id="back" aria-label="Back" title="Back" disabled></button>
+  <button class="btn" id="fwd" aria-label="Forward" title="Forward" disabled></button>
+  <button class="btn" id="reload" aria-label="Reload" title="Reload"></button>
+  <input id="addr" type="text" spellcheck="false" autocomplete="off" aria-label="Address" placeholder="Enter a web address">
+  <button class="btn line" id="capture" title="Save this page into the case (HTML, screenshot, hash, time)"><span>Capture</span></button>
+  <button class="btn kill" id="kill" title="Kill switch (Ctrl+Shift+Backspace): close every case window, wipe, drop Tor, lock the vault"><span>Kill</span></button>
+</div>
+<div class="bar2">
+  <span class="chip" id="chip" role="status" aria-live="polite">Checking</span>
+  <span class="tag" id="modname"></span>
+  <span class="grow"></span>
+  <span class="tag" id="vault"></span>
+  <button class="btn line sm" id="blocked" aria-expanded="false">Blocked 0</button>
+</div>
+<section id="panel" hidden aria-label="Blocked requests and limits"></section>
+<div id="msg" class="msg" role="alert" hidden></div>
+<script src="app.js"></script>
+</body></html>
