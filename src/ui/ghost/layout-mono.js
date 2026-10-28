@@ -25,7 +25,7 @@
       return { root: h('div', { class: 'app mn-app', id: 'app', dataset: { view: 'home', layout: 'single-column' } }, top, h('main', { id: 'main', tabindex: '-1' }), P.buildStatus()), destroy() {} };
     },
     home() {
-      const lk = lay.lookupForm({ cls: 'mn-search', button: 'Look up →', kind: false, placeholder: 'domain, IP, ASN or URL', label: 'What to look up: domain, IP, ASN or URL', autofocus: true });
+      const lk = lay.lookupForm({ cls: 'mn-search', button: 'Look up →', kind: false, placeholder: 'domain, IP, ASN, URL, company or place', label: 'What to look up: domain, IP, ASN, URL, company or place', autofocus: true });
       const status = h('p', { class: 'mn-status mono', role: 'status' }, 'Reading this computer'), tryRow = h('p', { class: 'mn-try mono', hidden: true }), stats = h('dl', { class: 'mn-stats' }), right = h('div', { class: 'mn-right' });
       const sec = h('section', { class: 'view mn-home', 'aria-label': 'Home' }, h('div', { class: 'mn-cols' },
         h('div', { class: 'mn-left' }, h('h1', { class: 'mn-h' }, 'See what is already public.', h('span', { class: 'mn-cur', 'aria-hidden': 'true' })), h('p', { class: 'mn-lead' }, 'Domains, companies, files, places and news in one case file. Free, no limits, and everything stays on this computer.'),

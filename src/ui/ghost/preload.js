@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('ghostApp', Object.freeze({
   connectors: Object.freeze({ list: () => call('gapp:connectors.list'), get: (id) => call('gapp:connectors.get', id), requestApproval: (id) => call('gapp:connectors.requestApproval', id), test: (id) => call('gapp:connectors.test', id), enable: (id) => call('gapp:connectors.enable', id), disable: (id) => call('gapp:connectors.disable', id) }),
   jobs: Object.freeze({ run: (o) => call('gapp:jobs.run', o), get: (id) => call('gapp:jobs.get', id), cancel: (id) => call('gapp:jobs.cancel', id) }),
   pickFile: () => call('gapp:pickFile'),
+  builtins: Object.freeze({ status: () => call('gapp:builtins.status') }),
+  search: Object.freeze({ classify: (o) => call('gapp:search.classify', o), run: (o) => call('gapp:search.run', o), cancel: (o) => call('gapp:search.cancel', o) }),
   scope: Object.freeze({ declare: (o) => call('gapp:scope.declare', o), revoke: (id) => call('gapp:scope.revoke', id), active: () => call('gapp:scope.active'), log: (n) => call('gapp:scope.log', n), run: (o) => call('gapp:scan.run', o) }),
   report: Object.freeze({ save: (o) => call('gapp:report.save', o) }),
   terminal: Object.freeze({ open: (o) => call('gapp:terminal.open', o || {}) }),
@@ -35,5 +37,5 @@ contextBridge.exposeInMainWorld('ghostApp', Object.freeze({
     send: (p) => call('gqn:send', p), sent: (p) => call('gqn:sent', p),
     onPopped: sub('gqn:popped'), onSend: sub('gqn:send'), onSent: sub('gqn:sent'),
   }),
-  onStatus: sub('gapp:status'), onInstall: sub('gapp:install'), onJob: sub('gapp:job'), onWindow: sub('gapp:window'),
+  onStatus: sub('gapp:status'), onInstall: sub('gapp:install'), onJob: sub('gapp:job'), onWindow: sub('gapp:window'), onBuiltins: sub('gapp:builtins'), onSearch: sub('gapp:search'),
 }));

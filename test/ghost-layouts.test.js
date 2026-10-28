@@ -34,6 +34,12 @@ test('each layout file registers a frame, a Home, a module summary and a board s
   assert.match(read('settings.js'), /GH\.relayout\(\)/, 'a skin change rebuilds the frame live');
   assert.match(read('screens.js'), /Lx\.home\(\)/); assert.match(read('module.js'), /Lx\.moduleSummary/); assert.match(read('board.js'), /Lx\.boardStrip/);
 });
+test('every layout lists Workspace and Tools in its navigation, not the module list', () => {
+  const shell = read('shell.js'), i = shell.indexOf('const navItems'), nav = shell.slice(i, shell.indexOf('GH.shellParts', i));
+  for (const l of ["label: 'Workspace'", "label: 'All tools'", "label: 'Case board'", "label: 'Tool Integrations'", "label: 'Settings'"]) assert.ok(nav.includes(l), l);
+  assert.equal(/MODS\.map|\.\.\.MODS/.test(nav), false);
+  for (const f of ['layout-ops.js', 'layout-terminal.js', 'layout-hud.js', 'layout-mono.js']) assert.ok(read(f).includes('P.navItems()'), f + ' draws its navigation from the shared list');
+});
 test('page order: pure core and data before the shell, layouts after it, all scripts present and parse', () => {
   const html = read('index.html'), scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
   const at = (n) => scripts.indexOf(n); const vm = require('node:vm');

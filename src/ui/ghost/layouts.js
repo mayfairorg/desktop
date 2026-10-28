@@ -12,7 +12,7 @@
   // o: { id, cls, label, placeholder, button, prompt }
   lay.lookupForm = (o = {}) => {
     const S = window.GhostScope;
-    const err = h('p', { class: 'cmd-err lk-err', role: 'alert', hidden: true }), input = h('input', { id: o.id || 'cmdq', class: 'mono lk-in', type: 'text', placeholder: o.placeholder || 'domain, IP, ASN or URL', 'aria-label': o.label || 'What to look up: domain, IP, ASN or URL', spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off', 'data-autofocus': o.autofocus ? '' : null });
+    const err = h('p', { class: 'cmd-err lk-err', role: 'alert', hidden: true }), input = h('input', { id: o.id || 'cmdq', class: 'mono lk-in', type: 'text', placeholder: o.placeholder || 'domain, IP, ASN, URL, company or place', 'aria-label': o.label || 'What to look up: domain, IP, ASN, URL, company or place', spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off', 'data-autofocus': o.autofocus ? '' : null });
     const kind = h('span', { class: 'lk-kind mono', 'aria-live': 'polite' }, 'auto');
     input.addEventListener('input', () => { const d = S.detectInput(input.value); kind.textContent = d.refused ? 'not looked up' : d.kind || 'auto'; err.hidden = true; });
     const form = h('form', { class: 'lk ' + (o.cls || ''), autocomplete: 'off', onsubmit: (ev) => { ev.preventDefault(); const why = GH.submitLookup(input.value); err.hidden = !why; err.textContent = why || ''; } },

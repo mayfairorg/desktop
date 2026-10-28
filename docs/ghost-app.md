@@ -11,6 +11,9 @@ Ghost is an app inside Mayfair Desktop (category Research, not preinstalled). It
 | Mayfair ID client (device sign-in, entitlement) | `src/main/ghost/app/id-client.js` |
 | Argument checks for the `gapp:*` calls | `src/main/ghost/app/checks.js` |
 | Cases in the vault | `src/main/ghost/app/cases.js` |
+| Shipped lookups: register, approve, switch on, self-test, per-tool state | `src/main/ghost/app/builtins.js` |
+| Master search: classify, run, cancel, event stream | `src/main/ghost/app/search.js` |
+| Which input kinds each shipped lookup takes, its group, how a kind becomes its input | `src/main/ghost/app/toolmap.js` |
 | Scope guard and scan log | `src/main/ghost/app/scopelog.js` |
 | Report export (HTML, PDF, JSON) | `src/main/ghost/app/report.js` |
 | Ghost Terms (version, hash, clauses) | `src/main/ghost/app/terms-text.js` |
@@ -57,6 +60,38 @@ Lookup limits, enforced in code: no person, username, email or phone input kinds
 
 Active scanning needs `modules.scanning` (operators have it). The scope guard takes one target (a domain, an IP, or a range no wider than /24), "I own it" or "I have written permission" (with who), and one tick. It lasts 12 hours and every declaration, scan start and scan end is a hash-chained line in the vault (`verify()` finds edits). The scan target comes from the declaration, not from the page.
 
+## The shipped lookups and the master search
+
+Calls and events the page uses (all gated like the other `gapp:*` calls, arguments checked in `checks.js`, no command, path or argument list anywhere). The preload names are `ghostApp.builtins.status()`, `ghostApp.search.classify({query})`, `ghostApp.search.run({...})`, `ghostApp.search.cancel({searchId})`, `ghostApp.onBuiltins(cb)` and `ghostApp.onSearch(cb)`.
+
+### The shipped lookups are ready at start
+
+Once the Terms are accepted (stage `ready`), on every start, `GhostApp.ensureBuiltins()` registers the shipped folders and `builtins.approveShipped` approves and switches on, in the same call and without a dialog (`manager.approveBuiltin`, in-process only, never on the bridge), every shipped lookup whose installed folder is byte-identical to the shipped one. Nothing waits for a test. A lookup the person switched off stays off. Security connectors and any folder that is not the shipped one are untouched and keep the native approval window. Any later change to a file withdraws the approval (the manager's hash check, unchanged).
+
+`ensureBuiltins` runs from `status()`, from every gated call and from every change, so a restart with the Terms already accepted sets up without any other step. Every failure is written to the Ghost log (`builtin-setup-failed`, `builtin-setup-skipped`, `builtin-selftest-failed`, `builtins-register-failed`) and shown with its reason in `gapp:builtins.status`.
+
+After that the self-test runs in the background (two at a time, per-service politeness in the connectors unchanged). It only records `tested` or `failed` and the reason; it never switches anything off. Tools that need a program that is not here (ExifTool, MediaInfo, Tika, OCRmyPDF, Tesseract, FFmpeg, GDAL, QGIS) are only checked for that program, never run; ArchiveBox needs the person's own instance.
+
+Why the cards said "Needs your approval" and "Not tested": approval used to sit inside the same one-by-one pipeline as the self-test (approve one, test it, approve the next), two at a time. A rate-limited service (GDELT, crt.sh, RDAP) made each step slow, so a tool further down the list stayed unapproved for minutes or until the window closed; a failed test left a tool approved but off; an error inside that pipeline was swallowed and never retried in that run. Approval is now one synchronous pass in front of the tests.
+
+### `gapp:builtins.status` and event `gapp:builtins`
+
+Returns `{ total, ready, 'setting-up', needsProgram, off, failed:[{id,name,reason}], phase, error, tests:{done,total}, tools:[{ id, name, category, inputs:[kind], state, note, tested, testNote, description }] }`. `state` is `ready`, `setting-up`, `needs-program`, `off` or `failed`. `tested` is `tested`, `failed` or `pending`; `testNote` is the reason. `needs-program` carries `note` "Runs in the Ghost virtual computer" while the virtual computer image is not published (`vm-index.json` `published:false`), otherwise "needs <program>". The event carries the same object (debounced).
+
+### `gapp:search.classify` `{ query }`
+
+Pure. Returns `{ kind, value, alternatives:[{kind,value}] }`. Kinds: `domain ip cidr asn url cert-hash org-name lei file place-text coords keyword` (a closed list; `file` is never guessed from text). There is no person, username, email or phone kind. `asn` needs the `AS` prefix. Something that looks like an email address is a `keyword`; its domain part is only offered as an alternative the person can choose. A bare number is a `keyword`.
+
+### `gapp:search.run` `{ query, kind?, tools?, caseId? }`
+
+Returns `{ ok, searchId, kind, value, tools:[id], skipped:[{tool,state,note}] }`, or `{ ok:false, code, error }` (`bad-input`, `no-tools`, `error`); it never throws to the page. Without `kind` the query is classified; with `kind` the value is cleaned and checked as that kind (for `file` the query is the token from `gapp:pickFile`; every tool gets its own fresh one-time token for the same file). Without `tools`, every READY tool whose kinds include the kind takes part; with `tools`, exactly those (a tool page passes `tools:[id]`). Tools that take the kind but are not ready (needs a program, off, setting up, failed) are never run and are reported in `skipped` and as a `tool-error` event with `state`. Passive tools only (no scope), the Ghost block list applies, at most six tools of one search run at once through the existing job runner, and a full job queue is waited out.
+
+Events `gapp:search`: `{ searchId, caseId?, type, tool?, results?, total?, truncated?, error?, state?, note?, jobId?, ms, summary?, cancelled? }` with `type` one of `tool-start`, `tool-result` (normalised connector results, at most 1000), `tool-empty`, `tool-error` (`state` is `needs-program`, `off`, `setting-up` or `failed` when no job ran or the program is missing) and `done` (`summary: { ran, results, errors, empty, notRun }`).
+
+### `gapp:search.cancel` `{ searchId }`
+
+Cancels the running jobs and the tools that have not started; `done` follows with `cancelled: true`. Returns `{ ok:true, cancelled }`.
+
 ## Case board
 
 Format `mayfair-ghost-case/1`, stored sealed in the vault namespace `cases` with up to 20 backups (at most one every 5 minutes). A non-manual entity or link must carry a source. Undo and redo are 50 snapshot steps. Reports are self-contained escaped HTML (no script), JSON with a hash, or PDF from a script-free, network-blocked window. Footer: "Made with Mayfair Ghost. Copyright The Mayfair Organization."
@@ -93,4 +128,4 @@ A drawer on every Ghost screen (top-bar button, Ctrl+Shift+N) that can pop out i
 
 ## Tests
 
-`test/ghost-app-*.test.js`, `test/ghost-case-model.test.js` (person type, custom fields, link labels, case file merge), `test/ghost-scope.test.js` need no display. `node tools/ghost-app-shots.js` runs the real view inside a stand-in main window under Xvfb at 1280x800 and 390x844 against the local stand-ins and writes screenshots and a results file to `GHOST_OUT` (default `/tmp/ghost-shots`).
+`test/ghost-app-*.test.js` (including `ghost-app-classify`, `ghost-app-search`, `ghost-app-search-checks`, `ghost-app-builtins-setup`), `test/ghost-case-model.test.js` (person type, custom fields, link labels, case file merge), `test/ghost-scope.test.js` need no display. `node tools/ghost-app-shots.js` runs the real view inside a stand-in main window under Xvfb at 1280x800 and 390x844 against the local stand-ins and writes screenshots and a results file to `GHOST_OUT` (default `/tmp/ghost-shots`).

@@ -57,9 +57,9 @@
       return { root: h('div', { class: 'app tm-app', id: 'app', dataset: { view: 'home', layout: 'panel-grid' } }, top, h('main', { id: 'main', tabindex: '-1' }), keys, P.buildStatus()), destroy() {} };
     },
     home() {
-      const lk = lay.lookupForm({ cls: 'tm-lk', prompt: 'ghost@local:~$', button: 'Run', placeholder: 'lookup domain, IP, ASN or URL', kind: false, label: 'What to look up: domain, IP, ASN or URL' });
+      const lk = lay.lookupForm({ cls: 'tm-lk', prompt: 'ghost@local:~$', button: 'Run', placeholder: 'lookup domain, IP, ASN, URL, company or place', kind: false, label: 'What to look up: domain, IP, ASN, URL, company or place' });
       const grid = h('div', { class: 'tm-grid' });
-      const sec = h('section', { class: 'view tm-home', 'aria-label': 'Home' }, h('h1', { class: 'sr' }, 'Home'), V.panel('Prompt', [lk.form, lk.err, h('p', { class: 'tm-hint mono' }, 'Domains, IP addresses, ASNs and web addresses only. Names of people, usernames, emails and phone numbers are not looked up.')], { cls: 'tm-prompt' }), grid);
+      const sec = h('section', { class: 'view tm-home', 'aria-label': 'Home' }, h('h1', { class: 'sr' }, 'Home'), V.panel('Prompt', [lk.form, lk.err, h('p', { class: 'tm-hint mono' }, 'Every ready tool is asked. Names of people, usernames, emails and phone numbers are not looked up.')], { cls: 'tm-prompt' }), grid);
       const fill = (s) => { GH.clear(grid).append(jobsPanel(s), healthPanel(s), filesPanel(s), casePanel(s), logPanel(s), vaultPanel(s)); };
       const refresh = async () => { try { fill(await GH.data.snapshot()); } catch (e) { GH.clear(grid).append(h('p', { class: 'cmd-err', role: 'alert' }, GH.errText(e))); } };
       GH.clear(grid).append(h('p', { class: 'dt-empty tm-cursor' }, 'Reading this computer'));

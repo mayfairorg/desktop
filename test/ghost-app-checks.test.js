@@ -22,7 +22,7 @@ test('arguments are shaped: ids, inputs, scope, report', () => {
 });
 test('there is no call that takes a command, path, or arguments', () => {
   for (const ch of Object.keys(CALLS)) assert.equal(/exec|spawn|shell|argv|path|command|eval/i.test(ch), false, ch);
-  assert.deepEqual(EVENTS, ['gapp:status', 'gapp:install', 'gapp:job', 'gapp:window']);
+  assert.deepEqual(EVENTS, ['gapp:status', 'gapp:install', 'gapp:job', 'gapp:window', 'gapp:builtins', 'gapp:search']);
 });
 test('the Ghost channels are not part of the Browser bridge allowlist', () => {
   const { CH, BR } = require('../src/main/lib/ipc-allowlist');

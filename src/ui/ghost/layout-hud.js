@@ -24,11 +24,11 @@
     return svg;
   }
   const ringCard = (s) => {
-    const st = s.stats, hl = s.health, w = L.vaultWord(s.vault), lk = lay.lookupForm({ cls: 'hd-lk', button: 'Look up', kind: false, placeholder: 'domain, IP, ASN or URL' });
+    const st = s.stats, hl = s.health, w = L.vaultWord(s.vault), lk = lay.lookupForm({ cls: 'hd-lk', button: 'Look up', kind: false, placeholder: 'domain, IP, ASN, URL, company or place' });
     return h('section', { class: 'hd-ring', 'aria-label': 'Status' }, h('i', { class: 'br tl', 'aria-hidden': 'true' }), h('i', { class: 'br tr', 'aria-hidden': 'true' }), h('i', { class: 'br bl', 'aria-hidden': 'true' }), h('i', { class: 'br brr', 'aria-hidden': 'true' }),
       h('h1', { class: 'hd-title' }, 'Status'), ring(s),
       h('dl', { class: 'hd-read' }, h('div', {}, h('dt', {}, 'Connectors'), h('dd', { class: 'mono' }, st.ready + ' / ' + st.expected + ' ready')), h('div', {}, h('dt', {}, 'Case health'), h('dd', { class: 'mono' }, hl && hl.pct !== null ? hl.pct + '% sourced' : hl ? 'empty case' : 'no case open')), h('div', {}, h('dt', {}, 'Vault'), h('dd', { class: 'mono' }, w.word))),
-      h('div', { class: 'hd-cmd' }, lk.form, lk.err, h('p', { class: 'hd-hint mono' }, 'Domains, IP addresses, ASNs and web addresses only.')));
+      h('div', { class: 'hd-cmd' }, lk.form, lk.err, h('p', { class: 'hd-hint mono' }, 'Searches every ready tool. Names of people are not looked up.')));
   };
   function leftCards(s) {
     const st = s.stats, hl = s.health, issues = st.keys['test-failed'] + st.keys['program-missing'];

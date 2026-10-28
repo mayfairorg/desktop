@@ -13,7 +13,8 @@ const { CaseStore, CaseError } = require('./cases');
 const { PrefStore } = require('./prefs');
 const { ScopeGuard, ScopeError } = require('./scopelog');
 const R = require('./report');
-const { registerBuiltins, autoSetup } = require('./builtins');
+const { registerBuiltins, BuiltinSetup } = require('./builtins');
+const { Search, classify } = require('./search');
 const { NoteStore } = require('./notes');
 const NR = require('./notes-report');
 
@@ -35,7 +36,8 @@ function atomic(file, text) {
 
 class GhostApp {
   constructor({ userData, ghost, id, cloudBase = CLOUD, fetchImpl = (typeof fetch === 'function' ? fetch : null), allowLoopback = false, shell = null, dialog = null, getWindow = () => null, openTerminal = async () => false, openToolIntegrations = async () => false,
-    emit = () => {}, now = Date.now, version = '0.0.0', pollMinMs = 2000, electron = null, autoSetup: autoSetupOn = true } = {}) {
+    emit = () => {}, now = Date.now, version = '0.0.0', pollMinMs = 2000, electron = null, autoSetup: autoSetupOn = true, vmPublished = null } = {}) {
+    this.vmPublished = typeof vmPublished === 'function' ? vmPublished : () => { try { return !!require('../vm/images').loadIndex().published; } catch { return false; } };
     this.autoSetupOn = autoSetupOn !== false;
     this.userData = userData; this.ghost = ghost; this.id = id; this.fetch = fetchImpl; this.shell = shell; this.dialog = dialog; this.getWindow = getWindow; this.electron = electron;
     this.openTerminal = openTerminal; this.openToolIntegrations = openToolIntegrations; this.emit = emit; this.now = now; this.version = version; this.pollMinMs = pollMinMs;
@@ -48,7 +50,7 @@ class GhostApp {
     this.notes = this.vault ? new NoteStore({ vault: this.vault, now }) : null;      // Quick notes: sealed in the same vault, one document per case
     this.prefs = this.vault ? new PrefStore({ vault: this.vault }) : null;
     this.scope = ghost.vaultSvc ? new ScopeGuard({ io: ghost.vaultSvc.io.logs, now }) : null;
-    this.mem = { session: null, ent: null, entAt: 0, loaded: false, signin: null, refreshing: null, checking: false, lastError: null, hiddenConnectors: 0, builtins: null };
+    this.mem = { session: null, ent: null, entAt: 0, loaded: false, signin: null, refreshing: null, checking: false, lastError: null, hiddenConnectors: 0, builtins: null, builtinsErrAt: 0, setup: null, search: null, builtinsTimer: null };
     this.polling = null;
   }
 
@@ -102,6 +104,7 @@ class GhostApp {
     return 'apply';
   }
   status() {
+    try { this.ensureBuiltins(); } catch (e) { this._logWarn('builtins-ensure-failed', { reason: e && e.message }); }
     this._load(); const rec = this.installRecord(), s = this.mem.session, e = this.mem.ent, vs = this.vault ? this.vault.status() : null;
     const si = this.mem.signin;
     return {
@@ -114,20 +117,40 @@ class GhostApp {
     };
   }
   _changed() { try { this.emit('status', this.status()); } catch { /* window gone */ } this.ensureBuiltins(); }
-  // Once per run, as soon as access is granted (stage 'ready'): the connectors that ship with Mayfair are registered with the manager.
-  // Register only: no approval, no run, no network. Safe to call any number of times; an identical folder is not touched.
+  // As soon as access is granted (stage 'ready'), on every start: the connectors that ship with Mayfair are registered with the manager (copy only), then,
+  // because the Terms are accepted at that stage, approved and switched on in-process and tested in the background (builtins.js). Safe to call any
+  // number of times and from anywhere (status, every gated call, every change): each part happens once per run and nothing here waits on a test.
   ensureBuiltins() {
-    if (this.mem.builtins && this.ghost && this.ghost.manager && this.ready()) { this._autoSetupBuiltins(); return this.mem.builtins; }
-    if (this.mem.builtins || !this.ghost || !this.ghost.manager || !this.ready()) return this.mem.builtins;
-    try { this.mem.builtins = registerBuiltins(this.ghost.manager); }
-    catch (e) { this.mem.builtins = { modules: [], security: [], summary: { registered: 0, updated: 0, unchanged: 0, failed: 1 }, error: e.message }; }
+    if (!this.ghost || !this.ghost.manager || !this.ready()) return this.mem.builtins;
+    if (!this.mem.builtins || (this.mem.builtins.error && this.now() - this.mem.builtinsErrAt > 30000)) {
+      try { this.mem.builtins = registerBuiltins(this.ghost.manager); }
+      catch (e) {
+        this.mem.builtins = { modules: [], security: [], summary: { registered: 0, updated: 0, unchanged: 0, failed: 1 }, error: e.message }; this.mem.builtinsErrAt = this.now();
+        this._logWarn('builtins-register-failed', { reason: e.message });
+      }
+    }
     this._autoSetupBuiltins();
     return this.mem.builtins;
   }
-  // Once per run, after the Terms are accepted: the shipped passive lookups are approved, tested and switched on in the background (see builtins.autoSetup).
+  _logWarn(ev, f) { try { const l = this.ghost && this.ghost.log; if (l) l.warn(ev, f); } catch { /* logging never stops the app */ } }
+  // The per-tool state the window shows (builtins.js BuiltinSetup). One instance per run; created even when automatic setup is off.
+  _setup() {
+    if (!this.mem.setup) {
+      this.mem.setup = new BuiltinSetup({ manager: this.ghost.manager, log: this.ghost.log, vmPublished: this.vmPublished, onChange: () => this._builtinsChanged() });
+    }
+    return this.mem.setup;
+  }
+  _builtinsChanged() {
+    if (this.mem.builtinsTimer) return;
+    this.mem.builtinsTimer = setTimeout(() => { this.mem.builtinsTimer = null; try { this.emit('builtins', this._setup().status()); } catch { /* window gone */ } }, 120);
+    if (this.mem.builtinsTimer.unref) this.mem.builtinsTimer.unref();
+  }
+  // After the Terms: approve and switch on the shipped lookups (synchronously, here), then the self-test runs in the background and only records.
   _autoSetupBuiltins() {
-    if (!this.autoSetupOn || this.mem.autoSetup || !this.ghost || !this.ghost.manager || !this.ready() || !this.termsAccepted()) return;
-    this.mem.autoSetup = autoSetup(this.ghost.manager).then((r) => { this.mem.autoSetupResult = r; this._changed(); return r; }, () => null);
+    if (!this.autoSetupOn || !this.ghost || !this.ghost.manager || !this.ready() || !this.termsAccepted()) return;
+    const su = this._setup();
+    if (su.phase !== 'idle') return;
+    this.mem.autoSetup = su.start().then((r) => { this.mem.autoSetupResult = r; return r; });
   }
   ready() { return this.stage() === 'ready'; }
   _need(what) { if (!this.ready()) throw new AppError('not-ready', 'Finish the start steps first.'); this.ensureBuiltins(); return what; }
@@ -299,6 +322,16 @@ class GhostApp {
   jobCancel(id) { this._need(); return this.ghost.api()['ghost.jobs.cancel'](id); }
   async pickFile() { this._need(); return this.ghost.api()['ghost.pickFile'](); }
 
+  // ---------- the shipped tools and the master search ----------
+  builtinsStatus() { this._need(); return this._setup().status(); }
+  _search() {
+    if (!this.mem.search) this.mem.search = new Search({ setup: this._setup(), manager: this.ghost.manager, runner: this.ghost.runner, picks: this.ghost.picks, log: this.ghost.log, now: this.now, blocked: (e) => this._blocked(e), emit: (n, p) => this.emit(n, p) });
+    return this.mem.search;
+  }
+  searchClassify(o) { this._need(); return classify(o.query); }
+  searchRun(o) { this._need(); return this._search().run(o); }
+  searchCancel(o) { this._need(); return this._search().cancel(o.searchId); }
+
   // ---------- active scanning behind the light scope guard ----------
   scopeDeclare(o) { this._needModule('scanning'); return this.scope.declare(o); }
   scopeRevoke(id) { this._needModule('scanning'); return this.scope.revoke(id); }
@@ -391,7 +424,7 @@ class GhostApp {
   async terminalOpen(o) { this._need(); return { ok: await this.openTerminal(o || {}) }; }
   async toolPage() { this._need(); return { ok: await this.openToolIntegrations() }; }
   async vaultUnlock(o) { const r = await this.ghost.api()['ghost.vault.unlock'](o); this.mem.loaded = false; this._changed(); return { ok: r.ok, error: r.error, status: this.status() }; }
-  shutdown() { this.cancelSignin(); }
+  shutdown() { this.cancelSignin(); if (this.mem.builtinsTimer) { clearTimeout(this.mem.builtinsTimer); this.mem.builtinsTimer = null; } if (this.mem.setup) this.mem.setup.stop(); if (this.mem.search) this.mem.search.shutdown(); }
 }
 
 module.exports = { GhostApp, AppError, fail, BLOCKED, ENT_GRACE_MS, ENT_RECHECK_MS, CLOUD };

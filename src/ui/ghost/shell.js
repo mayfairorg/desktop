@@ -7,8 +7,10 @@
   const ROUTE_NAMES = {};
   let current = { name: 'home', arg: '', rest: '' }, token = 0;
 
-  const NAV_WORK = [['home', 'Home', 'home'], ['case', 'Case board', 'board']];
+  const NAV_WORK = [['workspace', 'Workspace', 'search'], ['case', 'Case board', 'board']];
   const NAV_TOOLS = [['tools', 'Tool Integrations', 'tool']];
+  // The tools that are not part of the master search: security tools you approve yourself, and active scanning behind the scope guard.
+  const NAV_MORE = [{ id: 'threat', label: 'Security tools', icon: 'shield' }, { id: 'scan', label: 'Active scanning', icon: 'scan', active: true }];
 
   GH.parseHash = (hash) => {
     const m = /^#\/?([a-z]*)(?:\/([^/?]*))?(?:\/(.*))?$/.exec(hash || '');
@@ -19,21 +21,21 @@
   GH.href = (name, arg, rest) => '#' + name + (arg ? '/' + encodeURIComponent(arg) + (rest ? '/' + encodeURIComponent(rest) : '') : '');
   GH.go = (name, arg, rest) => { const hash = GH.href(name, arg, rest); if (location.hash === hash) renderRoute(); else location.hash = hash; };
 
-  const SHORT = { 'Case board': 'Cases', 'Tool Integrations': 'Tools', 'Domains and networks': 'Domains' };
+  const SHORT = { 'Case board': 'Cases', 'Tool Integrations': 'Own tools', 'All tools': 'Tools', 'Security tools': 'Security', 'Active scanning': 'Scanning' };
   const lab = (l) => (SHORT[l] ? [h('span', { class: 'l' }, l), h('span', { class: 's' }, SHORT[l])] : [h('span', {}, l)]);
   function navLink(name, label, icon, active) {
     return h('a', { class: 'nav', href: GH.href(name === 'module' ? 'm' : name), dataset: { nav: name }, 'aria-current': active ? 'page' : null }, GH.icon(icon), h('span', {}, label));
   }
   function buildRail() {
     const st = GH.status || {};
-    const mods = MODS.map((m) => h('li', {}, h('a', { class: 'nav', href: GH.href('m', m.id), dataset: { nav: 'm:' + m.id } }, GH.icon(m.icon), h('span', {}, m.name), m.active ? h('i', { class: 'act-dot', title: 'Active scanning', 'aria-hidden': 'true' }) : null)));
+    const more = NAV_MORE.map((m) => h('li', {}, h('a', { class: 'nav', href: GH.href('m', m.id), dataset: { nav: 'm:' + m.id } }, GH.icon(m.icon), h('span', {}, m.label), m.active ? h('i', { class: 'act-dot', title: 'Active scanning', 'aria-hidden': 'true' }) : null)));
     return h('nav', { class: 'rail', 'aria-label': 'Ghost' },
-      h('a', { class: 'brand', href: '#home', 'aria-label': 'Mayfair Ghost, home' }, GH.icon('ghost', 'brand-ico'), h('span', { class: 'brand-t' }, h('b', {}, 'MAYFAIR'), h('i', {}, 'GHOST'))),
+      h('a', { class: 'brand', href: '#workspace', 'aria-label': 'Mayfair Ghost, Workspace' }, GH.icon('ghost', 'brand-ico'), h('span', { class: 'brand-t' }, h('b', {}, 'MAYFAIR'), h('i', {}, 'GHOST'))),
       h('div', { class: 'rail-scroll' },
         h('ul', { class: 'rail-list' }, NAV_WORK.map(([n, l, i]) => h('li', {}, h('a', { class: 'nav', href: GH.href(n), dataset: { nav: n } }, GH.icon(i), ...lab(l))))),
-        h('p', { class: 'rail-h' }, 'Investigate'),
-        h('ul', { class: 'rail-list' }, h('li', { class: 'm-only' }, h('a', { class: 'nav', href: '#modules', dataset: { nav: 'modules' } }, GH.icon('grid'), h('span', {}, 'Modules'))), mods),
         h('p', { class: 'rail-h' }, 'Tools'),
+        h('ul', { class: 'rail-list' }, h('li', { class: 'm-only' }, h('a', { class: 'nav', href: GH.href('tool'), dataset: { nav: 'tool' } }, GH.icon('grid'), ...lab('All tools'))), more),
+        h('p', { class: 'rail-h' }, 'More'),
         h('ul', { class: 'rail-list' }, NAV_TOOLS.map(([n, l, i]) => h('li', {}, h('a', { class: 'nav', href: GH.href(n), dataset: { nav: n } }, GH.icon(i), ...lab(l)))),
           h('li', {}, h('button', { class: 'nav', type: 'button', id: 'nav-term', onclick: openTerminal }, GH.icon('term'), h('span', {}, 'Terminal'))),
           h('li', {}, h('a', { class: 'nav', href: GH.href('settings'), dataset: { nav: 'settings' } }, GH.icon('gear'), h('span', {}, 'Settings'))))),
@@ -54,7 +56,7 @@
     });
   }
   function shortcuts() {
-    const rows = [['Ctrl Z / Ctrl Shift Z', 'Undo and redo on the case board'], ['/', 'Search the case'], ['Arrow keys', 'Move between entities on the graph'], ['Shift + Arrow keys', 'Nudge the selected entity'], ['Enter', 'Open the selected entity'], ['Delete', 'Remove the selected entities'], ['P', 'Pin or unpin the selected entity'], ['+ and -', 'Zoom the graph'], ['0', 'Fit the graph to the window'], ['Escape', 'Clear the selection, or close a dialog'], ['F11', 'Full screen'], ...(GH.qn ? GH.qn.SHORTCUTS : [])];
+    const rows = [['/', 'Jump to the master search (on the case board: search the case)'], ['Ctrl Z / Ctrl Shift Z', 'Undo and redo on the case board'], ['Arrow keys', 'Move between entities on the graph'], ['Shift + Arrow keys', 'Nudge the selected entity'], ['Enter', 'Open the selected entity'], ['Delete', 'Remove the selected entities'], ['P', 'Pin or unpin the selected entity'], ['+ and -', 'Zoom the graph'], ['0', 'Fit the graph to the window'], ['Escape', 'Clear the selection, or close a dialog'], ['F11', 'Full screen'], ...(GH.qn ? GH.qn.SHORTCUTS : [])];
     return GH.dialog({ title: 'Keyboard shortcuts', body: h('dl', { class: 'kv wide' }, rows.map(([a, b]) => [h('dt', { class: 'mono' }, a), h('dd', {}, b)])), actions: [{ label: 'Close', primary: true, value: null }] });
   }
   GH.shortcuts = shortcuts;
@@ -88,13 +90,17 @@
   GH.updateBars = updateBars;
 
   function crumbOf(r) {
-    if (r.name === 'm') { const m = window.GhostModules.byId(r.arg); return m ? m.name : 'Modules'; }
-    return { home: 'Home', modules: 'Modules', case: 'Case board', tools: 'Tool Integrations', settings: r.arg === 'appearance' || !r.arg ? 'Settings / Appearance' : 'Settings' }[r.name] || 'Home';
+    if (r.name === 'm') { const m = window.GhostModules.byId(r.arg), x = NAV_MORE.find((n) => n.id === r.arg); return x ? x.label : m ? m.name : 'Workspace'; }
+    if (r.name === 'search') return 'Results: ' + (r.rest || '');
+    if (r.name === 'tool') { const t = GH.ws && GH.ws.tool(r.arg); return r.arg ? (t ? t.name : 'Tool') : 'All tools'; }
+    const lx = GH.layout && GH.layout();
+    return { home: lx && lx.home ? 'Home' : 'Workspace', workspace: 'Workspace', case: 'Case board', tools: 'Tool Integrations', settings: r.arg === 'appearance' || !r.arg ? 'Settings / Appearance' : 'Settings' }[r.name] || 'Workspace';
   }
   async function renderRoute() {
     const r = GH.parseHash(location.hash); current = r; const my = ++token;
     const fn = GH.routes[r.name] || GH.routes.home;
-    document.querySelectorAll('#app [data-nav]').forEach((a) => { const n = a.dataset.nav; const on = n === r.name || (r.name === 'm' && n === 'm:' + r.arg); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    const lay0 = GH.layout && GH.layout(), key = r.name === 'home' && !(lay0 && lay0.home) ? 'workspace' : r.name === 'search' ? 'workspace' : r.name;
+    document.querySelectorAll('#app [data-nav]').forEach((a) => { const n = a.dataset.nav; const on = n === key || (r.name === 'm' && n === 'm:' + r.arg); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     const cr = document.getElementById('crumb'); if (cr) cr.textContent = crumbOf(r);
     document.getElementById('app').dataset.view = r.name;
     const host = document.getElementById('main'); GH.clear(host); host.append(h('div', { class: 'skel pad', 'aria-hidden': 'true' }, h('i', {}), h('i', {}), h('i', {})));
@@ -113,9 +119,10 @@
   GH.layouts = {};
   GH.layoutId = () => { const id = GH.appearance ? GH.appearance.skin() : 'mayfair'; return GH.layouts[id] ? id : 'mayfair'; };
   GH.layout = () => GH.layouts[GH.layoutId()] || null;
-  const navItems = () => [{ nav: 'home', href: GH.href('home'), label: 'Home' }, { nav: 'case', href: GH.href('case'), label: 'Case board', short: 'Cases' },
-    ...MODS.map((m) => ({ nav: 'm:' + m.id, href: GH.href('m', m.id), label: m.name, short: SHORT[m.name] || null, active: m.active, module: true })),
-    { nav: 'tools', href: GH.href('tools'), label: 'Tool Integrations', short: 'Tools' }, { nav: 'settings', href: GH.href('settings'), label: 'Settings' }];
+  const navItems = () => [{ nav: 'home', href: GH.href('home'), label: 'Home' }, { nav: 'workspace', href: GH.href('workspace'), label: 'Workspace' }, { nav: 'case', href: GH.href('case'), label: 'Case board', short: 'Cases' },
+    { nav: 'tool', href: GH.href('tool'), label: 'All tools', short: 'Tools' },
+    ...NAV_MORE.map((m) => ({ nav: 'm:' + m.id, href: GH.href('m', m.id), label: m.label, short: SHORT[m.label] || null, active: m.active, module: true })),
+    { nav: 'tools', href: GH.href('tools'), label: 'Tool Integrations', short: 'Own tools' }, { nav: 'settings', href: GH.href('settings'), label: 'Settings' }];
   GH.shellParts = { MODS, navItems, openTerminal, accountDialog, toggleFs: () => toggleFs(), buildStatus, crumbOf, shortcuts,
     actions() { return h('div', { class: 'top-r' }, GH.btn('', { icon: 'term', ghost: true, title: 'Open the terminal', cls: 'top-term', onclick: openTerminal }), GH.btn('', { icon: 'full', ghost: true, title: 'Full screen (F11)', id: 'fs', onclick: () => toggleFs() }),
       h('button', { class: 'btn ghost icon', id: 'theme', type: 'button', title: 'Theme', onclick: () => GH.appearance.set({ theme: GH.appearance.theme() === 'dark' ? 'light' : 'dark' }) }, GH.icon('sun')),

@@ -1,5 +1,5 @@
 'use strict';
-// Ghost module screens and connector cards. A module runs the connectors that are installed (through the Ghost connector core) and shows each one it expected but
+// Ghost connector cards (Tool Integrations), Active scanning and Security tools. A screen runs the connectors that are installed (through the Ghost connector core) and shows each one it expected but
 // cannot find as "Not installed". Every card shows one honest state (Needs your approval, Not tested, Test passed, Test failed, Program missing, Not installed). There is no sample data anywhere: a result on screen came from a connector run on this computer.
 (function () {
   const GH = window.GH, h = GH.h, S = window.GhostScope, M = window.GhostCase, MODS = window.GhostModules;
@@ -19,7 +19,7 @@
     const head = h('div', { class: 'cc-h' }, h('div', { class: 'cc-t' }, h('h3', {}, e ? e.name : o.label), h('span', { class: 'mono mute' }, (e ? e.id : o.id) + (e && e.version ? '  v' + e.version : ''))), h('div', { class: 'cc-tags' }, e ? h('span', { class: 'tag' + (e.scope === 'active' ? ' act' : '') }, SCOPE_TAG[e.scope] || 'ACTIVE') : null, stTag(st)));
     host.append(head);
     if (!e) {
-      host.append(h('p', { class: 'cc-state' }, GH.icon('alert'), h('b', {}, 'Not installed')), h('p', { class: 'mute sm' }, st.planned ? 'This lookup is planned and has not been built yet. It is shown so you know it is expected here. No results are made up in its place.' : 'Ghost has not set up "' + o.id + '" on this computer yet. Use "Set up built-in lookups" for Mayfair\'s own lookups. No results are made up in its place.'));
+      host.append(h('p', { class: 'cc-state' }, GH.icon('alert'), h('b', {}, 'Not installed')), h('p', { class: 'mute sm' }, st.planned ? 'This lookup is planned and has not been built yet. It is shown so you know it is expected here. No results are made up in its place.' : 'Ghost has not set up "' + o.id + '" on this computer yet. Mayfair\'s own lookups are in All tools. No results are made up in its place.'));
       return host;
     }
     host.append(h('p', { class: 'cc-state st-line st-' + st.key, role: 'status' }, GH.icon(st.key === 'passed' ? 'check' : st.key === 'needs-approval' ? 'lock' : 'alert'), h('span', {}, h('b', {}, st.label), st.detail ? '. ' + st.detail : '')));
@@ -169,54 +169,16 @@
   }
   GH.checkInput = checkInput;
 
-  // ---------- "Set up built-in lookups" ----------
-  // One button. For each built-in lookup in turn: the native approval window (one per connector, with the outside addresses and the licence), then its own
-  // self-test, then switching it on if the test passed. Nothing is approved without that window, and a failed or declined one is reported as it is.
-  GH.setupBuiltins = function setupBuiltins(o = {}) {
-    const ids = MODS.BUILTIN, host = h('section', { class: 'panel setup-panel', 'aria-labelledby': 'h-setup' });
-    const list = h('ul', { class: 'setup-list mono sm', 'aria-label': 'Progress' }), bar = h('p', { class: 'hint', role: 'status', 'aria-live': 'polite' }, '');
-    let running = false, stop = false;
-    const rows = {}, names = {};
-    const say = (id, text, cls) => { if (!rows[id]) { rows[id] = h('li', {}, h('span', {}, names[id] || id), h('span', { class: 'mute' }, '')); list.append(rows[id]); } rows[id].className = cls || ''; rows[id].lastChild.textContent = text; };
-    const run = async () => {
-      if (running) return; running = true; stop = false; GH.clear(list); btn.disabled = true; cancel.hidden = false;
-      let passed = 0, declined = 0, problems = 0, n = 0;
-      for (const id of ids) {
-        if (stop) break; n++; bar.textContent = 'Lookup ' + n + ' of ' + ids.length;
-        let e = null; try { e = await GH.call(GH.api.connectors.get, id); } catch { /* shown below */ }
-        if (!e) { say(id, 'Not installed', 'bad'); problems++; continue; }
-        names[id] = e.name; say(id, 'Waiting', '');
-        try {
-          if (e.state === 'not-approved') {
-            say(id, 'Needs your approval: answer the window that opened');
-            const r = await GH.call(GH.api.connectors.requestApproval, id);
-            if (!r || r.ok === false) { say(id, 'Not approved', 'bad'); declined++; continue; }
-          }
-          say(id, 'Testing');
-          const t = await GH.call(GH.api.connectors.test, id);
-          if (!t || t.passed !== true) {
-            const g = await GH.call(GH.api.connectors.get, id).catch(() => null), s2 = MODS.statusOf(g, id);
-            say(id, s2.label + (s2.detail ? ': ' + s2.detail.slice(0, 120) : ''), 'bad'); problems++; continue;
-          }
-          await GH.call(GH.api.connectors.enable, id);
-          say(id, 'Test passed', 'ok'); passed++;
-        } catch (x) { say(id, 'Not done: ' + GH.errText(x), 'bad'); problems++; }
-      }
-      running = false; btn.disabled = false; cancel.hidden = true; GH.conn.bust();
-      bar.textContent = (stop ? 'Stopped. ' : 'Finished. ') + passed + ' passed, ' + declined + ' not approved, ' + problems + ' with a problem.';
-      if (o.onDone) o.onDone();
-    };
-    const btn = GH.btn('Set up built-in lookups', { primary: true, icon: 'check', onclick: run });
-    const cancel = GH.btn('Stop after this one', { ghost: true, onclick: () => { stop = true; } }); cancel.hidden = true;
-    host.append(h('div', { class: 'panel-h' }, h('h2', { id: 'h-setup' }, 'Built-in lookups'), h('span', { class: 'mute mono' }, ids.length + ' lookups')),
-      h('p', { class: 'mute' }, 'Ghost asks you about each lookup in turn, in a native window that lists the outside addresses it contacts and its licence. After you approve one, Ghost tests it and switches it on only if the test passes. Nothing is contacted before you approve.'),
-      h('div', { class: 'row-a' }, btn, cancel), bar, list);
-    return host;
-  };
-
   // ---------- the screen ----------
+  // Only two module screens are left: Security tools (the security connectors you approve yourself) and Active scanning (behind the scope guard). Mayfair's own passive
+  // lookups are in the Workspace and All tools; an old link to one of those modules opens the master search for what it carried, or the tool index.
   GH.routes.m = async (id, value) => {
-    const m = MODS.byId(id); if (!m) return GH.routes.modules();
+    const m0 = MODS.byId(id); if (!m0) return GH.routes.tool('');
+    if (!m0.active && id !== 'threat') {
+      if (value) { try { const r = await GH.ws.classify(value); GH.ws.next = { kind: r.kind, value: r.value, tools: null, token: null, force: true }; return GH.routes.search(r.kind, r.value); } catch (e) { GH.toast(GH.errText(e)); } }
+      return GH.routes.tool('');
+    }
+    const m = id === 'threat' ? { ...m0, name: 'Security tools', blurb: 'Security and threat-intelligence tools you approve yourself: subdomain finders, rule matchers, and your own MISP, OpenCTI, OpenSearch and Neo4j. Each asks for approval in a native window.', wants: m0.wants.filter((w) => !MODS.BUILTIN.includes(w[0])) } : m0;
     const entitled = !m.active || (GH.status && GH.status.entitlement && GH.status.entitlement.modules && GH.status.entitlement.modules.scanning);
     const state = { scopeId: null, scopeTarget: null };
     const input = h('input', { id: 'm-in', class: 'mono', type: 'text', placeholder: m.placeholder, 'aria-label': m.placeholder, spellcheck: 'false', autocomplete: 'off', value: value || '', 'data-autofocus': '' });
@@ -229,6 +191,7 @@
       let list; try { list = await GH.conn.list(force); } catch (x) { GH.clear(cardsHost); cardsHost.append(h('div', { class: 'state' }, GH.icon('alert'), h('h2', {}, 'Connectors could not be listed'), h('p', {}, GH.errText(x)), GH.btn('Try again', { onclick: () => draw(true) }))); return; }
       listCache = list; host_registry.clear(); GH.clear(cardsHost);
       const { wanted, extra } = GH.conn.forModule(list, m);
+      if (id === 'threat') extra.splice(0, extra.length, ...extra.filter((x) => !MODS.BUILTIN.includes(x.id)));
       const mk = (w) => GH.connectorCard({ entry: w.entry, label: w.label, id: w.id, module: m, runnable: entitled, onChange: () => draw(true), input: mainInput, needScope: () => state.scopeId, scopeTarget: () => state.scopeTarget });
       for (const w of wanted) cardsHost.append(mk(w));
       for (const x of extra) cardsHost.append(mk({ entry: x, label: x.name, id: x.id }));
@@ -248,7 +211,6 @@
     top.push(h('div', {}, h('p', { class: 'eyebrow mono' }, (m.active ? 'ACTIVE' : 'PASSIVE') + ' MODULE'), h('h1', {}, m.name), h('p', { class: 'lead sm' }, m.blurb)));
     const Lx = GH.layout && GH.layout(); if (Lx && Lx.moduleSummary) top.push(Lx.moduleSummary(m));
     if (m.active) top.push(scopePanel(m, state, entitled, draw));
-    else if (m.wants.some((w) => MODS.BUILTIN.includes(w[0]))) top.push(GH.setupBuiltins({ onDone: () => draw(true) }));
     if (!m.fileInput && m.local !== 'pivots' && entitled) top.push(h('form', { class: 'cmd mod-cmd', onsubmit: go, autocomplete: 'off' }, h('label', { class: 'cmd-l mono', for: 'm-in', 'aria-hidden': 'true' }, '›'), input, kindEl, GH.btn(m.active ? 'Run ready tools' : 'Look up', { primary: true, type: 'submit' })), err);
     if (m.local === 'pivots') top.push(GH.pivotsPanel());
     if (m.places) top.push(GH.placesPanels());

@@ -62,6 +62,8 @@ function createGhostWindow({ electron, app, uiDir, isPackaged = true, icon, maxi
     'gapp:report.save': (e, o) => A.reportSave(o),
     'gapp:cases.exportJson': (e, j) => A.caseExportJson(j), 'gapp:cases.importPick': () => A.caseImportPick(),
     'gapp:terminal.open': (e, o) => A.terminalOpen(o), 'gapp:tools.open': () => A.toolPage(),
+    'gapp:builtins.status': () => A.builtinsStatus(),
+    'gapp:search.classify': (e, o) => A.searchClassify(o), 'gapp:search.run': (e, o) => A.searchRun(o), 'gapp:search.cancel': (e, o) => A.searchCancel(o),
     'gapp:window.fullscreen': (e, on) => { setFull(!!on); return { ok: true }; },
     'gapp:window.close': () => { hide(); return { ok: true }; },
   };

@@ -10,6 +10,8 @@ const connId = (v) => typeof v === 'string' && M.ID_RE.test(v);
 const jobId = (v) => typeof v === 'string' && /^[A-Za-z0-9_-]{4,64}$/.test(v);
 const caseId = (v) => typeof v === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(v);
 const scopeId = (v) => typeof v === 'string' && /^sc-[a-f0-9]{16}$/.test(v);
+const searchId = (v) => typeof v === 'string' && /^s-[a-f0-9]{16}$/.test(v);
+const KINDS = require('./search').KINDS;
 const MAX_CASE = 32 * 1024 * 1024;
 const input = (v) => obj(v) && Object.keys(v).length <= 16 && Object.entries(v).every(([k, x]) => /^[a-z][a-zA-Z0-9_]{0,31}$/.test(k) && (str(4096)(x) || Number.isInteger(x)));
 const secret = (v) => obj(v) && ((keysIn(v, ['passphrase']) && str(1024)(v.passphrase) && v.passphrase.length > 0) || (keysIn(v, ['phrase']) && str(400)(v.phrase) && v.phrase.length > 0));
@@ -30,12 +32,16 @@ const CALLS = {
   'gapp:report.save': [(v) => obj(v) && keysIn(v, ['json', 'format', 'author', 'hide', 'notesTabs']) && str(MAX_CASE)(v.json) && ['html', 'pdf', 'json'].includes(v.format) && (v.author === undefined || str(120)(v.author)) && (v.hide === undefined || (Array.isArray(v.hide) && v.hide.length <= 5000 && v.hide.every(str(64)))) && (v.notesTabs === undefined || (Array.isArray(v.notesTabs) && v.notesTabs.length <= 40 && v.notesTabs.every(str(64))))],
   'gapp:cases.exportJson': [str(MAX_CASE)], 'gapp:cases.importPick': [],
   'gapp:terminal.open': [(v) => obj(v) && keysIn(v, ['caseId']) && (v.caseId === undefined || /^[A-Za-z0-9_-]{1,40}$/.test(v.caseId))], 'gapp:tools.open': [],
+  'gapp:builtins.status': [],
+  'gapp:search.classify': [(v) => obj(v) && keysIn(v, ['query']) && str(2000)(v.query)],
+  'gapp:search.run': [(v) => obj(v) && keysIn(v, ['query', 'kind', 'tools', 'caseId']) && str(2000)(v.query) && v.query.trim().length > 0 && (v.kind === undefined || KINDS.includes(v.kind)) && (v.tools === undefined || (Array.isArray(v.tools) && v.tools.length >= 1 && v.tools.length <= 64 && v.tools.every(connId) && new Set(v.tools).size === v.tools.length)) && (v.caseId === undefined || caseId(v.caseId))],
+  'gapp:search.cancel': [(v) => obj(v) && keysIn(v, ['searchId']) && searchId(v.searchId)],
   'gapp:window.fullscreen': [bool], 'gapp:window.close': [],
 };
 // the virtual computer's calls for "Add a tool" (src/main/ghost/vm/ipc.js)
 const VMIPC = require('../vm/ipc');
 for (const n of VMIPC.APP_OPS) CALLS['gapp:vm.' + n] = VMIPC.CALLS[n];
-const EVENTS = ['gapp:status', 'gapp:install', 'gapp:job', 'gapp:window'];
+const EVENTS = ['gapp:status', 'gapp:install', 'gapp:job', 'gapp:window', 'gapp:builtins', 'gapp:search'];
 
 function check(channel, args) {
   const spec = Object.prototype.hasOwnProperty.call(CALLS, channel) ? CALLS[channel] : null;
