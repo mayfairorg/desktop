@@ -18,6 +18,8 @@ jobs:
         with: { node-version: 22 }
       - run: npm install --no-audit --no-fund   # switch to "npm ci" once package-lock.json is committed
       - run: npm test
+        env:
+          GHOST_SKIP_E2E: '1'   # the real-window Ghost layout checks (xvfb, ~14 min on a runner) are run before every release zip; the rest of the suite runs here
 
   build:
     needs: test
