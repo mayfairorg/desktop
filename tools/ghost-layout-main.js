@@ -97,6 +97,9 @@ eapp.whenReady().then(async () => {
   const { createGhostApp } = require('../src/main/ghost/app');
   process.env.MF_GHOST_ID_BASE = mock.base; process.env.MF_GHOST_CLOUD_BASE = mock.base; process.env.MF_GHOST_POLL_MS = '200'; process.env.MF_GHOST_NO_MAXIMIZE = '1';
   gapp = createGhostApp({ electron: { ...electron, shell: { openExternal: () => {} } }, userData, ghost, isPackaged: false, version: '1.0.0', openTerminal: async () => true, openToolIntegrations: async () => true });
+  // This harness answers the Workspace's tool list with a stand-in in the page. The real service must not push its own tool status into the page on top of it
+  // (on a slow machine with network the background self-tests finish late and the real list would replace the stand-in): its 'builtins' events are dropped here.
+  { const a = gapp.app, emit0 = a.emit; a.autoSetupOn = false; a.emit = function (type, ...rest) { if (type === 'builtins') return undefined; return emit0.call(this, type, ...rest); }; }
   gapp.show();
   const win = gapp.win.getWindow(); win.setContentSize(W, H); const wc = win.webContents;
   const pageErr = []; wc.on('console-message', (_e, level, msg) => { if (level >= 2) { pageErr.push(msg); console.log('PAGE-CONSOLE ' + msg); } });
