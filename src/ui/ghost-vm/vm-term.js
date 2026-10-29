@@ -11,6 +11,7 @@
   const msg = (e) => String((e && e.message) || e || '').replace(/^Error: /, '').replace(/^Error invoking remote method '[^']+': /, '');
   const say = (t) => ctx && ctx.say && ctx.say(t);
   const mb = (n) => (n >= 1073741824 ? (n / 1073741824).toFixed(1) + ' GB' : Math.max(1, Math.round(n / 1048576)) + ' MB');
+  const put = (el, ...kids) => el.append(...kids.flat(Infinity).filter((c) => c !== null && c !== undefined && c !== false));   // raw append would print null and [object HTMLElement]
   const btn = (label, o = {}) => h('button', { class: 'gvm-btn' + (o.primary ? ' primary' : '') + (o.danger ? ' danger' : ''), disabled: o.disabled, title: o.title, onclick: o.onclick }, label);
   async function run(fn) { try { const r = await fn(); if (r && r.ok === false && r.code !== 'declined' && r.code !== 'cancelled') say(r.error || 'That did not work.'); return r; } catch (e) { say(msg(e)); return null; } }
 
@@ -50,7 +51,7 @@
     if (st.state === 'downloading') {
       const d = st.download || { doneBytes: 0, total: st.totalBytes || 1, item: '' };
       const pct = Math.min(100, Math.round(((d.doneBytes || 0) / (d.total || 1)) * 100));
-      card.append(h('h2', { text: 'Downloading the virtual computer' }), h('div', { class: 'gvm-meter', role: 'progressbar', 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' }, h('i', { id: 'gvmFill' })),
+      put(card, h('h2', { text: 'Downloading the virtual computer' }), h('div', { class: 'gvm-meter', role: 'progressbar', 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' }, h('i', { id: 'gvmFill' })),
         h('p', { text: pct + '%  ·  ' + mb(d.doneBytes || 0) + ' of ' + mb(d.total || 0) + (d.item ? '  ·  ' + ({ qemu: 'QEMU program', kernel: 'kernel', initrd: 'start-up files', disk: 'system image' }[d.item] || d.item) : '') }),
         h('p', { text: 'Each file is checked against its pinned SHA-256 before it is used. A file that does not match is deleted.' }),
         h('div', { class: 'gvm-actions' }, btn('Cancel', { onclick: () => run(() => ctx.api.vm.cancelInstall()) })));
@@ -60,9 +61,9 @@
     }
     if (st.state === 'not-installed' || st.state === 'unknown') {
       if (st.notPublished || (st.installNote && !st.missing.length)) {
-        card.append(h('h2', { text: 'The virtual computer is not available yet' }), h('p', { text: st.installNote || 'No image has been published.' }), h('p', { text: 'Nothing was downloaded and nothing runs on this computer in its place.' }), h('div', { class: 'gvm-actions' }, btn('Check again', { onclick: () => run(() => ctx.api.vm.status().then(onStatus)) }), local));
+        put(card, h('h2', { text: 'The virtual computer is not available yet' }), h('p', { text: st.installNote || 'No image has been published.' }), h('p', { text: 'Nothing was downloaded and nothing runs on this computer in its place.' }), h('div', { class: 'gvm-actions' }, btn('Check again', { onclick: () => run(() => ctx.api.vm.status().then(onStatus)) }), local));
       } else {
-        card.append(h('h2', { text: 'Set up the Ghost virtual computer' }),
+        put(card, h('h2', { text: 'Set up the Ghost virtual computer' }),
           h('p', { text: 'Ghost runs tools and a terminal inside a small Linux computer (Alpine) that lives in this window, not on your computer. It can see one shared folder for this case and nothing else of yours: no home folder, no clipboard, no devices.' }),
           facts([['Download', mb(st.totalBytes || 0) + ', once, from github.com'], ['Contains', 'the QEMU program and a Linux image with git, python, pip, node, go and build tools'], ['Checked', 'every file against a SHA-256 pinned in this app'], ['Network', 'through Tor by default (you can change it), or none']]),
           h('p', { class: 'gvm-note', text: 'The download goes straight to GitHub from your computer, so GitHub sees your IP address. No case data is involved.' }),
@@ -72,12 +73,12 @@
       over.append(card); return;
     }
     if (st.state === 'starting' || st.state === 'stopping') {
-      card.append(h('h2', { text: st.state === 'starting' ? 'Starting the virtual computer' : 'Stopping' }), h('div', { class: 'gvm-meter' }, h('i', { id: 'gvmFill' })),
+      put(card, h('h2', { text: st.state === 'starting' ? 'Starting the virtual computer' : 'Stopping' }), h('div', { class: 'gvm-meter' }, h('i', { id: 'gvmFill' })),
         st.accel && !st.accel.fast ? h('p', { class: 'gvm-note', text: st.accel.notice }) : h('p', { text: 'This takes a few seconds with hardware virtualization.' }));
       over.append(card); const fill = document.getElementById('gvmFill'); if (fill) fill.style.width = '60%'; return;
     }
     if (st.state === 'stopped' || st.state === 'error') {
-      card.append(h('h2', { text: 'The virtual computer is not running' }), st.error ? h('p', { class: 'gvm-err', text: st.error }) : h('p', { text: 'Start it to open a terminal.' }),
+      put(card, h('h2', { text: 'The virtual computer is not running' }), st.error ? h('p', { class: 'gvm-err', text: st.error }) : h('p', { text: 'Start it to open a terminal.' }),
         h('div', { class: 'gvm-actions' }, btn('Start', { primary: true, onclick: () => start() }), btn('Reset it', { onclick: () => run(() => ctx.api.vm.reset()), title: 'Erase the machine\'s disk for this case and start clean. The shared folder and tools disk stay.' }), local));
       over.append(card);
     }
@@ -168,7 +169,7 @@
     clear(panelEl);
     const stateRow = h('div', { class: 'gvm-row' }, h('span', { class: 'gvm-tag ' + ((STATE[st.state] || [''])[0]), text: (STATE[st.state] || STATE.unknown)[1] }),
       st.state === 'stopped' ? btn('Start', { primary: true, onclick: start }) : null, st.state === 'running' ? btn('Stop', { onclick: () => run(() => ctx.api.vm.stop()) }) : null);
-    panelEl.append(h('section', { class: 'gvm-sec' }, h('h3', { text: 'Virtual computer' }), stateRow, st.error ? h('p', { class: 'gvm-err-t', text: st.error }) : null,
+    put(panelEl, h('section', { class: 'gvm-sec' }, h('h3', { text: 'Virtual computer' }), stateRow, st.error ? h('p', { class: 'gvm-err-t', text: st.error }) : null,
       st.accel ? h('p', { text: (st.accel.fast ? 'Accelerated with ' : 'Software emulation: ') + st.accel.label + (st.accel.fast ? '.' : '. ' + st.accel.notice) }) : h('p', { text: 'The accelerator is checked when the machine first starts.' }),
       st.disk ? h('p', { text: st.disk.note }) : null), networkSec(), caseSec(), resSec(), snapSec(), ghSec(), toolsSec(), logSec(), advSec());
   }

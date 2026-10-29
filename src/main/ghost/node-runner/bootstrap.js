@@ -17,3 +17,14 @@ if (!Array.isArray(args) || args.some((a) => typeof a !== 'string')) fail('bad a
 process.argv = [process.execPath, script, ...args];
 if (/\.mjs$/i.test(script)) import(pathToFileURL(script).href).catch((e) => { process.stderr.write(String(e && e.stack || e) + '\n'); process.exit(1); });
 else require(script);
+// A utility process does not end by itself when its work is done (its own pipes stay open), so end it when nothing but those pipes and
+// this watcher remain; a connector that still waits on a timer, a socket, a child or a file keeps the process alive as in plain Node.
+if (typeof process.getActiveResourcesInfo === 'function') {
+  let idle = 0;
+  const watch = setInterval(() => {
+    const r = process.getActiveResourcesInfo();
+    const own = r.filter((n) => n === 'Timeout').length <= 1 && r.every((n) => n === 'Timeout' || n === 'PipeWrap' || n === 'TTYWrap');
+    idle = own ? idle + 1 : 0;
+    if (idle >= 2) { clearInterval(watch); process.exit(process.exitCode || 0); }
+  }, 100);
+}
