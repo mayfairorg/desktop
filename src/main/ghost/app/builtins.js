@@ -208,7 +208,7 @@ class BuiltinSetup {
       else if (v === 'failed') {
         const d = String((e.install.lastTest && e.install.lastTest.detail) || '');
         // a service that could not be reached during the check says nothing about the tool: it stays ready and is checked again when a search runs
-        if (/unavailable: could not reach|network service .* not available|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|ENETUNREACH/i.test(d)) { row.tested = 'offline'; row.testNote = 'The service could not be reached during the check. It is used as soon as you search.'; }
+        if (/unavailable: could not reach|rate-limited|asked us to slow down|network service .* not available|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|ENETUNREACH/i.test(d)) { row.tested = 'offline'; row.testNote = 'The service could not be reached during the check. It is used as soon as you search.'; }
         else { row.tested = 'failed'; row.testNote = d; }
       }
       else row.testNote = tr && tr.state === 'running' ? 'Testing now' : this.phase === 'done' ? 'Not tested' : 'Test is queued';

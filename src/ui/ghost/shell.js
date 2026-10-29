@@ -39,7 +39,7 @@
         h('ul', { class: 'rail-list' }, NAV_TOOLS.map(([n, l, i]) => h('li', {}, h('a', { class: 'nav', href: GH.href(n), dataset: { nav: n } }, GH.icon(i), ...lab(l)))),
           h('li', {}, h('button', { class: 'nav', type: 'button', id: 'nav-term', onclick: openTerminal }, GH.icon('term'), h('span', {}, 'Terminal'))),
           h('li', {}, h('a', { class: 'nav', href: GH.href('settings'), dataset: { nav: 'settings' } }, GH.icon('gear'), h('span', {}, 'Settings'))))),
-      h('div', { class: 'rail-foot' }, GH.icon('lock'), h('span', {}, 'Local only. No telemetry. Update 21')));
+      h('div', { class: 'rail-foot' }, GH.icon('lock'), h('span', {}, 'Local only. No telemetry. Update 22')));
   }
   async function openTerminal() { try { await GH.call(GH.api.terminal.open); } catch (e) { GH.toast(GH.errText(e)); } }
   GH.openTerminal = openTerminal;

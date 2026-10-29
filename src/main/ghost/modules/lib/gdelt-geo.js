@@ -7,7 +7,7 @@ const meta = {
   id: 'gdelt-geo', tool: 'gdelt-geo-2.0', name: 'News locations (GDELT GEO)', version: '1.0.0',
   description: 'Places named in recent news coverage of an organisation, a domain, a place or a topic, with how many articles mention each, from the GDELT project.',
   capabilities: ['news', 'gdelt', 'geo', 'places', 'passive'], scope: 'passive', network: 'rate-limited',
-  hosts: ['api.gdeltproject.org'], client: { rps: 0.2, maxRequests: 1, timeoutMs: 30000, maxBytes: 2097152 },
+  hosts: ['api.gdeltproject.org'], client: { rps: 0.2, maxRequests: 4, timeoutMs: 30000, maxBytes: 2097152 },
   restrictions: 'GDELT asks for one request every 5 seconds and offers no availability guarantee; this connector sends one a run. Free to use with citation of GDELT. The points are places mentioned in articles, not verified event locations. Any query text is sent to GDELT as typed; a domain query must be a valid domain.',
   licence: { spdx: 'MIT', url: 'https://opensource.org/license/mit' },
   attribution: 'Data: The GDELT Project (gdeltproject.org)',
@@ -30,12 +30,24 @@ function buildQuery(kind, raw) {
   return /\s/.test(clean) ? `"${clean}"` : clean;
 }
 
+// GDELT answers "please limit requests to one every 5 seconds" in plain text with HTTP 200, and two GDELT tools started together share one allowance.
+// The client already spaces requests by 5 seconds, so asking again after that answer is polite: up to three tries.
+async function getPolite(ctx, url, purpose) {
+  let res;
+  for (let i = 0; i < 3; i++) {
+    res = await ctx.client.get(url, { purpose });
+    if (!/limit requests|one every|too many/i.test(String(res.text || '').slice(0, 300)) || res.status === 404) return res;
+    ctx.progress(0.3, 'GDELT asked to slow down, trying again');
+  }
+  return res;
+}
+
 async function run(ctx, input) {
   if (!['organisation', 'domain', 'place', 'topic'].includes(input.kind)) throw new ModuleError('bad-input', 'kind must be organisation, domain, place or topic');
   const query = buildQuery(input.kind, input.query);
   const span = input.timespan || '7d', limit = K.intOr(input.limit, 40, 1, 100);
   ctx.progress(0.2, 'asking GDELT');
-  const res = await ctx.client.get(`https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&format=geojson&timespan=${span}&maxpoints=${limit}`, { purpose: 'gdelt-geo' });
+  const res = await getPolite(ctx, `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&format=geojson&timespan=${span}&maxpoints=${limit}`, 'gdelt-geo');
   const text = res.text.trim();
   if (res.status === 404 || !text) { ctx.note('GDELT returned nothing for this query'); return; }
   let doc;

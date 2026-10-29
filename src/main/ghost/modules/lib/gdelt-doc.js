@@ -6,7 +6,7 @@ const meta = {
   id: 'gdelt-doc', tool: 'gdelt-doc-2.0', name: 'News coverage (GDELT)', version: '1.0.0',
   description: 'Recent news articles or a coverage-volume timeline for an organisation, a domain, a place or a topic, from the GDELT project.',
   capabilities: ['news', 'gdelt', 'timeline', 'passive'], scope: 'passive', network: 'rate-limited',
-  hosts: ['api.gdeltproject.org'], client: { rps: 0.2, maxRequests: 2, timeoutMs: 30000, maxBytes: 2097152 },
+  hosts: ['api.gdeltproject.org'], client: { rps: 0.2, maxRequests: 4, timeoutMs: 30000, maxBytes: 2097152 },
   restrictions: 'GDELT asks for one request every 5 seconds and offers no guarantee of availability. Use free to use with citation of GDELT. Any query text is sent to GDELT as typed; a domain query must be a valid domain.',
   licence: { spdx: 'MIT', url: 'https://opensource.org/license/mit' }, dataTerms: 'GDELT Project data, free to use with citation',
   inputs: [
@@ -29,12 +29,24 @@ function buildQuery(kind, raw) {
 }
 const gdeltDate = (s) => { const m = /^(\d{4})(\d{2})(\d{2})T?(\d{2})(\d{2})(\d{2})Z?$/.exec(String(s)); return m ? isoDate(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`) : null; };
 
+// GDELT answers "please limit requests to one every 5 seconds" in plain text with HTTP 200, and two GDELT tools started together share one allowance.
+// The client already spaces requests by 5 seconds, so asking again after that answer is polite: up to three tries.
+async function getPolite(ctx, url, purpose) {
+  let res;
+  for (let i = 0; i < 3; i++) {
+    res = await ctx.client.get(url, { purpose });
+    if (!/limit requests|one every|too many/i.test(String(res.text || '').slice(0, 300)) || res.status === 404) return res;
+    ctx.progress(0.3, 'GDELT asked to slow down, trying again');
+  }
+  return res;
+}
+
 async function run(ctx, input) {
   const query = buildQuery(input.kind, input.query);
   const mode = input.mode || 'articles', span = input.timespan || '7d';
   const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=${mode === 'timeline' ? 'timelinevol' : 'artlist'}&format=json&timespan=${span}${mode === 'articles' ? `&maxrecords=${MAX_ARTICLES}&sort=datedesc` : ''}`;
   ctx.progress(0.2, 'asking GDELT');
-  const res = await ctx.client.get(url, { purpose: 'gdelt-' + mode });
+  const res = await getPolite(ctx, url, 'gdelt-' + mode);
   const text = res.text.trim();
   if (res.status === 404 || !text) { ctx.note('GDELT returned nothing for this query'); return; }
   let doc;
