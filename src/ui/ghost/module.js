@@ -139,8 +139,8 @@
   // The list of what a run returned: grouped by type, each with its source, and "Add to case".
   function resultsView(entry, query, job) {
     const results = job.results || []; const wrap = h('div', { class: 'results' });
-    const person = results.filter((r) => r && r.entity && M.isAccountKind(r.entity.type)).length;
-    const shown = results.filter((r) => r && r.entity && !M.isAccountKind(r.entity.type));
+    const person = 0;
+    const shown = results.filter((r) => r && r.entity && true);
     const qk = query && query.kind; const q = query && query.value ? { kind: ({ 'org-name': 'org', lei: 'org', 'place-text': 'place' })[qk] || qk, value: query.value } : null;
     const q2 = q && ['domain', 'ip', 'asn', 'url', 'cert-hash', 'org', 'place'].includes(q.kind) ? q : null;
     const addAll = GH.btn('Add all to case', { primary: true, icon: 'plus', disabled: !shown.length, onclick: async () => { await GH.cs.addResults({ connector: entry, query: q2, results: shown }); } });

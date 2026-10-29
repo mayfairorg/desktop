@@ -45,8 +45,9 @@ test('bip39 construction: 12 words, round trip, checksum, unknown word, list sha
   const L = bip.words(); assert.equal(L.length, 2048); assert.equal(new Set(L).size, 2048);
   assert.equal(new Set(L.map((w) => w.slice(0, 4))).size, 2048);
   for (let i = 0; i < 50; i++) { const g = bip.generate(); assert.equal(g.words.length, 12); assert.ok(bip.fromWords(g.words.join('  ').toUpperCase()).equals(g.entropy)); }
-  const g = bip.generate(), bad = g.words.slice(); bad[3] = L[(L.indexOf(bad[3]) + 1) % 2048];
-  assert.throws(() => bip.fromWords(bad), (e) => e.code === 'bad-phrase');
+  const g = bip.generate(); let rejected = 0;   // a wrong word still passes the 4-bit checksum about 1 time in 16, so try several
+  for (let k = 1; k <= 12; k++) { const bad = g.words.slice(); bad[3] = L[(L.indexOf(bad[3]) + k) % 2048]; try { bip.fromWords(bad); } catch (e) { if (e.code === 'bad-phrase') rejected++; } }
+  assert.ok(rejected >= 6, 'a changed word is caught by the checksum most of the time');
   assert.throws(() => bip.fromWords(g.words.slice(0, 11)), (e) => e.code === 'bad-phrase');
   assert.throws(() => bip.fromWords(['zzzzzz', ...g.words.slice(1)]), (e) => e.code === 'bad-phrase');
   assert.deepEqual(bip.toWords(Buffer.alloc(16, 0)).length, 12);

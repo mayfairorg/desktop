@@ -35,7 +35,7 @@
   };
   const ALIAS_TO_TYPE = {};
   for (const [t, list] of Object.entries(ALIASES)) for (const a of list) ALIAS_TO_TYPE[a] = t;
-  // Account-style kinds (usernames, handles, profiles, phone numbers, faces ...) are not a case type; a connector that reports one gets it withheld and counted.
+  // Account-style kinds (usernames, handles, profiles, phone numbers, faces ...) are not a case type; kept as findings, not blocked.
   // A `person` result is a Person entity.
   const ACCOUNT_KIND = /(^|[-_.])(user|username|handle|account|profile|social|phone|telephone|mobile|face|name|surname|relative|resident|occupant)([-_.]|$)/i;
 
@@ -177,13 +177,10 @@
     if (qtype && query.value) { const r = addEntity(c, { type: qtype, value: query.value, label: query.value, sources: [first], manual: false, seen: nowIso(now) }); target = r.id; }
     for (const r of results || []) {
       const e = r && r.entity; if (!e || typeof e.type !== 'string' || typeof e.value !== 'string') { withhold('invalid'); continue; }
-      if (isAccountKind(e.type)) { withhold('account'); continue; }
       const m = mapType(e.type);
-      if (m.type === 'email') { const role = r.raw && r.raw.role; if (!EMAIL_ROLES.includes(role)) { withhold('email'); continue; } }
-      if (m.type === 'finding' && isAccountKind(m.kind)) { withhold('account'); continue; }
       const sid = srcFor(r.source && r.source.url);
       const attrs = {}; if (m.kind) attrs.kind = m.kind; if (r.confidence) attrs.confidence = r.confidence; if (r.uncertaintyNote) attrs.uncertaintyNote = clip(r.uncertaintyNote, 300);
-      if (m.type === 'email') attrs.role = r.raw.role;
+      if (m.type === 'email' && r.raw && r.raw.role) attrs.role = r.raw.role;
       const seen = r.observedAt || nowIso(now);
       // what a registry or database published about a person goes in as fields, each with the connector it came from and the time
       const fields = [];

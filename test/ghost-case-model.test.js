@@ -16,18 +16,18 @@ test('ingest adds entities with a source, merges duplicates, strips URL queries'
   assert.deepEqual(M.validate(c), []);
   for (const e of Object.values(c.entities)) assert.equal(M.isUnsourced(e), false);
 });
-test('a person result becomes a Person; account-style kinds (username, phone) are withheld and counted', () => {
+test('a person result becomes a Person; account-style kinds (username, phone) are kept as findings, nothing is withheld', () => {
   const c = M.newCase('t');
   const r = M.ingest(c, { connector: conn, query: null, results: [res('person', 'Jane Doe', { raw: { roles: ['technical'], emails: ['jane@example.org'], of: 'example.org' } }), res('username', 'jdoe'), res('phone', '+4400000'), res('domain', 'example.org')], rawSha256: '' });
-  assert.equal(r.withheld, 2); assert.equal(JSON.stringify(c).includes('jdoe'), false);
+  assert.equal(r.withheld, 0); assert.equal(JSON.stringify(c).includes('jdoe'), true);
   const jane = Object.values(c.entities).find((e) => e.type === 'person'); assert.equal(jane.label, 'Jane Doe'); assert.equal(M.isUnsourced(jane), false);
   assert.deepEqual(jane.fields.map((f) => f.title), ['Role', 'Associated with', 'Email (as published)']); assert.ok(jane.fields.every((f) => f.source.startsWith('dns-doh') && f.t));
   assert.deepEqual(M.validate(c), []);
 });
-test('email is kept only with an infrastructure role', () => {
+test('email is kept with or without a role', () => {
   const c = M.newCase('t');
   M.ingest(c, { connector: conn, query: null, results: [res('email', 'x@example.org', { entity: { type: 'email', value: 'x@example.org' } })], rawSha256: '' });
-  assert.equal(Object.values(c.entities).filter((e) => e.type === 'email').length, 0);
+  assert.equal(Object.values(c.entities).filter((e) => e.type === 'email').length, 1);
   M.ingest(c, { connector: conn, query: null, results: [{ ...res('email', 'abuse@example.org'), entity: { type: 'email', value: 'abuse@example.org' }, raw: { role: 'abuse-contact' } }], rawSha256: '' });
   assert.equal(JSON.stringify(c).includes('abuse@example.org'), true);
 });

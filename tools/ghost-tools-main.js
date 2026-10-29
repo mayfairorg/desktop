@@ -188,7 +188,7 @@ eapp.whenReady().then(async () => {
 
     // ================= honest states =================
     await show('exiftool');
-    rec('needs a program: badge, one plain line naming the program, no results, Run off', (await q('.tp-badge')) === 'Needs a program' && /Needs ExifTool, which is not on this computer/.test(await q('.tp-banner')) && (await J("document.querySelector('.tp-run').disabled")) && (await has('.tp-sum')) === false && (await has('.rt')) === false, await q('.tp-banner'));
+    rec('needs a program: badge, one plain line naming the program, no results, Run off', (await q('.tp-badge')) === 'Ghost computer' && /Needs ExifTool, which is not on this computer/.test(await q('.tp-banner')) && (await J("document.querySelector('.tp-run').disabled")) && (await has('.tp-sum')) === false && (await has('.rt')) === false, await q('.tp-banner'));
     rec('needs a program: only the one line is shown (no form, no tabs, nothing that looks like a result)', (await J("document.querySelector('.tp-form').hidden && document.querySelector('.tp-tabs').hidden && document.querySelector('.tp-panel').hidden")) && !/Found|result/.test(await J("document.querySelector('.tp').innerText")), await J("document.querySelector('.tp').innerText.slice(0,200)"));
     await mock('reset()'); await J(`document.querySelector('.tp-form').requestSubmit()`); await sleep(150);
     rec('needs a program: nothing can be started (no calls made)', (await mock("count('jobs.run')")) === 0 && (await mock("count('search.run')")) === 0);

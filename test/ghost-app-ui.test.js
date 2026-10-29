@@ -73,7 +73,7 @@ test('Workspace: only the closed list of kinds, nothing about people, honest sta
   const kinds = M.INPUT_KINDS.filter((k) => !['entity', 'rules-file', 'log-file', 'instance-url'].includes(k));
   assert.deepEqual(kinds, ['domain', 'ip', 'cidr', 'asn', 'url', 'cert-hash', 'org-name', 'lei', 'file', 'place-text', 'coords', 'keyword']);
   for (const k of kinds) assert.ok(ws.includes("'" + k + "'") || ws.includes(k + ':'), k + ' has a label');
-  for (const l of ['Ready', 'Setting up', 'Needs a program', 'Switched off', 'Not working', 'Tested', 'Test failed', 'Test pending', 'Understood as', 'Will ask ', 'Nothing searched in this window yet']) assert.ok(ws.includes(l), l);
+  for (const l of ['Ready', 'Setting up', 'Ghost computer', 'Switched off', 'Not working', 'Tested', 'Test failed', 'Checking', 'Understood as', 'Will ask ', 'Nothing searched in this window yet']) assert.ok(ws.includes(l), l);
   assert.ok(ws.includes('gapp:builtins.status') && ws.includes('gapp:search.run'), 'the calls are named in the file');
   assert.equal(/\bAI\b|Claude|Anthropic|assistant|generated/i.test(ws + read('results.js')), false, 'no authorship text');
 });

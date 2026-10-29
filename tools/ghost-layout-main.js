@@ -142,7 +142,7 @@ eapp.whenReady().then(async () => {
     rec(L('workspace: tool index grouped by category, from the tool list'), (await count('.ws-cat')) >= 6 && (await count('.ws-tool')) === 19 && /domains and networks/i.test(await txt('.ws-idx')) && /threat intel/i.test(await txt('.ws-idx')), `${await count('.ws-cat')} groups, ${await count('.ws-tool')} tools`);
     rec(L('workspace: states shown honestly (ready, setting up, needs program, off, not working) and the test badge'), (await count('.ws-st.st-ready')) === 13 && (await count('.ws-st.st-setting-up')) === 1 && (await count('.ws-st.st-needs-program')) === 3 && (await count('.ws-st.st-off')) === 1 && (await count('.ws-st.st-failed')) === 1 && (await count('.tb-failed')) === 1 && (await count('.tb-tested')) === 12);
     rec(L('workspace: a failed tool is named with its reason, the count line is plain words'), /filing index could not be read/.test(await txt('.ws-fail')) && /13 of 19 ready, 1 setting up, 3 need a program, 1 switched off, 1 not working/.test(await txt('.ws-count')), await txt('.ws-count'));
-    rec(L('workspace: a program that is not here says where it runs'), /Runs in the virtual computer/.test(await js("document.querySelector('.ws-tool[data-tool=exiftool] .ws-st').title")) && /Needs a program/.test(await txt('.ws-tool[data-tool=exiftool]')));
+    rec(L('workspace: a program that is not here says where it runs'), /Runs in the virtual computer/.test(await js("document.querySelector('.ws-tool[data-tool=exiftool] .ws-st').title")) && /Ghost computer/.test(await txt('.ws-tool[data-tool=exiftool]')));
     await noOverflow(L('workspace')); await contrast(L('workspace')); await shot(`${id}-workspace`);
     // --- the box understands what is typed, and can be changed
     await js("document.getElementById('ws-q').focus()");
@@ -168,7 +168,7 @@ eapp.whenReady().then(async () => {
     rec(L('overview: grouped by entity type with counts'), (await count('.ws-g')) >= 5 && /Domains/.test(await txt('.ws-ov')) && /IP addresses/.test(await txt('.ws-ov')) && /Organisations/.test(await txt('.ws-ov')), `${await count('.ws-g')} groups`);
     rec(L('overview: the same domain from two tools (written two ways) is one row with both tools'), (await js("[...document.querySelectorAll('.ws-tbl tbody tr')].filter(r=>/^www\\.example\\.org/i.test(r.querySelector('.ws-v .mono').textContent)).length")) === 1 && (await js("(()=>{const r=[...document.querySelectorAll('.ws-tbl tbody tr')].find(r=>/^www\\.example\\.org/i.test(r.querySelector('.ws-v .mono').textContent));return r.querySelectorAll('.ws-chip').length})()")) === 2);
     rec(L('overview: each row shows source time, and its sources open'), (await count('.ws-when')) >= 8 && (await count('.ws-src')) >= 8 && !/no time given/.test(await txt('.ws-ov')));
-    rec(L('overview: results about a person are counted and left out, never shown'), /1 result left out/.test(await txt('.ws-ov .flow-note')) && !/someone/.test(await txt('.ws-ov')));
+    rec(L('overview: account-style results are shown like any other, nothing is left out by kind'), !/left out/.test(await txt('.ws-ov')) && /someone/.test(await txt('.ws-ov')));
     rec(L('results: the badge of Overview counts the findings'), /^\d+$/.test(await js("document.querySelector('.ws-tab .ws-badge').textContent")) && +(await js("document.querySelector('.ws-tab .ws-badge').textContent")) === (await count('.ws-tbl tbody tr')));
     await noOverflow(L('results overview')); await contrast(L('results overview')); await shot(`${id}-results`);
     // --- select and add to case through the case store
@@ -186,7 +186,7 @@ eapp.whenReady().then(async () => {
     rec(L('tabs: Home returns to Overview'), (await js("document.activeElement.dataset.tab")) === 'overview' && (await count('.ws-ov')) === 1);
     // --- a tool's own tab: results, error, nothing found, and the tool page
     await js("document.querySelector('.ws-tab[data-tab=dns-doh]').click()"); await sleep(250);
-    rec(L('tool tab: status strip, results table, This search / Tool page switch'), (await count('.ws-strip')) === 1 && /Ready/.test(await txt('.ws-strip')) && (await count('.ws-panel table')) >= 1 && (await count('.ws-sw .btn')) === 2 && /Add these to case/.test(await txt('.ws-panel')) && /left out/.test(await txt('.ws-panel .flow-note')));
+    rec(L('tool tab: status strip, results table, This search / Tool page switch'), (await count('.ws-strip')) === 1 && /Ready/.test(await txt('.ws-strip')) && (await count('.ws-panel table')) >= 1 && (await count('.ws-sw .btn')) === 2 && /Add these to case/.test(await txt('.ws-panel')));
     await shot(`${id}-tool-tab`);
     await js("[...document.querySelectorAll('.ws-sw .btn')].find(b=>/Tool page/.test(b.textContent)).click()"); await sleep(250);
     rec(L('tool tab: Tool page opens the tool\'s own page with the search handed over'), (await count('.ws-tt-b > *')) >= 1 && (!(await count('.stub-toolpage')) || /query: example\.org, kind: domain/.test(await txt('.stub-toolpage'))) && (await js("document.querySelector('.ws-sw .btn[aria-pressed=true]').textContent")) === 'Tool page', (await txt('.ws-panel')).slice(0, 80));
@@ -251,6 +251,7 @@ eapp.whenReady().then(async () => {
     ops: ['.ops-menu', '.ops-tabs', '.ops-tree', 'main#main', '.ops-detail', '.status', '.ops-map .pmap', '.ops-tables', '.ops-t1', '.ops-t2', '.ops-t3'],
     terminal: ['.tm-top', '.tm-keys', 'main#main', '.status', '.tm-prompt', '.tm-jobs', '.tm-health', '.tm-files', '.tm-case', '.tm-log', '.tm-vault', '.padlock', '.dial'],
     hud: ['.hd-nav', '.hd-top', 'main#main', '.status', '.hd-ring', '.hd-l', '.hd-r', '.hd-conn', '.hd-cases', '.hd-scan', '.hd-act', '.hd-sweep', '.hd-last', '.hd-ring-svg', '.hd-card .br'],
+    shell: ['.sh-top', '.sh-nav', 'main#main', '.status', '.sh-banner', '.sh-hello', '.sh-search', '.sh-menubox', '.sh-menu', '.sh-stat'],
     mono: ['.mn-top', '.mn-nav', 'main#main', '.status', '.mn-h', '.mn-search', '.mn-grid', '.mn-stats', '.mn-ch', '.mn-key'],
   };
 
@@ -281,7 +282,7 @@ eapp.whenReady().then(async () => {
       rec(`skin ${sk.id}: data-skin applied and saved in the vault`, (await js('document.documentElement.dataset.skin')) === sk.id && A.prefsGet().skin === sk.id, JSON.stringify(A.prefsGet()));
       await regions(`${sk.id} home (empty)`, HOME[sk.id]);
       const t = await text();
-      const emptyOk = { mayfair: /No cases yet/i.test(t) && /Nothing searched in this window yet/i.test(t), ops: /No case is open/i.test(t) && /No lookups yet/i.test(t), terminal: /No jobs have run in this window/i.test(t) && /No cases yet/i.test(t) && /No case is open/i.test(t), hud: /No case is open/i.test(t) && /No activity yet|0 event/i.test(t) || /No cases yet/i.test(t), mono: /nothing looked up in this window yet/i.test(t) && /No lookups have run/i.test(t) }[sk.id];
+      const emptyOk = { mayfair: /No cases yet/i.test(t) && /Nothing searched in this window yet/i.test(t), ops: /No case is open/i.test(t) && /No lookups yet/i.test(t), terminal: /No jobs have run in this window/i.test(t) && /No cases yet/i.test(t) && /No case is open/i.test(t), hud: /No case is open/i.test(t) && /No activity yet|0 event/i.test(t) || /No cases yet/i.test(t), mono: /nothing looked up in this window yet/i.test(t) && /No lookups have run/i.test(t), shell: /NO LOOKUPS YET/i.test(t) && /SELECT A TOOL CATEGORY/.test(t) }[sk.id];
       rec(`empty state ${sk.id}: says so, shows no sample data`, emptyOk, '');
       if (sk.id === 'ops') rec('empty state ops: map has no pins, the empty note is shown', (await count('.pm-pin')) === 0 && (await count('.pmap-empty')) === 1);
       if (sk.id === 'hud') rec('empty state hud: sweep has no blips', (await count('.rd-blip')) === 0);
@@ -340,6 +341,14 @@ eapp.whenReady().then(async () => {
         rec('hud: activity chart counts the real events', (await count('.bars-bar')) >= 1);
         rec('hud: side panels either side of the ring', await js(`(()=>{const l=document.querySelector('.hd-l').getBoundingClientRect(),r=document.querySelector('.hd-ring').getBoundingClientRect(),x=document.querySelector('.hd-r').getBoundingClientRect();return ${W >= 1181} ? (l.right<=r.left+1&&r.right<=x.left+1) : true})()`));
       }
+      if (sk.id === 'shell') {
+        rec('shell: the menu lists every module and the first row is selected', (await count('.sh-mi')) === (await js('GhostModules.MODULES.length')) && (await count('.sh-mi.on')) === 1 && (await js("document.querySelector('.sh-mi.on').dataset.mod")) === (await js('GhostModules.MODULES[0].id')));
+        await js("document.querySelector('.sh-menu').focus()"); await js("document.querySelector('.sh-menu').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}))"); await sleep(100);
+        rec('shell: the arrow key moves the highlight bar and the line under the menu follows', (await js("document.querySelector('.sh-mi.on').dataset.mod")) === (await js('GhostModules.MODULES[1].id')) && (await js("document.querySelector('.sh-note').textContent.length")) > 10);
+        rec('shell: the status line counts tools, cases, entities and the vault from this computer', /TOOLS \d+\/\d+ READY/.test(await js("document.querySelector('.sh-stat').innerText")) && /VAULT [A-Z ]+/.test(await js("document.querySelector('.sh-stat').innerText")));
+        rec('shell: the banner is hidden from screen readers and the page keeps a real heading', (await js("document.querySelector('.sh-banner').getAttribute('aria-hidden')")) === 'true' && (await count('h1')) >= 1);
+        await shot('shell-home');
+      }
       if (sk.id === 'mono') {
         const total = await js("[...document.querySelectorAll('.mn-mods .mn-ch')].reduce((a,e)=>a+e.textContent.length,0)");
         const exp = await js("(async()=>GhostLay.connStats(await GH.conn.list()).rows.reduce((a,r)=>a+r.cells.length,0))()").catch(() => null);
@@ -374,7 +383,7 @@ eapp.whenReady().then(async () => {
 
     // ----- the picker: choose live, persists, theme switch is off for dark skins, back to Mayfair restores the sidebar -----
     await go('#settings/appearance', '.skins');
-    rec('picker: five skins with a layout name each', (await count('.sk')) === 5 && (await count('.sk .sk-n em')) >= 5);
+    rec('picker: six skins with a layout name each', (await count('.sk')) === 6 && (await count('.sk .sk-n em')) >= 6);
     await js(`document.querySelector('.sk input[value=ops]').click()`); await sleep(700);
     rec('picker: choosing Operations changes the whole frame at once and keeps the Settings screen', (await count('.ops-tabs')) === 1 && (await count('.rail')) === 0 && /Appearance/.test(await text()) && A.prefsGet().skin === 'ops');
     rec('picker: the chosen skin is focused after the change (keyboard users keep their place)', (await js("document.activeElement.closest('.sk')&&document.activeElement.value")) === 'ops');

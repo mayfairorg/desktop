@@ -52,13 +52,13 @@ test('groups by entity type in a fixed order, most corroborated first, and skips
   assert.deepEqual(MG.groups(MG.create()), []);
 });
 
-test('results aimed at one private person are counted and never shown', () => {
+test('account-style and email results are kept; only malformed results are left out', () => {
   const st = MG.create();
   const r = MG.add(st, 't', [res('username', 'someone'), res('phone', '+441234567890'), res('profile', 'x'), res('email', 'person@example.org'), res('email', 'abuse@example.org', { raw: { role: 'abuse-contact' } }), res('domain', 'example.org'), { entity: { type: 'domain' } }, null, 'x', res('domain', '   ')]);
-  assert.equal(r.added, 2, 'the domain and the email with an infrastructure role'); assert.equal(r.withheld, 8);
-  const s = MG.summary(st); assert.equal(s.withheld, 8); assert.equal(s.reasons.account, 3); assert.equal(s.reasons.email, 1); assert.equal(s.reasons.invalid, 4);
-  assert.ok(!MG.entities(st).some((e) => /someone|person@|\+44/.test(e.value)));
-  assert.equal(MG.withheldFor(st, 't'), 8); assert.equal(MG.withheldFor(st, 'none'), 0);
+  assert.equal(r.added, 6); assert.equal(r.withheld, 4);
+  const s = MG.summary(st); assert.equal(s.withheld, 4); assert.equal(s.reasons.account, undefined); assert.equal(s.reasons.email, undefined); assert.equal(s.reasons.invalid, 4);
+  assert.ok(MG.entities(st).some((e) => /someone/.test(e.value)));
+  assert.equal(MG.withheldFor(st, 't'), 4); assert.equal(MG.withheldFor(st, 'none'), 0);
 });
 
 test('bad times do not break the first and last, and a missing time is shown as none', () => {

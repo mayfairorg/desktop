@@ -32,10 +32,7 @@
     const out = { added: 0, merged: 0, withheld: 0 }, T = tool(st, toolId);
     for (const r of Array.isArray(results) ? results : []) {
       const e = isObj(r) && r.entity; if (!isObj(e) || typeof e.type !== 'string' || typeof e.value !== 'string' || !e.value.trim()) { withhold(st, toolId, 'invalid'); out.withheld++; continue; }
-      if (M.isAccountKind(e.type)) { withhold(st, toolId, 'account'); out.withheld++; continue; }
       const m = typeOf(e.type);
-      if (m.type === 'finding' && M.isAccountKind(m.kind)) { withhold(st, toolId, 'account'); out.withheld++; continue; }
-      if (m.type === 'email' && !(r.raw && M.EMAIL_ROLES.includes(r.raw.role))) { withhold(st, toolId, 'email'); out.withheld++; continue; }
       const key = m.type + ':' + M.canonKey(m.type, e.value, m.kind);
       let row = st.map.get(key);
       if (!row) {

@@ -4,7 +4,7 @@
 (function () {
   const GH = window.GH, h = GH.h, MG = window.GhostMerge, ws = GH.ws;
   const icon = (n) => GH.icon(n);
-  const WITHHELD = 'Ghost does not show or store usernames, phone numbers, accounts, face data or email addresses without an infrastructure role.';
+  const WITHHELD = 'The tool sent them in a form Ghost could not read.';
   const when = (iso) => (iso ? GH.fmtTime(iso) : 'no time given');
   const toolName = (s, id) => { const t = s.tools.find((x) => x.id === id), k = ws.tool(id); return (k && k.name) || (t && t.name) || id; };
 
@@ -101,7 +101,7 @@
   }
 
   // ---------- the screen ----------
-  const badge = (t) => ({ waiting: 'waiting', running: 'running', done: String(t.count), empty: 'none', error: 'error', skipped: ({ 'needs-program': 'needs program', off: 'off', 'setting-up': 'setting up' })[t.why] || 'not run' }[t.status]);
+  const badge = (t) => ({ waiting: 'waiting', running: 'running', done: String(t.count), empty: 'none', error: 'error', skipped: ({ 'needs-program': 'ghost computer', off: 'off', 'setting-up': 'setting up' })[t.why] || 'not run' }[t.status]);
   GH.results = {
     view(s) {
       const host = h('section', { class: 'view ws ws-res', 'aria-labelledby': 'ws-rh' });

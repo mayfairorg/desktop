@@ -85,6 +85,46 @@
   --gh-art:1;
 }
 
+/* ---------- Shell: green on black, like a terminal ---------- */
+[data-skin=shell],[data-skin=shell] body{--mf-accent-ink:#3bf264}
+[data-skin=shell]{
+  color-scheme:dark;
+  --mf-surface:#000;--mf-soft:#03160a;--mf-soft2:#062a12;
+  --mf-text:#3bf264;--mf-mute:#22b64b;--mf-line:#14702c;
+  --mf-accent:#0a7a1c;--mf-on-accent:#eafff0;
+  --mf-danger:#ff8080;--mf-ok:#7dffb0;--mf-warn:#f2e05a;--mf-info:#5fd7ff;
+  --mf-scene:#000;--mf-black:#000;
+  --mf-hov:color-mix(in srgb,var(--mf-text) 8%,transparent);
+  --mf-act:color-mix(in srgb,var(--mf-text) 14%,transparent);
+  --mf-font:'Mayfair Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --mf-mono:'Mayfair Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --mf-r-sm:2px;--mf-r-ctl:3px;--mf-r-pop:4px;--mf-r-dlg:4px;--mf-r-pill:2px;
+  --gh-bg:var(--mf-scene);
+  --gh-panel:var(--mf-surface);
+  --gh-raised:var(--mf-soft);
+  --gh-rail:var(--mf-surface);
+  --gh-grid:color-mix(in srgb,var(--mf-accent) 9%,transparent);
+  --gh-focus:var(--mf-accent-ink);
+  --gh-hot:var(--mf-accent-ink);
+  --gh-gap:var(--mf-s3);
+  --gh-g-bg:var(--mf-scene);
+  --gh-g-ink:var(--mf-text);
+  --gh-g-edge:color-mix(in srgb,var(--mf-mute) 90%,var(--gh-g-bg));
+  --gh-g-hi:var(--mf-accent-ink);
+  --gh-g-sel:color-mix(in srgb,var(--mf-accent) 18%,var(--mf-scene));
+  --gh-dot:var(--mf-accent-ink);
+  --gh-deco-grid:0;
+  --gh-deco-scan:.03;
+  --gh-bracket:0px;
+  --gh-bracket-size:0px;
+  --gh-ph-case:uppercase;
+  --gh-ph-track:.12em;
+  --gh-ph-bg:transparent;
+  --gh-ph-mark:"$ ";
+  --gh-ph-rule:1px;
+  --gh-art:1;
+}
+
 /* ---------- Cyan HUD ---------- */
 [data-skin=hud],[data-skin=hud] body{--mf-accent-ink:#2ee6ea}
 [data-skin=hud]{

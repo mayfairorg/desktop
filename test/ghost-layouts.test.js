@@ -18,13 +18,13 @@ const read = (f) => fs.readFileSync(path.join(dir, f), 'utf8');
 
 // ---------- the skins and their layouts ----------
 test('every skin names its layout; Mayfair keeps the sidebar and the others each have their own', () => {
-  assert.deepEqual(K.SKINS.map((s) => [s.id, s.layout]), [['mayfair', 'sidebar'], ['terminal', 'panel-grid'], ['hud', 'ring-hud'], ['mono', 'single-column'], ['ops', 'console']]);
-  assert.equal(new Set(K.SKINS.map((s) => s.layout)).size, 5, 'five different layouts');
+  assert.deepEqual(K.SKINS.map((s) => [s.id, s.layout]), [['mayfair', 'sidebar'], ['terminal', 'panel-grid'], ['hud', 'ring-hud'], ['mono', 'single-column'], ['shell', 'menu-shell'], ['ops', 'console']]);
+  assert.equal(new Set(K.SKINS.map((s) => s.layout)).size, 6, 'six different layouts');
   assert.equal(K.DEFAULT, 'mayfair');
   for (const s of K.SKINS) assert.ok(s.blurb.length > 40, s.id + ' describes its layout');
 });
 test('each layout file registers a frame, a Home, a module summary and a board summary; Mayfair registers none', () => {
-  const files = { ops: 'layout-ops.js', terminal: 'layout-terminal.js', hud: 'layout-hud.js', mono: 'layout-mono.js' };
+  const files = { ops: 'layout-ops.js', terminal: 'layout-terminal.js', hud: 'layout-hud.js', mono: 'layout-mono.js', shell: 'layout-shell.js' };
   for (const [id, f] of Object.entries(files)) {
     const src = read(f); assert.match(src, new RegExp('GH\\.layouts\\.' + id + ' = \\{'), id);
     for (const fn of ['shell(', 'home(', 'moduleSummary(', 'boardStrip(']) assert.ok(src.includes(fn), id + ' ' + fn);
@@ -38,12 +38,12 @@ test('every layout lists Workspace and Tools in its navigation, not the module l
   const shell = read('shell.js'), i = shell.indexOf('const navItems'), nav = shell.slice(i, shell.indexOf('GH.shellParts', i));
   for (const l of ["label: 'Workspace'", "label: 'All tools'", "label: 'Case board'", "label: 'Tool Integrations'", "label: 'Settings'"]) assert.ok(nav.includes(l), l);
   assert.equal(/MODS\.map|\.\.\.MODS/.test(nav), false);
-  for (const f of ['layout-ops.js', 'layout-terminal.js', 'layout-hud.js', 'layout-mono.js']) assert.ok(read(f).includes('P.navItems()'), f + ' draws its navigation from the shared list');
+  for (const f of ['layout-ops.js', 'layout-terminal.js', 'layout-hud.js', 'layout-mono.js', 'layout-shell.js']) assert.ok(read(f).includes('P.navItems()'), f + ' draws its navigation from the shared list');
 });
 test('page order: pure core and data before the shell, layouts after it, all scripts present and parse', () => {
   const html = read('index.html'), scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
   const at = (n) => scripts.indexOf(n); const vm = require('node:vm');
-  for (const s of ['lay-core.js', 'data.js', 'viz.js', 'map.js', 'layouts.js', 'layout-ops.js', 'layout-terminal.js', 'layout-hud.js', 'layout-mono.js']) { assert.ok(at(s) > 0, s); assert.doesNotThrow(() => new vm.Script(read(s), { filename: s })); }
+  for (const s of ['lay-core.js', 'data.js', 'viz.js', 'map.js', 'layouts.js', 'layout-ops.js', 'layout-terminal.js', 'layout-hud.js', 'layout-mono.js', 'layout-shell.js']) { assert.ok(at(s) > 0, s); assert.doesNotThrow(() => new vm.Script(read(s), { filename: s })); }
   assert.ok(at('modules.js') < at('lay-core.js') && at('casesvc.js') < at('data.js') && at('shell.js') < at('layout-ops.js') && at('viz.js') < at('map.js') && at('map.js') < at('layouts.js') && at('layouts.js') < at('layout-ops.js') && at('layout-mono.js') < at('app.js'));
   assert.ok(html.indexOf('ghost.css') < html.indexOf('layouts.css'));
 });
@@ -53,7 +53,7 @@ test('layouts.css: tokens only, no images, no own radius, no icon chips, and eve
   assert.equal(/url\(|data:|@import|\.png|\.jpe?g/i.test(css), false, 'no images or remote css');
   for (const m of css.matchAll(/border-radius:\s*([^;}]+)/g)) assert.match(m[1].trim(), /^(var\(--mf-r-[a-z]+\)|50%|0)(\s|$)/, 'radius ' + m[1]);
   assert.equal(/\.chip-ico|\.ico-chip|icon-chip|\.ico-bg|\.tint/.test(css), false);
-  for (const sel of ['.ops-menu', '.ops-tabs', '.ops-tree', '.ops-detail', '.ops-map', '.ops-tables', '.tm-keys', '.tm-grid', '.tm-vault', '.padlock', '.hd-ring', '.hd-card', '.hd-nav', '.hd-radar-svg', '.mn-h', '.mn-search', '.mn-grid', '.mn-stats', '.pmap', '.pm-link']) assert.ok(css.includes(sel), sel);
+  for (const sel of ['.ops-menu', '.ops-tabs', '.ops-tree', '.ops-detail', '.ops-map', '.ops-tables', '.tm-keys', '.tm-grid', '.tm-vault', '.padlock', '.hd-ring', '.hd-card', '.hd-nav', '.hd-radar-svg', '.mn-h', '.mn-search', '.mn-grid', '.mn-stats', '.sh-menu', '.sh-box', '.sh-banner', '.pmap', '.pm-link']) assert.ok(css.includes(sel), sel);
   assert.match(css, /@media \(max-width:719px\)/); assert.match(css, /@media \(max-width:1099px\)/); assert.match(css, /pointer:coarse/); assert.match(css, /prefers-reduced-motion:reduce/);
 });
 test('motion: every animation is subtle, and the global reduced-motion rule plus the layout rule turn them all off', () => {
@@ -71,14 +71,14 @@ test('keyboard: the tree is a real tree, the map pins and linked dots are button
   const lay = read('layouts.js'); assert.ok(lay.includes("h('a', { class: cls, href: it.href"));
 });
 test('no sample data in the layouts: no addresses, names or invented numbers, and random only for element ids', () => {
-  const src = ['lay-core.js', 'data.js', 'viz.js', 'map.js', 'layouts.js', 'layout-ops.js', 'layout-terminal.js', 'layout-hud.js', 'layout-mono.js'].map(read).join('\n').replace(/\/\/.*$/gm, '');
+  const src = ['lay-core.js', 'data.js', 'viz.js', 'map.js', 'layouts.js', 'layout-ops.js', 'layout-terminal.js', 'layout-hud.js', 'layout-mono.js', 'layout-shell.js'].map(read).join('\n').replace(/\/\/.*$/gm, '');
   assert.equal(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/.test(src), false, 'no IP addresses');
   assert.equal(/example\.(org|com|net)|lorem|sample data|fake|dummy|placeholder data/i.test(src), false);
   for (const m of src.matchAll(/Math\.random\(\)([^;]{0,30})/g)) assert.match(m[1], /^\.toString\(36\)/, 'random is only used to make element ids');
   assert.equal(/Date\.now\(\) - \d{4,}|new Array\(\d+\)\.fill\([1-9]/.test(src), false);
 });
 test('the page code stays text-only: no innerHTML, no inline style attributes, no web addresses', () => {
-  for (const f of ['lay-core.js', 'data.js', 'viz.js', 'map.js', 'layouts.js', 'layout-ops.js', 'layout-terminal.js', 'layout-hud.js', 'layout-mono.js']) {
+  for (const f of ['lay-core.js', 'data.js', 'viz.js', 'map.js', 'layouts.js', 'layout-ops.js', 'layout-terminal.js', 'layout-hud.js', 'layout-mono.js', 'layout-shell.js']) {
     const src = read(f).replace(/\/\/.*$/gm, '');
     assert.equal(/\.innerHTML|insertAdjacentHTML|outerHTML|document\.write|eval\(|new Function|setAttribute\(\s*['"]style['"]|https?:\/\//.test(src), false, f);
   }

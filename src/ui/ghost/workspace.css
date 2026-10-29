@@ -59,6 +59,7 @@
 .ws-st.st-ready{border-color:var(--mf-ok);color:var(--mf-ok)}
 .ws-st.st-setting-up,.ws-st.st-needs-program{border-color:var(--mf-warn);color:var(--mf-warn)}
 .ws-st.st-failed{border-color:var(--mf-danger);color:var(--mf-danger)}
+.ws-tb.tb-offline{color:var(--mf-muted,inherit)}
 .ws-tb.tb-failed{border-color:var(--mf-danger);color:var(--mf-danger)}
 .ws-fail{border:1px solid var(--mf-danger);border-radius:var(--mf-r-ctl);padding:var(--mf-s3);font-size:var(--mf-fs-sm)}
 .ws-fail ul{margin-top:var(--mf-s1);display:flex;flex-direction:column;gap:var(--mf-s1)}

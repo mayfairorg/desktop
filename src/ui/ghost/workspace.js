@@ -40,7 +40,7 @@
   const ST = { data: null, error: null, p: null, subs: new Set(), timer: null, ping: null };
   const STATES = ['ready', 'setting-up', 'needs-program', 'off', 'failed'];
   function normStatus(r) {
-    const tools = (Array.isArray(r && r.tools) ? r.tools : []).filter((t) => t && typeof t.id === 'string').map((t) => ({ id: t.id, name: t.name || t.id, category: catOf(t), inputs: Array.isArray(t.inputs) ? t.inputs.filter((k) => typeof k === 'string') : [], state: STATES.includes(t.state) ? t.state : 'setting-up', note: String(t.note || ''), tested: ['tested', 'failed', 'pending'].includes(t.tested) ? t.tested : 'pending', testNote: String(t.testNote || '') }));
+    const tools = (Array.isArray(r && r.tools) ? r.tools : []).filter((t) => t && typeof t.id === 'string').map((t) => ({ id: t.id, name: t.name || t.id, category: catOf(t), inputs: Array.isArray(t.inputs) ? t.inputs.filter((k) => typeof k === 'string') : [], state: STATES.includes(t.state) ? t.state : 'setting-up', note: String(t.note || ''), tested: ['tested', 'offline', 'failed', 'pending'].includes(t.tested) ? t.tested : 'pending', testNote: String(t.testNote || '') }));
     const n = (s) => tools.filter((t) => t.state === s).length;
     return { total: tools.length, ready: n('ready'), settingUp: n('setting-up'), needsProgram: n('needs-program'), off: n('off'), failed: Array.isArray(r && r.failed) ? r.failed : tools.filter((t) => t.state === 'failed').map((t) => ({ id: t.id, name: t.name, reason: t.note || t.testNote })), tools };
   }
@@ -137,12 +137,12 @@
   ws.again = (s) => { ws.next = { kind: s.kind, value: s.value, tools: s.tools.map((t) => t.id), token: s.token || null, force: true }; GH.go('search', s.kind, s.value); };
 
   // ---------- small pieces ----------
-  const LABEL = { ready: 'Ready', 'setting-up': 'Setting up', 'needs-program': 'Needs a program', off: 'Switched off', failed: 'Not working' };
+  const LABEL = { ready: 'Ready', 'setting-up': 'Setting up', 'needs-program': 'Ghost computer', off: 'Switched off', failed: 'Not working' };
   const EXPLAIN = { ready: 'Ready to use.', 'setting-up': 'Ghost is getting this ready. It can be used as soon as setup finishes.', 'needs-program': 'It needs a program that is not on this computer. It works as soon as the program exists, for example in the virtual computer.', off: 'You switched this tool off. Switch it on in Tool Integrations to use it again.', failed: 'It did not start.' };
   ws.stateLabel = (t) => LABEL[t.state] || t.state;
   ws.stateExplain = (t) => { const base = EXPLAIN[t.state] || ''; return t.note && t.state !== 'ready' ? t.note + (t.state === 'failed' ? '' : '. ' + base) : base; };
   ws.stateTag = (t) => h('span', { class: 'ws-st st-' + t.state, title: ws.stateExplain(t) }, ws.stateLabel(t));
-  ws.testTag = (t) => h('span', { class: 'ws-tb tb-' + t.tested, title: t.testNote || null }, { tested: 'Tested', failed: 'Test failed', pending: 'Test pending' }[t.tested] || 'Test pending');
+  ws.testTag = (t) => h('span', { class: 'ws-tb tb-' + t.tested, title: t.testNote || null }, { tested: 'Tested', offline: 'Online check later', failed: 'Test failed', pending: 'Checking' }[t.tested] || 'Checking');
   const kindsText = (t) => t.inputs.filter((k) => KINDS.includes(k)).map((k) => KIND_SHORT[k] || k).join(', ') || 'nothing yet';
   const icon = (n) => GH.icon(n);
   const errState = (title, msg, retry) => h('div', { class: 'state', role: 'alert' }, icon('alert'), h('h2', {}, title), h('p', {}, msg), retry ? GH.btn('Try again', { onclick: retry }) : null);

@@ -50,7 +50,7 @@
     }
 
     // ----- the state of a tool, in plain words -----
-    const STATE_LABEL = { ready: 'Ready', running: 'Running', 'needs-program': 'Needs a program', off: 'Off', failed: 'Failed', 'setting-up': 'Getting ready' };
+    const STATE_LABEL = { ready: 'Ready', running: 'Running', 'needs-program': 'Ghost computer', off: 'Off', failed: 'Failed', 'setting-up': 'Getting ready' };
     const missingNames = (entry) => ((entry && entry.install && entry.install.requirements) || []).filter((r) => r && r.status !== 'ok' && r.status !== 'untested').map((r) => r.name);
     // tool: the app's status line for this tool (or null), entry: the connector's own entry (or null).
     // -> { state, label, line, canRun }   line is ONE plain sentence, or '' when there is nothing to say.
@@ -78,6 +78,7 @@
       let v = tool && tool.tested;
       if (!v) v = entry && entry.install ? (entry.install.verified === 'tested' ? 'tested' : entry.install.verified === 'failed' ? 'failed' : 'pending') : 'pending';
       if (v === 'tested') return { tone: 'ok', kind: 'tested', time: lt && lt.t || '', text: 'Self-test passed' };
+      if (v === 'offline') return { tone: 'mute', kind: 'pending', time: lt && lt.t || '', text: 'The online check could not reach the service. It is used as soon as you search.' };
       if (v === 'failed') return { tone: 'bad', kind: 'failed', time: lt && lt.t || '', text: 'Self-test failed: ' + clip((tool && tool.testNote) || (lt && lt.detail) || 'no reason was recorded', 240) };
       return { tone: 'mute', kind: 'pending', time: '', text: 'Self-test has not run yet' };
     }
@@ -407,7 +408,7 @@
     // ---------- results, raw, history ----------
     const tabbar = h('div', { class: 'tp-tabs', role: 'tablist', 'aria-label': 'Results, raw answer and history' });
     const panel = h('div', { class: 'tp-panel', role: 'tabpanel', tabindex: '-1' });
-    const isAccount = (r) => !!(r && r.entity && M && M.isAccountKind(r.entity.type));
+    const isAccount = () => false;   // nothing is hidden by kind
     const shownOf = (rec) => (rec ? rec.results.filter((r) => !isAccount(r)) : []);
     function drawTabs() {
       const rec = S.view, n = rec ? shownOf(rec).length : 0, hl = history().length;
@@ -450,7 +451,7 @@
       else line.textContent = 'It failed: ' + String(rec.error || 'no reason was given').replace(/[.\s]+$/, '') + '.';
       panel.append(line);
       if (rec.rejected) panel.append(h('p', { class: 'hint' }, GH.plural(rec.rejected, 'line') + ' from the tool could not be read and were left out.'));
-      if (hidden) panel.append(h('p', { class: 'flow-note tp-withheld' }, GH.icon('lock'), h('span', {}, GH.plural(hidden, 'result') + ' withheld: Ghost does not show or store usernames, phone numbers, accounts or face data.')));
+      if (hidden) panel.append(h('p', { class: 'flow-note tp-withheld' }, GH.icon('lock'), h('span', {}, GH.plural(hidden, 'result') + ' left out: the tool sent them in a form Ghost could not read.')));
       if (!list.length) return;
       S.selected = [];
       const bar = h('div', { class: 'tp-addbar row-a' },

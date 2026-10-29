@@ -4,7 +4,7 @@
 (function () {
   const GH = window.GH, h = GH.h, K = window.GhostSkins;
   let state = K.clean(null), loaded = false;
-  const LAYOUT = { sidebar: 'Sidebar layout', 'panel-grid': 'Panel grid layout', 'ring-hud': 'Ring layout', 'single-column': 'Single column layout', console: 'Console layout' };
+  const LAYOUT = { sidebar: 'Sidebar layout', 'panel-grid': 'Panel grid layout', 'ring-hud': 'Ring layout', 'single-column': 'Single column layout', console: 'Console layout', 'menu-shell': 'Menu shell layout' };
 
   let shown = null;
   function paint(p) {
@@ -39,6 +39,7 @@
     if (sk.layout === 'console') t.append(h('i', { class: 'sk-tabs' }, bs(6)), h('i', { class: 'sk-tree' }, bs(4)), h('i', { class: 'sk-map' }, h('s', { class: 'sk-l1' }), h('s', { class: 'sk-dot' }), h('s', { class: 'sk-dot d2' })), h('i', { class: 'sk-side' }, bs(3)), h('i', { class: 'sk-tbls' }, h('s', {}), h('s', {}), h('s', {})));
     else if (sk.layout === 'panel-grid') t.append(h('i', { class: 'sk-box a' }, bs(3)), h('i', { class: 'sk-box b' }, h('s', { class: 'sk-bar' }, h('u', {})), h('s', { class: 'sk-bar' }, h('u', {}))), h('i', { class: 'sk-box c' }, bs(4)), h('i', { class: 'sk-box d' }, h('s', { class: 'sk-lock' })));
     else if (sk.layout === 'ring-hud') t.append(h('i', { class: 'sk-col' }, h('s', { class: 'sk-card' }), h('s', { class: 'sk-card' }), h('s', { class: 'sk-card' })), h('i', { class: 'sk-ring' }, h('s', {})), h('i', { class: 'sk-col' }, h('s', { class: 'sk-card' }), h('s', { class: 'sk-card' })));
+    else if (sk.layout === 'menu-shell') t.append(h('i', { class: 'sk-ban' }), h('i', { class: 'sk-mnu' }, h('s', { class: 'on' }), h('s', {}), h('s', {}), h('s', {})));
     else if (sk.layout === 'single-column') t.append(h('i', { class: 'sk-big' }, h('s', {}), h('s', {})), h('i', { class: 'sk-in' }, h('s', {}), h('u', {})), h('i', { class: 'sk-chars' }, h('s', {}), h('s', {}), h('s', {})));
     else t.append(h('i', { class: 'sk-rail' }, h('b', {}), h('b', {}), h('b', { class: 'on' }), h('b', {})),
       h('i', { class: 'sk-main' }, h('s', { class: 'sk-h' }), h('s', { class: 'sk-t' }), h('i', { class: 'sk-card' }, h('s', { class: 'sk-l' }), h('s', { class: 'sk-l' }), h('s', { class: 'sk-bar' }, h('u', {}))), h('s', { class: 'sk-btn' })));

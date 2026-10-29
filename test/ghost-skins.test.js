@@ -11,12 +11,12 @@ const K = require('../src/ui/ghost/skins');
 const { PrefStore, PrefError } = require('../src/main/ghost/app/prefs');
 const { check } = require('../src/main/ghost/app/checks');
 
-const EXPECT = ['mayfair', 'terminal', 'hud', 'mono', 'ops'];
+const EXPECT = ['mayfair', 'terminal', 'hud', 'mono', 'shell', 'ops'];
 const MODES = (id) => (id === 'mayfair' ? ['dark', 'light'] : ['dark']);
 
-test('the picker lists the five skins, and each one has a block in skins.css', () => {
+test('the picker lists the six skins, and each one has a block in skins.css', () => {
   assert.deepEqual(K.IDS, EXPECT); assert.equal(K.DEFAULT, 'mayfair');
-  assert.deepEqual(K.SKINS.map((s) => s.label), ['Mayfair', 'Terminal green', 'Cyan HUD', 'Mono minimal', 'Operations']);
+  assert.deepEqual(K.SKINS.map((s) => s.label), ['Mayfair', 'Terminal green', 'Cyan HUD', 'Mono minimal', 'Shell', 'Operations']);
   for (const id of K.IDS) assert.ok(H.skinBlocks(id).length >= 1, id);
   const named = new Set(H.SKIN.flatMap((b) => b.sels).map((s) => (/^\[data-skin=(\w+)\]/.exec(s) || [])[1]).filter(Boolean)); assert.deepEqual([...named].sort(), [...EXPECT].sort());
   assert.deepEqual(K.SKINS.filter((s) => !s.dark).map((s) => s.id), ['mayfair'], 'only Mayfair has a light version');

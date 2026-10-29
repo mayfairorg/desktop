@@ -51,7 +51,7 @@
       const meta = { id: connector.id, version: connector.version, licence: connector.licence && connector.licence.spdx ? connector.licence.spdx : '', attribution: connector.externalRestrictions && connector.externalRestrictions !== 'None.' && /attribution|credit|contains data/i.test(connector.externalRestrictions) ? connector.externalRestrictions.slice(0, 280) : '' };
       const out = GH.cs.mutate('Add results from ' + connector.id, (c) => { const r = M.ingest(c, { connector: meta, query, results, rawSha256: raw }); M.layout(c); return r; });
       GH.toast(out.added + out.merged ? 'Added to "' + S.c.title + '": ' + GH.plural(out.added, 'new entity', 'new entities') + (out.merged ? ', ' + out.merged + ' merged' : '') + '.' : 'Nothing new to add.');
-      if (out.withheld) GH.toast(GH.plural(out.withheld, 'result') + ' not added: Ghost does not store usernames, phone numbers, accounts, face data or email without an infrastructure role, and a case has a size limit.');
+      if (out.withheld) GH.toast(GH.plural(out.withheld, 'result') + ' not added: they could not be read, or the case reached its size limit.');
       return out;
     },
     // A small dialog: pick an existing case or start a new one. -> true when a case is now open.

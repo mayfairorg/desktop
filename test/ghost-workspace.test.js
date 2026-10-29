@@ -43,7 +43,7 @@ test('the tool list is read as given: states, categories, unknown values made sa
   const by = Object.fromEntries(st.tools.map((t) => [t.id, t]));
   assert.equal(by.a.category, 'domains'); assert.equal(by.b.category, 'domains'); assert.equal(by.c.category, 'files'); assert.equal(by.d.category, 'news'); assert.equal(by.e.state, 'setting-up'); assert.equal(by.e.tested, 'pending');
   assert.deepEqual(ws.toolsFor('domain').ready.map((t) => t.id), ['a', 'b']); assert.deepEqual(ws.toolsFor('domain').other.map((t) => t.id), ['d']); assert.deepEqual(ws.toolsFor('file').ready, []);
-  assert.equal(ws.stateLabel(by.c), 'Needs a program'); assert.match(ws.stateExplain(by.c), /Runs in the virtual computer/);
+  assert.equal(ws.stateLabel(by.c), 'Ghost computer'); assert.match(ws.stateExplain(by.c), /Runs in the virtual computer/);
 });
 test('without the app calls the page says so instead of listing anything', async () => {
   const ctx = page({}), ws = ctx.GH.ws;
@@ -74,15 +74,15 @@ test('events become per-tool rows and one merged Overview; progress counts follo
   m.emit({ searchId: 's1', type: 'tool-start', tool: 'a' }); assert.equal(s.tools[0].status, 'running'); assert.deepEqual({ ...ws.counts(s) }, { total: 2, done: 0, empty: 0, error: 0, skipped: 0, running: 1, waiting: 1, finished: 0 });
   m.emit({ searchId: 's1', type: 'tool-result', tool: 'a', ms: 120, results: [R('a', 'domain', 'a.example'), R('a', 'ip', '203.0.113.5'), R('a', 'username', 'x')] });
   m.emit({ searchId: 's1', type: 'tool-result', tool: 'b', ms: 300, results: [R('b', 'domain', 'A.EXAMPLE.')] });
-  assert.equal(s.tools[0].status, 'done'); assert.equal(s.tools[0].count, 2); assert.equal(s.tools[0].withheld, 1); assert.equal(s.tools[0].ms, 120);
-  assert.equal(MG.summary(s.merge).entities, 2); assert.equal(MG.summary(s.merge).corroborated, 1);
+  assert.equal(s.tools[0].status, 'done'); assert.equal(s.tools[0].count, 3); assert.equal(s.tools[0].withheld, 0); assert.equal(s.tools[0].ms, 120);
+  assert.equal(MG.summary(s.merge).entities, 3); assert.equal(MG.summary(s.merge).corroborated, 1);
   assert.equal(s.status, 'running'); m.emit({ searchId: 's1', type: 'done' }); assert.equal(s.status, 'done'); assert.equal(ws.counts(s).finished, 2);
 });
 test('error, empty and a result list with nothing usable are each shown as what they are', async () => {
   const m = mk(), ctx = page(m.api), ws = ctx.GH.ws; await ws.status.load(true);
   const s = await ws.begin({ kind: 'domain', value: 'a.example' });
   m.emit({ searchId: 's1', type: 'tool-error', tool: 'a', error: { message: 'The service said too many requests.' }, ms: 50 });
-  m.emit({ searchId: 's1', type: 'tool-result', tool: 'b', results: [R('b', 'username', 'someone')] });
+  m.emit({ searchId: 's1', type: 'tool-result', tool: 'b', results: [R('b', 'domain', '   ')] });
   assert.equal(s.tools[0].status, 'error'); assert.match(s.tools[0].error, /too many requests/);
   assert.equal(s.tools[1].status, 'empty', 'a tool whose only results were left out found nothing to show'); assert.equal(s.tools[1].withheld, 1);
   m.emit({ searchId: 's1', type: 'tool-error', tool: 'a', error: 'plain text' }); assert.equal(s.tools[0].error, 'plain text');

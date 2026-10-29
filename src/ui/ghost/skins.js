@@ -10,6 +10,7 @@
     { id: 'terminal', label: 'Terminal green', layout: 'panel-grid', dark: true, blurb: 'A grid of bordered panels: jobs, connector gauges, case files, an activity log and a large vault status. Green on black.' },
     { id: 'hud', label: 'Cyan HUD', layout: 'ring-hud', dark: true, blurb: 'A status ring in the middle, stat panels either side, an activity chart and a sweep. Corner brackets on every card.' },
     { id: 'mono', label: 'Mono minimal', layout: 'single-column', dark: true, blurb: 'One column of large fixed-width type on a dotted page, a big search box and lookups drawn as a character grid.' },
+    { id: 'shell', label: 'Shell', layout: 'menu-shell', dark: true, blurb: 'A command-line session: a block-letter banner, a status line, a prompt to look something up and a boxed menu of tool categories you move through with the arrow keys.' },
     { id: 'ops', label: 'Operations', layout: 'console', dark: true, blurb: 'Module tabs across the top, a case tree on the left, a map in the middle with tables below and a detail panel on the right.' },
   ];
   const DEFAULT = 'mayfair';

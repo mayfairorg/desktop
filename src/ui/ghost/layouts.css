@@ -109,7 +109,7 @@
 /* ==========================================================================
    OPERATIONS
    ========================================================================== */
-.app.ops-app,.app.tm-app,.app.mn-app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+.app.ops-app,.app.tm-app,.app.mn-app,.app.sh-app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
 .ops-menu{display:flex;align-items:center;gap:var(--mf-s4);min-height:46px;padding:var(--mf-s1) var(--mf-s3);background:var(--gh-rail);border-bottom:1px solid var(--mf-line);flex-wrap:wrap}
 .ops-brand{display:flex;align-items:center;gap:var(--mf-s2);text-decoration:none;font-size:var(--mf-fs-sm);letter-spacing:.16em;min-height:44px}
 .ops-brand b{font-weight:var(--mf-fw-semi)}.ops-brand i{font-style:normal;color:var(--mf-mute)}
@@ -510,3 +510,60 @@ html[data-deco=off] .br{display:none}
 
 /* the case title is a single-line input: on a phone it takes the full width and a smaller size so a normal title is not cut off */
 @media (max-width:560px){ .title-in,input.title-in{width:100%;min-width:0;box-sizing:border-box;font-size:clamp(16px,5.2vw,22px)} }
+
+/* ---------- Shell: a command-line session (skin "shell", layout menu-shell) ---------- */
+.app.sh-app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;background:var(--gh-bg);font-family:var(--mf-mono)}
+.sh-top{border-bottom:1px solid var(--mf-line)}
+.sh-bar,.sh-nav-in,.sh-app main{max-width:1100px;margin-left:auto;margin-right:auto;width:100%}
+.sh-bar{display:flex;align-items:center;gap:var(--mf-s4);min-height:44px;padding:0 var(--mf-s5)}
+.sh-brand{text-decoration:none;color:var(--mf-accent-ink);font-weight:var(--mf-fw-bold);min-height:44px;display:inline-flex;align-items:center}
+.sh-crumb{flex:1;color:var(--mf-mute);min-width:0;font-size:var(--mf-fs-sm)}
+.sh-crumb::before{content:"~/ "}
+.sh-bar .top-r{display:flex;gap:var(--mf-s1)}.sh-bar .btn{height:32px;min-height:32px}.sh-bar .btn.icon{width:32px}
+.sh-nav{overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--mf-mute) transparent}
+.sh-nav-in{display:flex;gap:var(--mf-s4);padding:0 var(--mf-s5);min-width:max-content}
+.shl{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;min-height:36px;cursor:pointer;white-space:nowrap;font-size:var(--mf-fs-sm);color:var(--mf-mute);padding:0 var(--mf-s2)}
+.shl:hover{color:var(--mf-text)}
+.shl:focus-visible{outline:2px solid var(--gh-focus);outline-offset:1px}
+.shl[aria-current=page]{background:var(--mf-accent);color:var(--mf-on-accent)}
+.shl .act-dot{margin-left:var(--mf-s2)}
+.sh-app main{padding:var(--mf-s5) var(--mf-s5) 64px;flex:1}
+.sh-home{display:flex;flex-direction:column;gap:var(--mf-s4);max-width:760px}
+.sh-banner{margin:0;color:var(--mf-accent-ink);font-family:var(--mf-mono);font-size:clamp(9px,2.6vw,17px);line-height:1.05;letter-spacing:0;white-space:pre;overflow:hidden}
+.sh-hello{border:1px solid var(--mf-accent-ink);padding:var(--mf-s3) var(--mf-s5);text-align:center;color:var(--mf-accent-ink);align-self:stretch;max-width:420px}
+.sh-hello p{margin:0}.sh-hi{font-weight:var(--mf-fw-bold)}
+.sh-state{margin:0;color:var(--mf-accent-ink);font-weight:var(--mf-fw-bold);overflow-wrap:anywhere}
+.sh-stat{margin:0;color:var(--mf-mute);font-size:var(--mf-fs-sm);overflow-wrap:anywhere}
+.sh-search{display:flex;align-items:center;gap:var(--mf-s2);flex-wrap:wrap}
+.sh-search .lk-p{color:var(--mf-accent-ink);white-space:nowrap}
+.sh-search .lk-in{flex:1 1 220px;min-width:0;background:transparent;border:0;border-bottom:1px solid var(--mf-line);color:var(--mf-text);font-family:var(--mf-mono);padding:var(--mf-s2) 0;border-radius:0}
+.sh-search .lk-in:focus{outline:none;border-bottom-color:var(--mf-accent-ink)}
+.sh-box{position:relative;border:1px solid var(--mf-line);padding:var(--mf-s5) var(--mf-s4) var(--mf-s3);margin-top:var(--mf-s2)}
+.sh-bt{position:absolute;top:0;left:var(--mf-s3);transform:translateY(-50%);margin:0;padding:0 var(--mf-s2);background:var(--gh-bg);color:var(--mf-accent-ink);font-size:var(--mf-fs-sm);font-weight:var(--mf-fw-bold);letter-spacing:.06em;font-family:var(--mf-mono)}
+.sh-menu{list-style:none;margin:0;padding:0;outline:none}
+.sh-menu:focus-visible{outline:2px solid var(--gh-focus);outline-offset:4px}
+.sh-mi{display:flex;align-items:center;gap:var(--mf-s2);min-height:36px;padding:0 var(--mf-s2);cursor:pointer;color:var(--mf-text)}
+.sh-mi:hover{background:var(--mf-hov)}
+.sh-mk{width:1.2em;flex:none}
+.sh-mn{width:2ch;flex:none;color:var(--mf-mute)}
+.sh-ml{min-width:0;overflow-wrap:anywhere}
+.sh-mi.on{background:var(--mf-accent);color:var(--mf-on-accent);font-weight:var(--mf-fw-bold)}
+.sh-mi.on .sh-mk::before{content:"▶"}.sh-mi.on .sh-mn{color:var(--mf-on-accent)}
+.sh-hint,.sh-note,.sh-foot{margin:0;color:var(--mf-mute);font-size:var(--mf-fs-sm)}
+.sh-hint{margin-top:var(--mf-s3)}
+.sh-note::before{content:"· "}
+.sh-rows{list-style:none;margin:0;padding:0;display:grid;gap:var(--mf-s1)}
+.sh-rows li{display:grid;grid-template-columns:2ch minmax(0,1fr) auto;gap:var(--mf-s3);align-items:baseline}
+.sh-bstats{margin:0 0 var(--mf-s3);color:var(--mf-mute);font-size:var(--mf-fs-sm);overflow-wrap:anywhere}
+[data-skin=shell] h1,[data-skin=shell] h2,[data-skin=shell] h3{font-family:var(--mf-mono);letter-spacing:0}
+[data-skin=shell] .view{max-width:1100px}
+[data-skin=shell] .btn{border-radius:0}
+.sk-prev.lay-menu-shell{display:grid;gap:3px;padding:6px 8px;grid-template-columns:none;align-content:start}
+.lay-menu-shell .sk-ban{height:10px;width:60%;background:var(--mf-accent-ink)}
+.lay-menu-shell .sk-mnu{border:1px solid var(--mf-line);padding:4px;display:grid;gap:3px}
+.lay-menu-shell .sk-mnu s{height:5px;background:var(--mf-mute);width:70%}.lay-menu-shell .sk-mnu s.on{background:var(--mf-accent);width:100%}
+@media (max-width:719px){
+  .sh-bar{padding:0 var(--mf-s3)}.sh-nav-in{padding:0 var(--mf-s3)}.sh-crumb{display:none}.sh-brand{flex:1}
+  .sh-app main{padding:var(--mf-s4) var(--mf-s3) var(--mf-s6)}
+  .sh-hello{max-width:none}
+}
